@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Test-Path \"$env:USERPROFILE\\\\.local\\\\bin\\\\claude.exe\"; Get-ChildItem \"$env:USERPROFILE\\\\.local\\\\bin\" -ErrorAction SilentlyContinue | Select-Object Name; Write-Output \"--- downloads ---\"; Get-ChildItem \"$env:USERPROFILE\\\\.claude\\\\downloads\" -ErrorAction SilentlyContinue | Select-Object Name)",
+      "PowerShell(Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force)",
+      "PowerShell(Get-ExecutionPolicy -Scope CurrentUser)",
+      "PowerShell(Get-ExecutionPolicy -List)",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\Usuário\\\\Documents\\\\Israel\\\\igreja_react_app\" -Recurse -Depth 3 | Where-Object { -not $_.FullName.Contains\\('node_modules'\\) -and -not $_.FullName.Contains\\('.git'\\) } | Select-Object FullName, PSIsContainer | Sort-Object PSIsContainer -Descending | Format-Table -AutoSize)",
+      "PowerShell(Get-NetTCPConnection -LocalPort 5173 -State Listen -ErrorAction SilentlyContinue)",
+      "PowerShell(Start-Process powershell -ArgumentList \"-NoExit\", \"-Command\", \"cd 'c:\\\\Users\\\\Usuário\\\\Documents\\\\Israel\\\\igreja_react_app'; npm run dev\" -WindowStyle Normal)",
+      "Bash(git --version)",
+      "Bash(git init *)",
+      "Bash(git remote *)",
+      "Bash(git add *)"
+    ]
+  }
+}
