@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Header from '../components/Header';
 import Toast from '../components/Toast';
 import { loadMembros, saveMembros } from '../data/membros';
 import { loadConfig, saveConfig, DIAS_SEMANA, formatHora } from '../data/config';
 import { loadContribuicoes, clearContribuicoes, totalContribuicoes, totalPorObra } from '../data/contribuicoes';
+import { MINISTERIOS, loadVagas, saveVagas, VAGAS_KEY } from '../data/vagas';
 
 const ADMIN_PIN = '1234';
 const CADASTROS_KEY = 'cadastros_pendentes';
@@ -20,12 +21,21 @@ function saveCadastros(cadastros) {
 
 function ModalGerenciarCadastros({ isOpen, onClose, cadastros, setCadastros, membros, setMembros }) {
   const pendentes = cadastros.filter(c => c.status === 'pendente');
+  const [aprovadoNome, setAprovadoNome] = useState(null);
+
+  useEffect(() => {
+    if (!aprovadoNome) return;
+    const t = setTimeout(() => {
+      setAprovadoNome(null);
+      onClose();
+    }, 3000);
+    return () => clearTimeout(t);
+  }, [aprovadoNome, onClose]);
 
   const handleAprovar = (id) => {
     const cadastro = cadastros.find(c => c.id === id);
     if (!cadastro) return;
 
-    // Adicionar como membro
     const novoMembro = {
       id: Math.max(...membros.map(m => m.id), 0) + 1,
       nome: cadastro.nome,
@@ -39,14 +49,13 @@ function ModalGerenciarCadastros({ isOpen, onClose, cadastros, setCadastros, mem
     setMembros(novosMembros);
     saveMembros(novosMembros);
 
-    // Atualizar status do cadastro
     const novosCadastros = cadastros.map(c =>
       c.id === id ? { ...c, status: 'aprovado' } : c
     );
     setCadastros(novosCadastros);
     saveCadastros(novosCadastros);
 
-    alert(`${cadastro.nome} aprovado como membro!`);
+    setAprovadoNome(cadastro.nome);
   };
 
   const handleRejeitar = (id) => {
@@ -87,7 +96,28 @@ function ModalGerenciarCadastros({ isOpen, onClose, cadastros, setCadastros, mem
         </div>
 
         <div style={{ padding: 'var(--spacing-lg)' }}>
-          {pendentes.length === 0 ? (
+          {aprovadoNome ? (
+            <div style={{ textAlign: 'center', padding: '48px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+              <div style={{
+                width: '64px', height: '64px', borderRadius: '50%',
+                background: 'rgba(34,197,94,0.15)', border: '2px solid rgba(34,197,94,0.5)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <i className="ph ph-check" style={{ fontSize: '2rem', color: '#22c55e' }}></i>
+              </div>
+              <div>
+                <h4 style={{ margin: 0, marginBottom: '6px', fontSize: '1.1rem', color: 'var(--text-primary)' }}>
+                  Membro aprovado!
+                </h4>
+                <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                  <strong style={{ color: 'var(--accent-color)' }}>{aprovadoNome}</strong> foi adicionado(a) como membro.
+                </p>
+              </div>
+              <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                Voltando ao painel em instantes...
+              </p>
+            </div>
+          ) : pendentes.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-secondary)' }}>
               <i className="ph ph-check-circle" style={{ fontSize: '2rem', marginBottom: '12px', display: 'block' }}></i>
               <p>Nenhum cadastro pendente</p>
@@ -498,7 +528,7 @@ function ModalContribuicoes({ onClose, contribs, onLimpar }) {
           {/* Lista de registros */}
           {contribs.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
-              <i className="ph ph-hands-coins" style={{ fontSize: '2.5rem', display: 'block', marginBottom: '12px' }}></i>
+              <i className="ph ph-hand-coins" style={{ fontSize: '2.5rem', display: 'block', marginBottom: '12px' }}></i>
               <p>Nenhuma intenção registrada ainda.</p>
             </div>
           ) : (
@@ -594,7 +624,9 @@ function PinGate({ onAuthenticated }) {
 function ModalConfiguracoes({ onClose, onSaved }) {
   const [cfg, setCfg] = useState(loadConfig);
   const [heroBgPreview, setHeroBgPreview] = useState(loadConfig().heroBg);
-  const [secao, setSecao] = useState('identidade'); // identidade | hero | aviso | whatsapp | cultos
+  const [secao, setSecao] = useState('identidade');
+  const [vagas, setVagas] = useState(loadVagas);
+  const [novaVaga, setNovaVaga] = useState({ ministerio: MINISTERIOS[0].nome, data: '', horario: '', vagas: 4 });
 
   const set = (campo, valor) => setCfg(c => ({ ...c, [campo]: valor }));
   const setWa = (campo, valor) => setCfg(c => ({ ...c, whatsapp: { ...c.whatsapp, [campo]: valor } }));
@@ -627,6 +659,31 @@ function ModalConfiguracoes({ onClose, onSaved }) {
     setCfg(c => ({ ...c, obras: c.obras.map(o => o.id === id ? { ...o, foto: null } : o) }));
   };
 
+  const handleCultoFotoUpload = (id, e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 900;
+        const ratio = Math.min(MAX / img.width, MAX / img.height, 1);
+        const canvas = document.createElement('canvas');
+        canvas.width  = img.width  * ratio;
+        canvas.height = img.height * ratio;
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        const compressed = canvas.toDataURL('image/jpeg', 0.78);
+        setCfg(c => ({ ...c, cultos: c.cultos.map(cu => cu.id === id ? { ...cu, foto: compressed } : cu) }));
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeCultoFoto = (id) => {
+    setCfg(c => ({ ...c, cultos: c.cultos.map(cu => cu.id === id ? { ...cu, foto: null } : cu) }));
+  };
+
   const handleHeroUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -649,8 +706,20 @@ function ModalConfiguracoes({ onClose, onSaved }) {
     reader.readAsDataURL(file);
   };
 
+  const adicionarVaga = () => {
+    if (!novaVaga.data.trim() || !novaVaga.horario.trim()) return;
+    const nova = { ...novaVaga, id: Date.now(), aberta: true, confirmados: 0 };
+    setVagas(v => [...v, nova]);
+    setNovaVaga(nv => ({ ...nv, data: '', horario: '' }));
+  };
+
+  const toggleVaga = (id) => setVagas(v => v.map(vg => vg.id === id ? { ...vg, aberta: !vg.aberta } : vg));
+
+  const removerVaga = (id) => setVagas(v => v.filter(vg => vg.id !== id));
+
   const handleSalvar = () => {
     saveConfig(cfg);
+    saveVagas(vagas);
     onSaved();
     onClose();
   };
@@ -669,6 +738,8 @@ function ModalConfiguracoes({ onClose, onSaved }) {
     { key: 'whatsapp',   label: 'WhatsApp',   icon: 'ph-whatsapp-logo' },
     { key: 'cultos',     label: 'Cultos',     icon: 'ph-calendar' },
     { key: 'obras',      label: 'Obras',      icon: 'ph-hands-heart' },
+    { key: 'pix',        label: 'PIX',        icon: 'ph-key' },
+    { key: 'servir',     label: 'Servir',     icon: 'ph-heart' },
   ];
 
   return (
@@ -870,10 +941,142 @@ function ModalConfiguracoes({ onClose, onSaved }) {
                         <input type="checkbox" checked={cu.restrito || false} onChange={e => setCulto(cu.id, 'restrito', e.target.checked)} style={{ width: '16px', height: '16px', accentColor: 'var(--accent-color)' }} />
                         <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Visível apenas para membros logados</span>
                       </label>
+
+                      {/* Foto */}
+                      <div>
+                        <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '8px' }}>Foto da Programação</label>
+                        {cu.foto && (
+                          <div style={{ width: '100%', height: '110px', borderRadius: 'var(--radius-md)', overflow: 'hidden', marginBottom: '8px', border: '1px solid var(--border-color)' }}>
+                            <img src={cu.foto} alt={cu.nome} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                          </div>
+                        )}
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <label style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '8px', background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                            <i className="ph ph-image"></i>
+                            {cu.foto ? 'Trocar foto' : 'Adicionar foto'}
+                            <input type="file" accept="image/*" onChange={e => handleCultoFotoUpload(cu.id, e)} style={{ display: 'none' }} />
+                          </label>
+                          {cu.foto && (
+                            <button onClick={() => removeCultoFoto(cu.id)} style={{ padding: '8px 14px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 'var(--radius-md)', color: '#ef4444', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}>
+                              Remover
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* PIX */}
+          {secao === 'pix' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0 }}>
+                Chave PIX exibida na aba de contribuição. Pode ser CPF, CNPJ, e-mail, telefone ou chave aleatória.
+              </p>
+
+              <div>
+                <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                  Chave PIX
+                </label>
+                <input
+                  type="text"
+                  value={cfg.pixKey || ''}
+                  onChange={e => set('pixKey', e.target.value)}
+                  style={inputSt}
+                  placeholder="Ex: igrejafoiporamor@email.com"
+                />
+              </div>
+
+              {cfg.pixKey && (
+                <div style={{ padding: '14px 16px', background: 'rgba(109,40,217,0.1)', border: '1px solid rgba(109,40,217,0.3)', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <i className="ph ph-check-circle" style={{ fontSize: '1.2rem', color: '#6d28d9', flexShrink: 0 }}></i>
+                  <div>
+                    <p style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 2px' }}>Chave configurada</p>
+                    <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0, wordBreak: 'break-all' }}>{cfg.pixKey}</p>
+                  </div>
+                </div>
+              )}
+
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.6 }}>
+                Esta chave será exibida para os contribuintes copiarem diretamente no app do banco.
+              </p>
+            </div>
+          )}
+
+          {/* SERVIR */}
+          {secao === 'servir' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0 }}>
+                Crie e gerencie as vagas de voluntariado para cada ministério.
+              </p>
+
+              {/* Formulário nova vaga */}
+              <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: 'var(--spacing-md)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <p style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Nova Vaga</p>
+
+                <div>
+                  <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Ministério</label>
+                  <select value={novaVaga.ministerio} onChange={e => setNovaVaga(nv => ({ ...nv, ministerio: e.target.value }))} style={{ ...inputSt, padding: '8px', fontSize: '0.85rem' }}>
+                    {MINISTERIOS.map(m => <option key={m.nome} value={m.nome}>{m.nome}</option>)}
+                  </select>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Data</label>
+                    <input type="text" placeholder="Ex: Dom, 22 Jun" value={novaVaga.data} onChange={e => setNovaVaga(nv => ({ ...nv, data: e.target.value }))} style={{ ...inputSt, padding: '8px', fontSize: '0.85rem' }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Horário</label>
+                    <input type="text" placeholder="Ex: 09:00 - 12:00" value={novaVaga.horario} onChange={e => setNovaVaga(nv => ({ ...nv, horario: e.target.value }))} style={{ ...inputSt, padding: '8px', fontSize: '0.85rem' }} />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Número de vagas</label>
+                  <input type="number" min="1" max="50" value={novaVaga.vagas} onChange={e => setNovaVaga(nv => ({ ...nv, vagas: Number(e.target.value) }))} style={{ ...inputSt, padding: '8px', fontSize: '0.85rem' }} />
+                </div>
+
+                <button
+                  onClick={adicionarVaga}
+                  disabled={!novaVaga.data.trim() || !novaVaga.horario.trim()}
+                  style={{ padding: '10px', background: '#6d28d9', border: 'none', borderRadius: 'var(--radius-md)', color: '#fff', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', opacity: (!novaVaga.data.trim() || !novaVaga.horario.trim()) ? 0.5 : 1 }}
+                >
+                  <i className="ph ph-plus"></i> Adicionar Vaga
+                </button>
+              </div>
+
+              {/* Lista de vagas */}
+              {vagas.length === 0 ? (
+                <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', textAlign: 'center', padding: '16px 0' }}>Nenhuma vaga criada ainda.</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <p style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', margin: 0 }}>Vagas criadas</p>
+                  {vagas.map(vg => (
+                    <div key={vg.id} style={{ background: 'var(--bg-surface)', border: `1px solid ${vg.aberta ? 'rgba(109,40,217,0.4)' : 'var(--border-color)'}`, borderRadius: 'var(--radius-md)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{vg.ministerio}</p>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>{vg.data} · {vg.horario} · {vg.vagas} vagas</p>
+                      </div>
+                      <button
+                        onClick={() => toggleVaga(vg.id)}
+                        style={{ flexShrink: 0, padding: '5px 12px', borderRadius: 'var(--radius-full)', border: 'none', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', background: vg.aberta ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.1)', color: vg.aberta ? '#22c55e' : '#ef4444' }}
+                      >
+                        {vg.aberta ? 'Aberta' : 'Fechada'}
+                      </button>
+                      <button
+                        onClick={() => removerVaga(vg.id)}
+                        style={{ flexShrink: 0, width: '30px', height: '30px', borderRadius: 'var(--radius-sm)', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        <i className="ph ph-trash" style={{ fontSize: '0.9rem' }}></i>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -885,6 +1088,130 @@ function ModalConfiguracoes({ onClose, onSaved }) {
           <button onClick={handleSalvar} style={{ flex: 2, padding: '12px', background: 'var(--accent-color)', border: 'none', borderRadius: 'var(--radius-md)', color: 'var(--bg-color)', cursor: 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
             <i className="ph ph-floppy-disk"></i> Salvar Configurações
           </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const ACONSELHAMENTO_KEY = 'pedidos_aconselhamento';
+
+function loadAconselhamentos() {
+  try { return JSON.parse(localStorage.getItem(ACONSELHAMENTO_KEY)) || []; }
+  catch { return []; }
+}
+
+function ModalAconselhamento({ onClose }) {
+  const [pedidos, setPedidos] = useState(loadAconselhamentos);
+  const [expandido, setExpandido] = useState(null);
+
+  const toggleAtendido = (id) => {
+    const novos = pedidos.map(p => p.id === id ? { ...p, atendido: !p.atendido } : p);
+    setPedidos(novos);
+    localStorage.setItem(ACONSELHAMENTO_KEY, JSON.stringify(novos));
+  };
+
+  const remover = (id) => {
+    if (!confirm('Remover este pedido?')) return;
+    const novos = pedidos.filter(p => p.id !== id);
+    setPedidos(novos);
+    localStorage.setItem(ACONSELHAMENTO_KEY, JSON.stringify(novos));
+  };
+
+  const CONTATO_ICON = {
+    'WhatsApp': 'ph-whatsapp-logo',
+    'Ligação telefônica': 'ph-phone',
+    'Presencial na Igreja': 'ph-church',
+    'E-mail': 'ph-envelope',
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+      <div style={{ width: '100%', maxWidth: '600px', background: 'var(--bg-color)', borderRadius: '20px 20px 0 0', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+
+        {/* Header */}
+        <div style={{ padding: '20px var(--spacing-lg) var(--spacing-md)', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+          <div>
+            <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.1rem', margin: 0 }}>Pedidos de Aconselhamento</h3>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '2px 0 0' }}>{pedidos.filter(p => !p.atendido).length} pendente{pedidos.filter(p => !p.atendido).length !== 1 ? 's' : ''} · {pedidos.length} no total</p>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.3rem', cursor: 'pointer', padding: '4px' }}>
+            <i className="ph ph-x"></i>
+          </button>
+        </div>
+
+        {/* Lista */}
+        <div style={{ overflowY: 'auto', padding: 'var(--spacing-md) var(--spacing-lg)', flex: 1 }}>
+          {pedidos.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
+              <i className="ph ph-chat-circle-dots" style={{ fontSize: '2.5rem', display: 'block', marginBottom: '10px' }}></i>
+              <p style={{ fontSize: '0.9rem' }}>Nenhum pedido recebido ainda.</p>
+            </div>
+          ) : (
+            pedidos.map(p => (
+              <div key={p.id} style={{ background: 'var(--bg-surface)', border: `1px solid ${p.atendido ? 'var(--border-color)' : 'rgba(109,40,217,0.35)'}`, borderRadius: 'var(--radius-md)', marginBottom: '10px', overflow: 'hidden', opacity: p.atendido ? 0.65 : 1 }}>
+
+                {/* Cabeçalho do pedido */}
+                <button
+                  onClick={() => setExpandido(expandido === p.id ? null : p.id)}
+                  style={{ width: '100%', background: 'none', border: 'none', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', textAlign: 'left' }}
+                >
+                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: p.atendido ? 'var(--bg-surface-elevated)' : 'rgba(109,40,217,0.15)', border: `1px solid ${p.atendido ? 'var(--border-color)' : 'rgba(109,40,217,0.3)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <i className="ph ph-chat-circle-dots" style={{ fontSize: '1.1rem', color: p.atendido ? 'var(--text-muted)' : '#6d28d9' }}></i>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)', margin: '0 0 2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {p.nome || 'Anônimo'}
+                    </p>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>
+                      {p.tipo} · {p.data}
+                    </p>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                    {p.atendido && <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#22c55e', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)', borderRadius: 'var(--radius-full)', padding: '2px 8px' }}>Atendido</span>}
+                    <i className={`ph ${expandido === p.id ? 'ph-caret-up' : 'ph-caret-down'}`} style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}></i>
+                  </div>
+                </button>
+
+                {/* Conteúdo expandido */}
+                {expandido === p.id && (
+                  <div style={{ padding: '0 16px 14px', borderTop: '1px solid var(--border-color)' }}>
+                    <div style={{ paddingTop: '12px', marginBottom: '10px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <i className={`ph ${CONTATO_ICON[p.contato] || 'ph-chat'}`} style={{ color: '#6d28d9', fontSize: '1rem' }}></i>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Contato preferido: {p.contato}</span>
+                        {!p.membro && <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-full)', padding: '1px 7px' }}>Visitante</span>}
+                      </div>
+                      {p.telefone && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 10px', background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.25)', borderRadius: 'var(--radius-sm)' }}>
+                          <i className="ph ph-phone" style={{ color: '#22c55e', fontSize: '1rem' }}></i>
+                          <span style={{ fontSize: '0.88rem', color: 'var(--text-primary)', fontWeight: 700, letterSpacing: '0.3px' }}>{p.telefone}</span>
+                        </div>
+                      )}
+                    </div>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-primary)', lineHeight: 1.65, background: 'var(--bg-surface-elevated)', padding: '12px', borderRadius: 'var(--radius-sm)', margin: '0 0 12px' }}>
+                      {p.mensagem}
+                    </p>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        onClick={() => toggleAtendido(p.id)}
+                        style={{ flex: 1, padding: '9px', borderRadius: 'var(--radius-md)', border: 'none', background: p.atendido ? 'rgba(255,255,255,0.06)' : '#22c55e', color: p.atendido ? 'var(--text-secondary)' : '#fff', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                      >
+                        <i className={`ph ${p.atendido ? 'ph-arrow-counter-clockwise' : 'ph-check'}`}></i>
+                        {p.atendido ? 'Reabrir' : 'Marcar como Atendido'}
+                      </button>
+                      <button
+                        onClick={() => remover(p.id)}
+                        style={{ padding: '9px 14px', borderRadius: 'var(--radius-md)', border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.08)', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.82rem', fontWeight: 600 }}
+                      >
+                        <i className="ph ph-trash"></i> Remover
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>
@@ -945,6 +1272,252 @@ function ModalComunicado({ onClose, onSent }) {
   );
 }
 
+// ─── Galeria helpers ──────────────────────────────────────────
+const GALERIA_KEY = 'galeria_fotos';
+const TEMAS_KEY   = 'galeria_temas';
+
+const TEMAS_DEFAULT = ['Cultos', 'Eventos', 'Retiros', 'Missões'];
+
+function loadGaleria() {
+  try { return JSON.parse(localStorage.getItem(GALERIA_KEY)) || []; } catch { return []; }
+}
+function saveGaleria(fotos) { localStorage.setItem(GALERIA_KEY, JSON.stringify(fotos)); }
+
+function loadTemas() {
+  try { return JSON.parse(localStorage.getItem(TEMAS_KEY)) || TEMAS_DEFAULT; } catch { return TEMAS_DEFAULT; }
+}
+function saveTemas(temas) { localStorage.setItem(TEMAS_KEY, JSON.stringify(temas)); }
+
+function comprimirFotoGaleria(file, cb) {
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 900;
+      const ratio = Math.min(MAX / img.width, MAX / img.height, 1);
+      const canvas = document.createElement('canvas');
+      canvas.width  = img.width  * ratio;
+      canvas.height = img.height * ratio;
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      cb(canvas.toDataURL('image/jpeg', 0.78));
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// ─── Modal Galeria ─────────────────────────────────────────────
+function ModalGerenciarGaleria({ onClose, onSaved }) {
+  const [aba, setAba]         = useState('fotos');
+  const [fotos, setFotos]     = useState(loadGaleria);
+  const [temas, setTemas]     = useState(loadTemas);
+  const [novoTema, setNovoTema] = useState('');
+  const [form, setForm]       = useState({ titulo: '', categoria: '', data: '', img: null });
+  const [preview, setPreview] = useState(null);
+  const [adicionando, setAdicionando] = useState(false);
+
+  const set = campo => e => setForm(f => ({ ...f, [campo]: e.target.value }));
+
+  const handleFoto = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    comprimirFotoGaleria(file, b64 => { setPreview(b64); setForm(f => ({ ...f, img: b64 })); });
+  };
+
+  const handleSalvarFoto = () => {
+    if (!form.titulo.trim() || !form.categoria || !form.img) {
+      alert('Preencha título, tema e selecione uma foto.');
+      return;
+    }
+    const novas = [{ id: Date.now(), ...form }, ...fotos];
+    setFotos(novas);
+    saveGaleria(novas);
+    setForm({ titulo: '', categoria: '', data: '', img: null });
+    setPreview(null);
+    setAdicionando(false);
+    onSaved?.();
+  };
+
+  const handleExcluirFoto = id => {
+    const novas = fotos.filter(f => f.id !== id);
+    setFotos(novas);
+    saveGaleria(novas);
+  };
+
+  const handleAddTema = () => {
+    const t = novoTema.trim();
+    if (!t || temas.includes(t)) return;
+    const novos = [...temas, t];
+    setTemas(novos);
+    saveTemas(novos);
+    setNovoTema('');
+  };
+
+  const handleDeleteTema = t => {
+    const novos = temas.filter(x => x !== t);
+    setTemas(novos);
+    saveTemas(novos);
+  };
+
+  const inputSt = { width: '100%', background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', padding: '11px 14px', borderRadius: 'var(--radius-md)', fontFamily: 'var(--font-body)', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}>
+      <div style={{ background: 'var(--bg-color)', borderRadius: 'var(--radius-lg)', width: '100%', maxWidth: '520px', maxHeight: '92vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+
+        {/* Header */}
+        <div style={{ padding: '18px 20px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3 style={{ margin: 0, fontFamily: 'var(--font-heading)' }}>Galeria & Temas</h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: '1.3rem', cursor: 'pointer' }}>
+            <i className="ph ph-x"></i>
+          </button>
+        </div>
+
+        {/* Abas */}
+        <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)' }}>
+          {[['fotos', 'ph-images', 'Fotos'], ['temas', 'ph-tag', 'Temas']].map(([key, icon, label]) => (
+            <button
+              key={key}
+              onClick={() => { setAba(key); setAdicionando(false); }}
+              style={{ flex: 1, padding: '12px', background: 'none', border: 'none', borderBottom: aba === key ? '2px solid var(--accent-color)' : '2px solid transparent', color: aba === key ? 'var(--accent-color)' : 'var(--text-secondary)', fontWeight: aba === key ? 700 : 400, fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+            >
+              <i className={`ph ${icon}`}></i> {label}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ padding: '20px' }}>
+
+          {/* ── ABA: FOTOS ── */}
+          {aba === 'fotos' && (
+            <>
+              {!adicionando ? (
+                <>
+                  <button
+                    onClick={() => setAdicionando(true)}
+                    style={{ width: '100%', padding: '11px', background: 'var(--accent-color)', border: 'none', borderRadius: 'var(--radius-md)', color: 'var(--bg-color)', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '16px' }}
+                  >
+                    <i className="ph ph-plus"></i> Adicionar Foto
+                  </button>
+
+                  {fotos.length === 0 ? (
+                    <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem', padding: '32px 0' }}>Nenhuma foto adicionada ainda.</p>
+                  ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                      {fotos.map(foto => (
+                        <div key={foto.id} style={{ position: 'relative', borderRadius: 'var(--radius-md)', overflow: 'hidden', aspectRatio: '1', background: 'var(--bg-surface)' }}>
+                          <img src={foto.img} alt={foto.titulo} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(transparent 40%, rgba(0,0,0,0.85))', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '8px' }}>
+                            <p style={{ color: '#fff', fontSize: '0.72rem', fontWeight: 600, margin: 0, lineHeight: 1.3 }}>{foto.titulo}</p>
+                            <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.62rem', margin: '2px 0 0' }}>{foto.categoria}{foto.data ? ` · ${foto.data}` : ''}</p>
+                          </div>
+                          <button
+                            onClick={() => handleExcluirFoto(foto.id)}
+                            style={{ position: 'absolute', top: '6px', right: '6px', width: '26px', height: '26px', borderRadius: '50%', background: 'rgba(239,68,68,0.85)', border: 'none', color: '#fff', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                          >
+                            <i className="ph ph-trash"></i>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                /* Formulário de nova foto */
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <h4 style={{ margin: 0, fontWeight: 600 }}>Nova Foto</h4>
+
+                  {/* Upload da imagem */}
+                  <label style={{ cursor: 'pointer', display: 'block' }}>
+                    <div style={{ width: '100%', height: '160px', borderRadius: 'var(--radius-md)', border: '2px dashed var(--border-color)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-surface)', overflow: 'hidden', position: 'relative' }}>
+                      {preview ? (
+                        <img src={preview} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <>
+                          <i className="ph ph-camera-plus" style={{ fontSize: '2rem', color: 'var(--text-muted)', marginBottom: '8px' }}></i>
+                          <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Toque para escolher a foto</span>
+                        </>
+                      )}
+                    </div>
+                    <input type="file" accept="image/*" onChange={handleFoto} style={{ display: 'none' }} />
+                  </label>
+
+                  <div>
+                    <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Título *</label>
+                    <input style={inputSt} placeholder="Ex: Culto dos Jovens — Junho" value={form.titulo} onChange={set('titulo')} />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Tema *</label>
+                    <select style={{ ...inputSt, appearance: 'none' }} value={form.categoria} onChange={set('categoria')}>
+                      <option value="">Selecione um tema...</option>
+                      {temas.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Data (opcional)</label>
+                    <input style={inputSt} placeholder="Ex: Jun 2025" value={form.data} onChange={set('data')} />
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
+                    <button onClick={() => { setAdicionando(false); setPreview(null); }} style={{ flex: 1, padding: '11px', background: 'transparent', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 600 }}>Cancelar</button>
+                    <button onClick={handleSalvarFoto} style={{ flex: 1, padding: '11px', background: 'var(--accent-color)', border: 'none', borderRadius: 'var(--radius-md)', color: 'var(--bg-color)', cursor: 'pointer', fontWeight: 700 }}>Salvar</button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* ── ABA: TEMAS ── */}
+          {aba === 'temas' && (
+            <>
+              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+                Temas são as categorias das fotos da galeria. Adicione eventos especiais como Culto dos Jovens, Culto das Mulheres etc.
+              </p>
+
+              {/* Adicionar novo tema */}
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+                <input
+                  style={{ ...inputSt, flex: 1 }}
+                  placeholder="Ex: Culto dos Jovens"
+                  value={novoTema}
+                  onChange={e => setNovoTema(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleAddTema()}
+                />
+                <button onClick={handleAddTema} style={{ padding: '11px 18px', background: 'var(--accent-color)', border: 'none', borderRadius: 'var(--radius-md)', color: 'var(--bg-color)', fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
+                  <i className="ph ph-plus"></i>
+                </button>
+              </div>
+
+              {/* Lista de temas */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {temas.map(t => (
+                  <div key={t} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 14px', background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <i className="ph ph-tag" style={{ color: 'var(--accent-color)', fontSize: '1rem' }}></i>
+                      <span style={{ fontWeight: 500 }}>{t}</span>
+                    </div>
+                    {!TEMAS_DEFAULT.includes(t) && (
+                      <button onClick={() => handleDeleteTema(t)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '1rem' }}>
+                        <i className="ph ph-trash"></i>
+                      </button>
+                    )}
+                    {TEMAS_DEFAULT.includes(t) && (
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>padrão</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Admin() {
   const [isAuthenticated, setIsAuthenticated] = useState(
     () => sessionStorage.getItem('adminAuth') === 'true'
@@ -957,6 +1530,9 @@ export default function Admin() {
   const [modalComunicado, setModalComunicado] = useState(false);
   const [modalConfig, setModalConfig] = useState(false);
   const [modalContribs, setModalContribs] = useState(false);
+  const [modalGaleria, setModalGaleria] = useState(false);
+  const [modalAconselhamento, setModalAconselhamento] = useState(false);
+  const [aconselhamentos] = useState(loadAconselhamentos);
   const [toast, setToast] = useState('');
 
   const totalNum = totalContribuicoes(contribs);
@@ -1066,6 +1642,23 @@ export default function Admin() {
             <i className="ph ph-caret-right"></i>
           </button>
           <button
+            onClick={() => setModalAconselhamento(true)}
+            className="event-list-item"
+            style={{ border: `1px solid ${aconselhamentos.filter(a => !a.atendido).length > 0 ? 'rgba(109,40,217,0.4)' : 'var(--border-color)'}`, borderRadius: 'var(--radius-md)', padding: 'var(--spacing-md)', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', background: 'none', cursor: 'pointer', color: 'var(--text-primary)', width: '100%', position: 'relative' }}
+          >
+            <i className="ph ph-chat-circle-dots" style={{ fontSize: '1.5rem', color: 'var(--accent-color)' }}></i>
+            <div style={{ flex: 1 }}>
+              <h4 style={{ fontWeight: 500 }}>Pedidos de Aconselhamento</h4>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{aconselhamentos.filter(a => !a.atendido).length} pendente{aconselhamentos.filter(a => !a.atendido).length !== 1 ? 's' : ''} · {aconselhamentos.length} no total</p>
+            </div>
+            {aconselhamentos.filter(a => !a.atendido).length > 0 && (
+              <div style={{ background: '#6d28d9', color: '#fff', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.85rem', flexShrink: 0 }}>
+                {aconselhamentos.filter(a => !a.atendido).length}
+              </div>
+            )}
+            <i className="ph ph-caret-right"></i>
+          </button>
+          <button
             onClick={() => setModalConfig(true)}
             className="event-list-item"
             style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: 'var(--spacing-md)', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', background: 'none', cursor: 'pointer', color: 'var(--text-primary)', width: '100%' }}
@@ -1074,6 +1667,19 @@ export default function Admin() {
             <div style={{ flex: 1 }}>
               <h4 style={{ fontWeight: 500 }}>Configurações da Igreja</h4>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Imagem, cultos, horários, endereço</p>
+            </div>
+            <i className="ph ph-caret-right"></i>
+          </button>
+
+          <button
+            onClick={() => setModalGaleria(true)}
+            className="event-list-item"
+            style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: 'var(--spacing-md)', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', background: 'none', cursor: 'pointer', color: 'var(--text-primary)', width: '100%' }}
+          >
+            <i className="ph ph-images" style={{ fontSize: '1.5rem', color: 'var(--accent-color)' }}></i>
+            <div style={{ flex: 1 }}>
+              <h4 style={{ fontWeight: 500 }}>Galeria & Temas</h4>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Fotos e categorias de eventos</p>
             </div>
             <i className="ph ph-caret-right"></i>
           </button>
@@ -1130,6 +1736,17 @@ export default function Admin() {
           contribs={contribs}
           onLimpar={() => setContribs([])}
         />
+      )}
+
+      {modalGaleria && (
+        <ModalGerenciarGaleria
+          onClose={() => setModalGaleria(false)}
+          onSaved={() => setToast('Galeria atualizada!')}
+        />
+      )}
+
+      {modalAconselhamento && (
+        <ModalAconselhamento onClose={() => setModalAconselhamento(false)} />
       )}
 
       {toast && <Toast message={toast} icon="ph-check-circle" type="success" onClose={() => setToast('')} duration={4000} />}

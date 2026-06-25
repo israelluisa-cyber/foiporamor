@@ -8,19 +8,20 @@ export const DEFAULT_CONFIG = {
   heroBg:      null, // base64 ou null (usa /hero_bg.png)
   youtubeLink: 'https://www.youtube.com/@IgrejaFoiPorAmorOficial/live',
   avisoHome:   'Reunião de Líderes na próxima segunda-feira às 19h30.',
+  pixKey:      'igrejafoiporamor@exemplo.com.br',
   whatsapp: {
     geracaoFogo: '5511999999001',
     larDePaz:    '5511999999002',
   },
   cultos: [
-    { id: 1, diaSemana: 2, hora: 19, min: 30, horaFim: 21, minFim: 0, nome: 'Curso de Teologia', ativo: true,  restrito: false },
-    { id: 2, diaSemana: 4, hora: 19, min: 30, horaFim: 21, minFim: 0, nome: 'Culto de Oração e Adoração',    ativo: true,  restrito: false },
-    { id: 3, diaSemana: 5, hora: 19, min: 30, horaFim: 21, minFim: 0, nome: 'Ensaio do Ministério de Louvor', ativo: true, restrito: true  },
-    { id: 4, diaSemana: 0, hora: 10, min:  0, horaFim: 12, minFim: 0, nome: 'Culto de Celebração',           ativo: true,  restrito: false },
+    { id: 1, diaSemana: 2, hora: 19, min: 30, horaFim: 21, minFim: 0, nome: 'Curso de Teologia',              ativo: true,  restrito: false, foto: null },
+    { id: 2, diaSemana: 4, hora: 19, min: 30, horaFim: 21, minFim: 0, nome: 'Culto de Oração e Adoração',     ativo: true,  restrito: false, foto: null },
+    { id: 3, diaSemana: 5, hora: 19, min: 30, horaFim: 21, minFim: 0, nome: 'Ensaio do Ministério de Louvor', ativo: true,  restrito: true,  foto: null },
+    { id: 4, diaSemana: 0, hora: 10, min:  0, horaFim: 12, minFim: 0, nome: 'Culto de Celebração',            ativo: true,  restrito: false, foto: null },
   ],
   obras: [
     { id: 'cancer',  nome: 'Casa de Crianças com Câncer', descricao: 'Visitamos e apoiamos famílias de crianças em tratamento oncológico, levando cuidado pastoral, amor e suporte emocional nos momentos mais difíceis.', icone: 'ph-heart', gradiente: 'linear-gradient(135deg, #7c3aed 0%, #db2777 100%)', foto: null },
-    { id: 'marmita', nome: 'Marmita no Centro de SP',     descricao: 'Todo sábado nossa equipe vai ao centro de São Paulo distribuir marmitas quentinhas e oração para moradores em situação de rua.', icone: 'ph-bowl-food', gradiente: 'linear-gradient(135deg, #ea580c 0%, #ca8a04 100%)', foto: null },
+    { id: 'marmita', nome: 'Marmita no Centro de SP',     descricao: 'Nossa equipe vai ao centro de São Paulo distribuir marmitas quentinhas e oração para moradores em situação de rua.', icone: 'ph-bowl-food', gradiente: 'linear-gradient(135deg, #ea580c 0%, #ca8a04 100%)', foto: null },
     { id: 'peniel',  nome: 'Casa Peniel',                  descricao: 'Lar de acolhimento e recuperação para homens em situação de vulnerabilidade social, oferecendo moradia, alimentação e restauração espiritual.', icone: 'ph-house-line', gradiente: 'linear-gradient(135deg, #0369a1 0%, #0f766e 100%)', foto: null },
     { id: 'festas',  nome: 'Dia das Crianças & Páscoa',   descricao: 'Nas datas comemorativas levamos alegria, presentes e o amor de Jesus a crianças em situação de vulnerabilidade social, criando memórias e transformando vidas.', icone: 'ph-smiley', gradiente: 'linear-gradient(135deg, #d97706 0%, #ec4899 100%)', foto: null },
   ],

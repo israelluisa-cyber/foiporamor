@@ -141,7 +141,7 @@ export default function Financeiro() {
                   boxShadow: '0 4px 14px rgba(0,0,0,0.3)',
                 }}
               >
-                <i className="ph ph-hands-coins"></i>
+                <i className="ph ph-hand-coins"></i>
                 Contribuir
               </button>
             </div>
@@ -153,7 +153,7 @@ export default function Financeiro() {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: 'var(--spacing-md)' }}>
             <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'linear-gradient(135deg, #7c3aed, #2563eb)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <i className="ph ph-qr-code" style={{ fontSize: '1.2rem', color: '#fff' }}></i>
+              <i className="ph ph-key" style={{ fontSize: '1.2rem', color: '#fff' }}></i>
             </div>
             <div>
               <h3 className="font-heading" style={{ fontSize: '1.05rem', margin: 0 }}>Faça sua Contribuição</h3>
@@ -164,7 +164,6 @@ export default function Financeiro() {
           <section className="glass-card" style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.2)' }}>
             <PixPanel
               tipo="Contribuição Geral"
-              quickAmounts={['60,00', '120,00']}
               toastText="Chave PIX copiada! Que Deus multiplique sua oferta."
               onSuccess={handlePixSuccess}
             />

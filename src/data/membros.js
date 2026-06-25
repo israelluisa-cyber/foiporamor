@@ -1,3 +1,5 @@
+import { supabase } from './supabase';
+
 export const MEMBROS_KEY = 'membros_data';
 
 export const DEFAULT_MEMBROS = [
@@ -20,4 +22,22 @@ export function loadMembros() {
 
 export function saveMembros(membros) {
   localStorage.setItem(MEMBROS_KEY, JSON.stringify(membros));
+  _syncMembrosToSupabase(membros);
+}
+
+async function _syncMembrosToSupabase(membros) {
+  try {
+    const rows = membros.map(m => ({
+      id: String(m.id),
+      nome: m.nome,
+      cargo: m.cargo || null,
+      celula: m.celula || null,
+      bairro: m.bairro || null,
+      foto: m.foto || null,
+      data_nascimento: m.dataNascimento || null,
+    }));
+    await supabase.from('membros').upsert(rows, { onConflict: 'id' });
+  } catch (e) {
+    console.warn('[Supabase] Erro ao salvar membros:', e.message);
+  }
 }

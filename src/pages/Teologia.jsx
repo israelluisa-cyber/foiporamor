@@ -102,7 +102,6 @@ export default function Teologia() {
             Realize o pagamento da mensalidade do ITEAP via PIX.
           </p>
           <PixPanel
-            quickAmounts={['50,00', '80,00', '100,00']}
             toastText="Chave PIX copiada! Aguarde a confirmação da secretaria."
           />
         </section>

@@ -1,7 +1,4 @@
-import { useState } from 'react';
 import Header from '../components/Header';
-import Toast from '../components/Toast';
-import { loadConfig } from '../data/config';
 
 const GRUPOS_PRINCIPAIS = [
   {
@@ -12,7 +9,6 @@ const GRUPOS_PRINCIPAIS = [
     cor: 'rgba(255,255,255,0.08)',
     corBorda: 'rgba(255,255,255,0.15)',
     corTexto: 'var(--text-primary)',
-    configKey: 'membros',
   },
   {
     id: 'obreiros',
@@ -22,7 +18,6 @@ const GRUPOS_PRINCIPAIS = [
     cor: 'rgba(251,146,60,0.12)',
     corBorda: 'rgba(251,146,60,0.35)',
     corTexto: '#fb923c',
-    configKey: 'obreiros',
   },
   {
     id: 'iteap',
@@ -32,7 +27,6 @@ const GRUPOS_PRINCIPAIS = [
     cor: 'rgba(99,102,241,0.12)',
     corBorda: 'rgba(99,102,241,0.35)',
     corTexto: '#818cf8',
-    configKey: 'iteap',
   },
   {
     id: 'jovens',
@@ -42,7 +36,6 @@ const GRUPOS_PRINCIPAIS = [
     cor: 'rgba(251,191,36,0.12)',
     corBorda: 'rgba(251,191,36,0.35)',
     corTexto: '#fbbf24',
-    configKey: 'jovens',
   },
 ];
 
@@ -55,7 +48,6 @@ const GRUPOS_ABERTOS = [
     cor: 'rgba(236,72,153,0.12)',
     corBorda: 'rgba(236,72,153,0.35)',
     corTexto: '#f472b6',
-    configKey: 'anas',
   },
   {
     id: 'louvor',
@@ -65,7 +57,6 @@ const GRUPOS_ABERTOS = [
     cor: 'rgba(52,211,153,0.12)',
     corBorda: 'rgba(52,211,153,0.35)',
     corTexto: '#34d399',
-    configKey: 'louvor',
   },
   {
     id: 'kids',
@@ -75,7 +66,6 @@ const GRUPOS_ABERTOS = [
     cor: 'rgba(251,191,36,0.12)',
     corBorda: 'rgba(251,191,36,0.35)',
     corTexto: '#fbbf24',
-    configKey: 'kids',
   },
   {
     id: 'evangelismo',
@@ -85,7 +75,6 @@ const GRUPOS_ABERTOS = [
     cor: 'rgba(251,146,60,0.12)',
     corBorda: 'rgba(251,146,60,0.35)',
     corTexto: '#fb923c',
-    configKey: 'evangelismo',
   },
   {
     id: 'musicos',
@@ -95,7 +84,6 @@ const GRUPOS_ABERTOS = [
     cor: 'rgba(99,102,241,0.12)',
     corBorda: 'rgba(99,102,241,0.35)',
     corTexto: '#818cf8',
-    configKey: 'musicos',
   },
   {
     id: 'bemvindo',
@@ -105,7 +93,6 @@ const GRUPOS_ABERTOS = [
     cor: 'rgba(52,211,153,0.12)',
     corBorda: 'rgba(52,211,153,0.35)',
     corTexto: '#34d399',
-    configKey: 'bemvindo',
   },
   {
     id: 'conselho',
@@ -115,7 +102,6 @@ const GRUPOS_ABERTOS = [
     cor: 'rgba(251,191,36,0.12)',
     corBorda: 'rgba(251,191,36,0.35)',
     corTexto: '#fbbf24',
-    configKey: 'conselho',
   },
   {
     id: 'professores',
@@ -125,7 +111,6 @@ const GRUPOS_ABERTOS = [
     cor: 'rgba(236,72,153,0.12)',
     corBorda: 'rgba(236,72,153,0.35)',
     corTexto: '#f472b6',
-    configKey: 'professores',
   },
   {
     id: 'midia',
@@ -135,42 +120,19 @@ const GRUPOS_ABERTOS = [
     cor: 'rgba(99,102,241,0.12)',
     corBorda: 'rgba(99,102,241,0.35)',
     corTexto: '#818cf8',
-    configKey: 'midia',
   },
 ];
 
-export default function Grupos() {
-  const [toast, setToast] = useState('');
-  const config = loadConfig();
-  const wa = config.whatsapp || {};
-
-  const handleWhatsApp = (grupo) => {
-    const numero = wa[grupo.configKey] || '';
-    if (!numero) {
-      setToast('Número não configurado. Acesse Admin > Configurações > WhatsApp.');
-      return;
-    }
-    const msg = encodeURIComponent(`Olá! Gostaria de entrar no grupo "${grupo.nome}". Podem me adicionar?`);
-    window.open(`https://wa.me/${numero}?text=${msg}`, '_blank');
-  };
-
-  const handleMaps = () => {
-    window.open(config.mapsLink || 'https://maps.google.com', '_blank');
-  };
-
-  const GrupoCard = ({ grupo, principal }) => (
-    <div
-      key={grupo.id}
-      style={{
-        display: 'flex', alignItems: 'center', gap: '14px',
-        padding: '14px 16px',
-        background: 'var(--bg-surface)',
-        border: '1px solid var(--border-color)',
-        borderRadius: 'var(--radius-md)',
-        marginBottom: '8px',
-      }}
-    >
-      {/* Ícone */}
+function GrupoCard({ grupo }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: '14px',
+      padding: '14px 16px',
+      background: 'var(--bg-surface)',
+      border: '1px solid var(--border-color)',
+      borderRadius: 'var(--radius-md)',
+      marginBottom: '8px',
+    }}>
       <div style={{
         width: '48px', height: '48px', borderRadius: '50%',
         background: grupo.cor, border: `1px solid ${grupo.corBorda}`,
@@ -179,71 +141,34 @@ export default function Grupos() {
         <i className={`ph ${grupo.icone}`} style={{ fontSize: '1.3rem', color: grupo.corTexto }}></i>
       </div>
 
-      {/* Info */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)', margin: 0, marginBottom: '2px' }}>
+        <p style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)', margin: '0 0 2px' }}>
           {grupo.nome}
         </p>
-        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.4 }}>
           {grupo.descricao}
         </p>
       </div>
-
-      {/* Botão */}
-      <button
-        onClick={() => handleWhatsApp(grupo)}
-        style={{
-          flexShrink: 0, width: '40px', height: '40px', borderRadius: '50%',
-          background: 'rgba(37,211,102,0.15)', border: '1px solid rgba(37,211,102,0.4)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          cursor: 'pointer',
-        }}
-        title="Entrar no grupo via WhatsApp"
-      >
-        <i className="ph ph-whatsapp-logo" style={{ fontSize: '1.2rem', color: '#25d366' }}></i>
-      </button>
     </div>
   );
+}
 
+export default function Grupos() {
   return (
     <div className="container" style={{ paddingBottom: 'var(--spacing-xl)' }}>
-      <Header title="Grupos & Células" backButton={true} />
+      <Header title="Grupos & Ministérios" backButton={true} />
 
       <main style={{ paddingTop: 'var(--spacing-md)' }}>
-
         <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: 'var(--spacing-lg)', lineHeight: 1.6 }}>
-          Faça parte de um grupo e cresça junto com a família IFPA.
+          Conheça os grupos e ministérios que fazem parte da família IFPA.
         </p>
 
-        {/* Endereço da Igreja */}
-        <section className="glass-card" style={{ marginBottom: 'var(--spacing-lg)', display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)' }}>
-          <div style={{ width: '48px', height: '48px', borderRadius: 'var(--radius-md)', background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <i className="ph ph-church" style={{ fontSize: '1.4rem', color: 'var(--accent-color)' }}></i>
-          </div>
-          <div style={{ flex: 1 }}>
-            <p style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>Igreja Foi Por Amor</p>
-            <p style={{ fontSize: '0.9rem', color: 'var(--text-primary)', marginBottom: '2px' }}>{config.endereco}</p>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{config.cidade}</p>
-          </div>
-          <button
-            onClick={handleMaps}
-            style={{ padding: '8px 14px', background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-full)', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '5px', whiteSpace: 'nowrap' }}
-          >
-            <i className="ph ph-map-pin"></i> Mapa
-          </button>
-        </section>
-
-        {/* Grupos Principais */}
         <h3 className="section-title" style={{ marginTop: 0 }}>Grupos da Igreja</h3>
-        {GRUPOS_PRINCIPAIS.map(g => <GrupoCard key={g.id} grupo={g} principal />)}
+        {GRUPOS_PRINCIPAIS.map(g => <GrupoCard key={g.id} grupo={g} />)}
 
-        {/* Grupos Abertos */}
-        <h3 className="section-title" style={{ marginTop: 'var(--spacing-lg)' }}>Grupos em que você pode entrar</h3>
+        <h3 className="section-title" style={{ marginTop: 'var(--spacing-lg)' }}>Ministérios</h3>
         {GRUPOS_ABERTOS.map(g => <GrupoCard key={g.id} grupo={g} />)}
-
       </main>
-
-      {toast && <Toast message={toast} icon="ph-info" type="info" onClose={() => setToast('')} />}
     </div>
   );
 }

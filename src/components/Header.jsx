@@ -135,11 +135,14 @@ export default function Header({ title, backButton = false, admin = false }) {
                 className="icon-btn"
                 aria-label="Notificações"
                 onClick={() => { setSinoAberto(o => !o); if (!sinoAberto) { setNotificacoes(loadNotificacoes()); } }}
-                style={{ position: 'relative' }}
+                style={{
+                  position: 'relative',
+                  ...(naoLidas > 0 && { color: 'var(--accent-color)' }),
+                }}
               >
-                <i className="ph ph-bell"></i>
+                <i className={`ph ${naoLidas > 0 ? 'ph-bell-ringing bell-ring' : 'ph-bell'}`}></i>
                 {naoLidas > 0 && (
-                  <span style={{ position: 'absolute', top: '4px', right: '4px', width: '8px', height: '8px', borderRadius: '50%', background: '#ef4444', border: '1.5px solid var(--bg-color)' }} />
+                  <span className="badge-notify" style={{ position: 'absolute', top: '4px', right: '4px', width: '8px', height: '8px', borderRadius: '50%', background: '#ef4444', border: '1.5px solid var(--bg-color)' }} />
                 )}
               </button>
 

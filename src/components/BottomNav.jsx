@@ -3,24 +3,27 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { getUnreadCount } from '../pages/Avisos';
 
 const MAIS_ITEMS = [
-  { label: 'Oração',         icon: 'ph-hands-praying',     to: '/oracao' },
-  { label: 'Contribuir',     icon: 'ph-hands-coins',       to: '/contribuir' },
-  { label: 'Agenda',         icon: 'ph-calendar-check',    to: '/programacao' },
-  { label: 'Teologia',       icon: 'ph-book-open-text',    to: '/teologia' },
-  { label: 'Perfil',         icon: 'ph-user-circle',       to: '/perfil' },
-  { label: 'Grupos',         icon: 'ph-users',             to: '/grupos' },
-  { label: 'Devocional',     icon: 'ph-sun-horizon',       to: '/devocional' },
-  { label: 'Bíblia',         icon: 'ph-book-bookmark',     to: '/biblia' },
-  { label: 'Diretório',      icon: 'ph-address-book',      to: '/diretorio' },
-  { label: 'Testemunhos',    icon: 'ph-star',              to: '/testemunhos' },
-  { label: 'Voluntários',    icon: 'ph-heart',             to: '/voluntarios' },
-  { label: 'Galeria',        icon: 'ph-images',            to: '/galeria' },
-  { label: 'Aconselhamento', icon: 'ph-chat-circle-dots',  to: '/aconselhamento' },
-  { label: 'Check-in',       icon: 'ph-baby',              to: '/checkin' },
+  { label: 'Oração',         icon: 'ph-hands-praying',       to: '/oracao' },
+  { label: 'Contribuir',     icon: 'ph-hand-coins',          to: '/contribuir' },
+  { label: 'Agenda',         icon: 'ph-calendar-check',      to: '/programacao' },
+  { label: 'Teologia',       icon: 'ph-book-open-text',      to: '/teologia' },
+  { label: 'Perfil',         icon: 'ph-user-circle',         to: '/perfil',   apenasLogado: true },
+  { label: 'Grupos',         icon: 'ph-users',               to: '/grupos' },
+  { label: 'Devocional',     icon: 'ph-sun-horizon',         to: '/devocional' },
+  { label: 'Bíblia',         icon: 'ph-book-bookmark',       to: '/biblia' },
+  { label: 'Testemunhos',    icon: 'ph-star',                to: '/testemunhos' },
+  { label: 'Voluntários',    icon: 'ph-heart',               to: '/voluntarios' },
+  { label: 'Galeria',        icon: 'ph-images',              to: '/galeria' },
+  { label: 'Aconselhamento', icon: 'ph-chat-circle-dots',    to: '/aconselhamento' },
   { label: 'Carteira',       icon: 'ph-identification-card', to: '/carteira' },
-  { label: 'Buscar',         icon: 'ph-magnifying-glass',  to: '/busca' },
-  { label: 'Admin',          icon: 'ph-shield-check',      to: '/admin' },
+  { label: 'Buscar',         icon: 'ph-magnifying-glass',    to: '/busca' },
+  { label: 'Admin',          icon: 'ph-shield-check',        to: '/admin' },
 ];
+
+function isLogado() {
+  try { return !!JSON.parse(sessionStorage.getItem('user_session')); }
+  catch { return false; }
+}
 
 export default function BottomNav() {
   const location = useLocation();
@@ -28,10 +31,12 @@ export default function BottomNav() {
   const path = location.pathname;
   const [mais, setMais] = useState(false);
   const unread = getUnreadCount();
+  const logado = isLogado();
+  const maisItemsFiltrados = MAIS_ITEMS.filter(item => !item.apenasLogado || logado);
 
   if (path === '/admin') {
     return (
-      <nav className="bottom-nav">
+      <nav className="bottom-nav" translate="no">
         <Link to="/" className="nav-item">
           <i className="ph ph-house nav-icon"></i>
           <span>Início</span>
@@ -39,10 +44,6 @@ export default function BottomNav() {
         <Link to="/admin" className="nav-item active">
           <i className="ph ph-chart-pie-slice nav-icon"></i>
           <span>Dashboard</span>
-        </Link>
-        <Link to="/diretorio" className="nav-item">
-          <i className="ph ph-address-book nav-icon"></i>
-          <span>Membros</span>
         </Link>
       </nav>
     );
@@ -69,6 +70,7 @@ export default function BottomNav() {
         >
           <div
             onClick={e => e.stopPropagation()}
+            translate="no"
             style={{
               width: '100%', maxWidth: '600px', margin: '0 auto',
               background: '#141414', borderTop: '1px solid #333',
@@ -79,7 +81,7 @@ export default function BottomNav() {
             <div style={{ width: '36px', height: '4px', background: '#333', borderRadius: '2px', margin: '0 auto 20px' }} />
             <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, marginBottom: '16px' }}>Todos os Recursos</p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
-              {MAIS_ITEMS.map(item => (
+              {maisItemsFiltrados.map(item => (
                 <button
                   key={item.to}
                   onClick={() => { setMais(false); navigate(item.to); }}
@@ -102,7 +104,7 @@ export default function BottomNav() {
         </div>
       )}
 
-      <nav className="bottom-nav">
+      <nav className="bottom-nav" translate="no">
         {navItems.map(item => (
           <Link key={item.to} to={item.to} className={`nav-item ${path === item.to ? 'active' : ''}`} style={{ position: 'relative' }}>
             <i className={`ph ${item.icon} nav-icon`}></i>

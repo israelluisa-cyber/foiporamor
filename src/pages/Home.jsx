@@ -193,6 +193,7 @@ export default function Home() {
     periodo:   `${formatHora(c.hora, c.min)} às ${formatHora(c.horaFim, c.minFim)}`,
     diaNome:   DIAS_SEMANA_NOME[c.diaSemana],
     gradiente: cultoGradiente(c.nome),
+    foto:      c.foto || null,
   }));
 
   const logado          = !!sessionStorage.getItem('user_session');
@@ -390,14 +391,17 @@ export default function Home() {
                   const ev = eventosFiltrados[bannerIdx];
                   return (
                     <div style={{ borderRadius: 'var(--radius-lg)', overflow: 'hidden', border: '1px solid var(--border-color)', boxShadow: '0 4px 20px rgba(0,0,0,0.3)' }}>
-                      {/* Banner gradiente */}
-                      <div style={{ position: 'relative', height: '110px', background: ev.gradiente, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', pointerEvents: 'none' }} />
-                        <div style={{ position: 'absolute', bottom: '-15px', left: '10px', width: '70px', height: '70px', borderRadius: '50%', background: 'rgba(255,255,255,0.04)', pointerEvents: 'none' }} />
-                        <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(255,255,255,0.15)', border: '2px solid rgba(255,255,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}>
-                          <i className={`ph ${ev.icon}`} style={{ fontSize: '2rem', color: '#fff' }}></i>
-                        </div>
-                        <span style={{ position: 'absolute', top: '10px', left: '14px', fontSize: '0.65rem', fontWeight: 700, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '1.5px' }}>{ev.dia}</span>
+                      {/* Banner */}
+                      <div style={{ position: 'relative', height: '110px', background: ev.gradiente, backgroundImage: ev.foto ? `url(${ev.foto})` : undefined, backgroundSize: 'cover', backgroundPosition: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {ev.foto && <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.38)' }} />}
+                        {!ev.foto && <>
+                          <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', pointerEvents: 'none' }} />
+                          <div style={{ position: 'absolute', bottom: '-15px', left: '10px', width: '70px', height: '70px', borderRadius: '50%', background: 'rgba(255,255,255,0.04)', pointerEvents: 'none' }} />
+                          <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(255,255,255,0.15)', border: '2px solid rgba(255,255,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}>
+                            <i className={`ph ${ev.icon}`} style={{ fontSize: '2rem', color: '#fff' }}></i>
+                          </div>
+                        </>}
+                        <span style={{ position: 'absolute', top: '10px', left: '14px', fontSize: '0.65rem', fontWeight: 700, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '1.5px', zIndex: 1 }}>{ev.dia}</span>
                       </div>
                       {/* Info */}
                       <div style={{ background: 'var(--bg-surface)', padding: '14px 16px' }}>
@@ -501,6 +505,25 @@ export default function Home() {
             </div>
           </section>
         )}
+
+        {/* Localização */}
+        <h3 className="section-title">Onde nos encontrar</h3>
+        <section className="glass-card" style={{ marginBottom: 'var(--spacing-lg)', display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)' }}>
+          <div style={{ width: '48px', height: '48px', borderRadius: 'var(--radius-md)', background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <i className="ph ph-map-pin" style={{ fontSize: '1.4rem', color: 'var(--accent-color)' }}></i>
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>{config.nomeIgreja}</p>
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-primary)', marginBottom: '2px' }}>{config.endereco}</p>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{config.cidade}</p>
+          </div>
+          <button
+            onClick={() => window.open(config.mapsLink || 'https://maps.google.com', '_blank')}
+            style={{ padding: '8px 14px', background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-full)', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '5px', whiteSpace: 'nowrap', flexShrink: 0 }}
+          >
+            <i className="ph ph-navigation-arrow"></i> Como chegar
+          </button>
+        </section>
 
         {/* Redes Sociais */}
         <div style={{ marginTop: 'var(--spacing-lg)' }}>

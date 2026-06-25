@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import BottomNav from './components/BottomNav';
+import ScrollToTop from './components/ScrollToTop';
 
 import Home        from './pages/Home';
 import Culto       from './pages/Culto';
@@ -15,10 +16,8 @@ import Usuario     from './pages/Usuario';
 import Avisos      from './pages/Avisos';
 import Devocional  from './pages/Devocional';
 import Biblia      from './pages/Biblia';
-import Diretorio   from './pages/Diretorio';
 import Aconselhamento from './pages/Aconselhamento';
 import Testemunhos from './pages/Testemunhos';
-import Checkin     from './pages/Checkin';
 import Galeria     from './pages/Galeria';
 import Voluntarios from './pages/Voluntarios';
 import Carteira    from './pages/Carteira';
@@ -28,6 +27,7 @@ import Contribuir  from './pages/Contribuir';
 function App() {
   return (
     <Router>
+      <ScrollToTop />
       <Routes>
         <Route path="/"              element={<Home />} />
         <Route path="/culto"         element={<Culto />} />
@@ -43,10 +43,8 @@ function App() {
         <Route path="/avisos"        element={<Avisos />} />
         <Route path="/devocional"    element={<Devocional />} />
         <Route path="/biblia"        element={<Biblia />} />
-        <Route path="/diretorio"     element={<Diretorio />} />
         <Route path="/aconselhamento" element={<Aconselhamento />} />
         <Route path="/testemunhos"   element={<Testemunhos />} />
-        <Route path="/checkin"       element={<Checkin />} />
         <Route path="/galeria"       element={<Galeria />} />
         <Route path="/voluntarios"   element={<Voluntarios />} />
         <Route path="/carteira"      element={<Carteira />} />

@@ -3,6 +3,7 @@ import Header from '../components/Header';
 import PixPanel from '../components/PixPanel';
 import { loadConfig } from '../data/config';
 
+
 export default function Contribuir() {
   const config = loadConfig();
   const obras  = config.obras || [];
@@ -69,7 +70,7 @@ export default function Contribuir() {
                 onClick={() => handleContribuir(obra)}
                 style={{ width: '100%', padding: '12px', background: obra.gradiente, border: 'none', borderRadius: 'var(--radius-md)', color: '#fff', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
               >
-                <i className="ph ph-hands-coins"></i>
+                <i className="ph ph-hand-coins"></i>
                 Contribuir para esta causa
               </button>
             </div>
@@ -80,7 +81,7 @@ export default function Contribuir() {
         <div ref={pixRef} style={{ scrollMarginTop: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: 'var(--spacing-md)' }}>
             <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <i className="ph ph-qr-code" style={{ fontSize: '1.2rem', color: 'var(--accent-color)' }}></i>
+              <i className="ph ph-key" style={{ fontSize: '1.2rem', color: 'var(--accent-color)' }}></i>
             </div>
             <div>
               <h3 className="font-heading" style={{ fontSize: '1rem', margin: 0 }}>
@@ -112,7 +113,6 @@ export default function Contribuir() {
           <section className="glass-card">
             <PixPanel
               tipo={obraSelecionada ? obraSelecionada.nome : 'Contribuição Geral'}
-              quickAmounts={['30,00', '50,00', '100,00']}
               toastText="Chave PIX copiada! Que Deus multiplique sua oferta."
             />
           </section>
