@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import Header from '../components/Header';
 import PixPanel from '../components/PixPanel';
 import { loadConfig } from '../data/config';
-import { loadContribuicoes, saveContribuicao } from '../data/contribuicoes';
+import { saveContribuicao } from '../data/contribuicoes';
 
 function parseBRL(str) {
   return parseFloat((str || '').replace('R$', '').replace(/\./g, '').replace(',', '.').trim()) || 0;

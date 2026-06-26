@@ -3,14 +3,29 @@ import { useNavigate, useLocation } from 'react-router-dom';
 
 function getSaudacao() {
   const h = new Date().getHours();
-  if (h >= 6 && h < 12) return { periodo: 'Bom dia',    periodo2: 'dia'   };
-  if (h >= 12 && h < 18) return { periodo: 'Boa tarde', periodo2: 'dia'   };
-  return                         { periodo: 'Boa noite', periodo2: 'noite' };
+  if (h >= 6 && h < 12) return { periodo: 'Bom dia',    periodo2: 'seu dia'   };
+  if (h >= 12 && h < 18) return { periodo: 'Boa tarde', periodo2: 'sua tarde' };
+  return                         { periodo: 'Boa noite', periodo2: 'sua noite' };
 }
 
 function getSession() {
   try { return JSON.parse(sessionStorage.getItem('user_session')); }
   catch { return null; }
+}
+
+function getFotoMembro(session) {
+  if (!session) return null;
+  try {
+    const cadastros = JSON.parse(localStorage.getItem('cadastros_pendentes')) || [];
+    return cadastros.find(c => c.id === session.id)?.foto || null;
+  } catch { return null; }
+}
+
+function isAniversario(dataNascimento) {
+  if (!dataNascimento) return false;
+  const hoje = new Date();
+  const [, mes, dia] = dataNascimento.split('-').map(Number);
+  return hoje.getDate() === dia && hoje.getMonth() + 1 === mes;
 }
 
 function loadNotificacoes() {
@@ -26,6 +41,9 @@ export default function Header({ title, backButton = false, admin = false }) {
   const location = useLocation();
   const { periodo, periodo2 } = getSaudacao();
   const session = getSession();
+
+  const aniversario  = session ? isAniversario(session.dataNascimento) : false;
+  const fotoMembro   = getFotoMembro(session);
 
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('theme');
@@ -91,10 +109,10 @@ export default function Header({ title, backButton = false, admin = false }) {
               {session ? (
                 <>
                   <p className="text-secondary" style={{ fontSize: '0.75rem', margin: 0, fontWeight: 600, color: 'var(--text-primary)' }}>
-                    {periodo}, {session.nome?.split(' ')[0]}!
+                    {aniversario ? `Feliz Aniversário, ${session.nome?.split(' ')[0]}! 🎂` : `${periodo}, ${session.nome?.split(' ')[0]}!`}
                   </p>
                   <p style={{ fontSize: '0.7rem', margin: 0, color: 'var(--text-muted)' }}>
-                    Que Deus abençoe seu {periodo2}!
+                    {aniversario ? 'Que Deus abençoe sua vida!' : `Que Deus abençoe ${periodo2}!`}
                   </p>
                 </>
               ) : (
@@ -103,7 +121,7 @@ export default function Header({ title, backButton = false, admin = false }) {
                     {periodo}!
                   </p>
                   <p style={{ fontSize: '0.7rem', margin: 0, color: 'var(--text-muted)' }}>
-                    Que Deus abençoe seu {periodo2}!
+                    Que Deus abençoe {periodo2}!
                   </p>
                 </>
               )}
@@ -191,8 +209,13 @@ export default function Header({ title, backButton = false, admin = false }) {
               onClick={() => navigate('/usuario')}
               className="icon-btn"
               aria-label="Usuário"
+              style={{ padding: 0, overflow: 'hidden' }}
             >
-              <i className="ph ph-user-circle"></i>
+              {fotoMembro ? (
+                <img src={fotoMembro} alt="Perfil" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'var(--radius-full)' }} />
+              ) : (
+                <i className="ph ph-user-circle"></i>
+              )}
             </button>
           </div>
         )}

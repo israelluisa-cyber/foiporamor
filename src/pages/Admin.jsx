@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Header from '../components/Header';
 import Toast from '../components/Toast';
 import { loadMembros, saveMembros } from '../data/membros';
 import { loadConfig, saveConfig, DIAS_SEMANA, formatHora } from '../data/config';
 import { loadContribuicoes, clearContribuicoes, totalContribuicoes, totalPorObra } from '../data/contribuicoes';
 import { MINISTERIOS, loadVagas, saveVagas, VAGAS_KEY } from '../data/vagas';
+import { EVANGELISMO_KEY, loadSaidas, saveSaidas, SAIDAS_DEFAULT } from '../data/evangelismo';
+import { loadTeologia, saveTeologia, TEOLOGIA_DEFAULT } from '../data/teologia';
 
 const ADMIN_PIN = '1234';
 const CADASTROS_KEY = 'cadastros_pendentes';
@@ -42,6 +44,7 @@ function ModalGerenciarCadastros({ isOpen, onClose, cadastros, setCadastros, mem
       cargo: 'Membro',
       celula: cadastro.celula,
       bairro: cadastro.bairro,
+      dataNascimento: cadastro.dataNascimento || null,
       foto: null,
     };
 
@@ -624,6 +627,31 @@ function PinGate({ onAuthenticated }) {
 function ModalConfiguracoes({ onClose, onSaved }) {
   const [cfg, setCfg] = useState(loadConfig);
   const [heroBgPreview, setHeroBgPreview] = useState(loadConfig().heroBg);
+  const [heroBgPosition, setHeroBgPosition] = useState(loadConfig().heroBgPosition || '50% 50%');
+  const [isDraggingHero, setIsDraggingHero] = useState(false);
+  const heroBgRef = useRef(null);
+
+  function parseHeroPos(pos) {
+    const KW = { left: 0, center: 50, right: 100, top: 0, bottom: 100 };
+    const parts = (pos || '50% 50%').trim().split(/\s+/);
+    if (parts.length === 1) return [50, 50];
+    const x = parts[0].endsWith('%') ? parseFloat(parts[0]) : (KW[parts[0]] ?? 50);
+    const y = parts[1].endsWith('%') ? parseFloat(parts[1]) : (KW[parts[1]] ?? 50);
+    return [x, y];
+  }
+
+  function updateHeroPos(e) {
+    const el = heroBgRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    const x = Math.min(100, Math.max(0, Math.round(((clientX - rect.left) / rect.width) * 100)));
+    const y = Math.min(100, Math.max(0, Math.round(((clientY - rect.top) / rect.height) * 100)));
+    const pos = `${x}% ${y}%`;
+    setHeroBgPosition(pos);
+    setCfg(c => ({ ...c, heroBgPosition: pos }));
+  }
   const [secao, setSecao] = useState('identidade');
   const [vagas, setVagas] = useState(loadVagas);
   const [novaVaga, setNovaVaga] = useState({ ministerio: MINISTERIOS[0].nome, data: '', horario: '', vagas: 4 });
@@ -794,11 +822,40 @@ function ModalConfiguracoes({ onClose, onSaved }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
               <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0 }}>Imagem de fundo do card principal da Home.</p>
 
-              {/* Preview */}
-              <div style={{ width: '100%', height: '160px', borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--border-color)', position: 'relative', background: '#111' }}>
-                <div style={{ position: 'absolute', inset: 0, backgroundImage: `url(${heroBgPreview || '/hero_bg.png'})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
-                <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>Preview do Hero</span>
+              {/* Preview interativo — arraste para posicionar */}
+              <div>
+                <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                  Posição da imagem <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>— clique ou arraste para ajustar</span>
+                </label>
+                <div
+                  ref={heroBgRef}
+                  onMouseDown={e => { setIsDraggingHero(true); updateHeroPos(e); }}
+                  onMouseMove={e => { if (isDraggingHero) updateHeroPos(e); }}
+                  onMouseUp={() => setIsDraggingHero(false)}
+                  onMouseLeave={() => setIsDraggingHero(false)}
+                  onTouchStart={e => { setIsDraggingHero(true); updateHeroPos(e); }}
+                  onTouchMove={e => { e.preventDefault(); updateHeroPos(e); }}
+                  onTouchEnd={() => setIsDraggingHero(false)}
+                  style={{ width: '100%', height: '180px', borderRadius: 'var(--radius-md)', overflow: 'hidden', border: `2px solid ${isDraggingHero ? 'var(--accent-color)' : 'var(--border-color)'}`, position: 'relative', background: '#111', cursor: 'crosshair', userSelect: 'none', transition: 'border-color 0.2s' }}
+                >
+                  <div style={{ position: 'absolute', inset: 0, backgroundImage: `url(${heroBgPreview || '/hero_bg.png'})`, backgroundSize: 'cover', backgroundPosition: heroBgPosition }} />
+
+                  {/* Marcador do ponto focal */}
+                  {(() => {
+                    const [px, py] = parseHeroPos(heroBgPosition);
+                    return (
+                      <div style={{ position: 'absolute', left: `${px}%`, top: `${py}%`, transform: 'translate(-50%, -50%)', pointerEvents: 'none', zIndex: 2 }}>
+                        <div style={{ width: '22px', height: '22px', borderRadius: '50%', border: '2.5px solid #fff', boxShadow: '0 0 0 1.5px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.4)', background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(2px)' }} />
+                      </div>
+                    );
+                  })()}
+
+                  {/* Dica */}
+                  {!isDraggingHero && (
+                    <div style={{ position: 'absolute', bottom: '8px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)', padding: '4px 10px', borderRadius: 'var(--radius-full)', pointerEvents: 'none' }}>
+                      <span style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.8)', whiteSpace: 'nowrap' }}>Arraste para reposicionar</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1272,247 +1329,214 @@ function ModalComunicado({ onClose, onSent }) {
   );
 }
 
-// ─── Galeria helpers ──────────────────────────────────────────
-const GALERIA_KEY = 'galeria_fotos';
-const TEMAS_KEY   = 'galeria_temas';
 
-const TEMAS_DEFAULT = ['Cultos', 'Eventos', 'Retiros', 'Missões'];
+/* ── Modal ITEAP ─────────────────────────────────────────────────── */
+function ModalITEAP({ onClose, onSaved }) {
+  const [data, setData] = useState(() => loadTeologia());
+  const [novoModulo, setNovoModulo] = useState({ nome: '', totalAulas: '' });
+  const inputSt = { width: '100%', padding: '10px', background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', color: 'var(--text-primary)', fontFamily: 'var(--font-body)', boxSizing: 'border-box', outline: 'none' };
 
-function loadGaleria() {
-  try { return JSON.parse(localStorage.getItem(GALERIA_KEY)) || []; } catch { return []; }
-}
-function saveGaleria(fotos) { localStorage.setItem(GALERIA_KEY, JSON.stringify(fotos)); }
+  const set = k => e => setData(d => ({ ...d, [k]: e.target.value }));
 
-function loadTemas() {
-  try { return JSON.parse(localStorage.getItem(TEMAS_KEY)) || TEMAS_DEFAULT; } catch { return TEMAS_DEFAULT; }
-}
-function saveTemas(temas) { localStorage.setItem(TEMAS_KEY, JSON.stringify(temas)); }
-
-function comprimirFotoGaleria(file, cb) {
-  const reader = new FileReader();
-  reader.onload = ev => {
-    const img = new Image();
-    img.onload = () => {
-      const MAX = 900;
-      const ratio = Math.min(MAX / img.width, MAX / img.height, 1);
-      const canvas = document.createElement('canvas');
-      canvas.width  = img.width  * ratio;
-      canvas.height = img.height * ratio;
-      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-      cb(canvas.toDataURL('image/jpeg', 0.78));
-    };
-    img.src = ev.target.result;
-  };
-  reader.readAsDataURL(file);
-}
-
-// ─── Modal Galeria ─────────────────────────────────────────────
-function ModalGerenciarGaleria({ onClose, onSaved }) {
-  const [aba, setAba]         = useState('fotos');
-  const [fotos, setFotos]     = useState(loadGaleria);
-  const [temas, setTemas]     = useState(loadTemas);
-  const [novoTema, setNovoTema] = useState('');
-  const [form, setForm]       = useState({ titulo: '', categoria: '', data: '', img: null });
-  const [preview, setPreview] = useState(null);
-  const [adicionando, setAdicionando] = useState(false);
-
-  const set = campo => e => setForm(f => ({ ...f, [campo]: e.target.value }));
-
-  const handleFoto = e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    comprimirFotoGaleria(file, b64 => { setPreview(b64); setForm(f => ({ ...f, img: b64 })); });
+  const handleAddModulo = () => {
+    const nome = novoModulo.nome.trim();
+    const total = parseInt(novoModulo.totalAulas);
+    if (!nome || isNaN(total) || total < 1) return;
+    const mod = { id: Date.now(), nome, totalAulas: total };
+    setData(d => ({ ...d, modulos: [...d.modulos, mod] }));
+    setNovoModulo({ nome: '', totalAulas: '' });
   };
 
-  const handleSalvarFoto = () => {
-    if (!form.titulo.trim() || !form.categoria || !form.img) {
-      alert('Preencha título, tema e selecione uma foto.');
-      return;
-    }
-    const novas = [{ id: Date.now(), ...form }, ...fotos];
-    setFotos(novas);
-    saveGaleria(novas);
-    setForm({ titulo: '', categoria: '', data: '', img: null });
-    setPreview(null);
-    setAdicionando(false);
-    onSaved?.();
+  const handleDeleteModulo = id => {
+    setData(d => {
+      const modulos = d.modulos.filter(m => m.id !== id);
+      const idxAtual = Math.min(d.moduloAtualIdx, Math.max(0, modulos.length - 1));
+      return { ...d, modulos, moduloAtualIdx: idxAtual };
+    });
   };
 
-  const handleExcluirFoto = id => {
-    const novas = fotos.filter(f => f.id !== id);
-    setFotos(novas);
-    saveGaleria(novas);
+  const handleSalvar = () => {
+    saveTeologia(data);
+    onSaved();
+    onClose();
   };
 
-  const handleAddTema = () => {
-    const t = novoTema.trim();
-    if (!t || temas.includes(t)) return;
-    const novos = [...temas, t];
-    setTemas(novos);
-    saveTemas(novos);
-    setNovoTema('');
-  };
-
-  const handleDeleteTema = t => {
-    const novos = temas.filter(x => x !== t);
-    setTemas(novos);
-    saveTemas(novos);
-  };
-
-  const inputSt = { width: '100%', background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', padding: '11px 14px', borderRadius: 'var(--radius-md)', fontFamily: 'var(--font-body)', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' };
+  const moduloAtual = data.modulos[data.moduloAtualIdx];
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}>
-      <div style={{ background: 'var(--bg-color)', borderRadius: 'var(--radius-lg)', width: '100%', maxWidth: '520px', maxHeight: '92vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+      <div style={{ background: 'var(--bg-color)', borderRadius: 'var(--radius-lg)', width: '100%', maxWidth: '520px', maxHeight: '90vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
 
-        {/* Header */}
         <div style={{ padding: '18px 20px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3 style={{ margin: 0, fontFamily: 'var(--font-heading)' }}>Galeria & Temas</h3>
+          <h3 style={{ margin: 0, fontFamily: 'var(--font-heading)' }}>Gerenciar ITEAP</h3>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: '1.3rem', cursor: 'pointer' }}>
             <i className="ph ph-x"></i>
           </button>
         </div>
 
-        {/* Abas */}
-        <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)' }}>
-          {[['fotos', 'ph-images', 'Fotos'], ['temas', 'ph-tag', 'Temas']].map(([key, icon, label]) => (
-            <button
-              key={key}
-              onClick={() => { setAba(key); setAdicionando(false); }}
-              style={{ flex: 1, padding: '12px', background: 'none', border: 'none', borderBottom: aba === key ? '2px solid var(--accent-color)' : '2px solid transparent', color: aba === key ? 'var(--accent-color)' : 'var(--text-secondary)', fontWeight: aba === key ? 700 : 400, fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-            >
-              <i className={`ph ${icon}`}></i> {label}
-            </button>
+        <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+
+          {/* Informações gerais */}
+          <div>
+            <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Professor / Instrutor</label>
+            <input style={inputSt} value={data.professor} onChange={set('professor')} placeholder="Nome do professor" />
+          </div>
+          <div>
+            <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Descrição</label>
+            <input style={inputSt} value={data.descricao} onChange={set('descricao')} placeholder="Ex: Instituto Teológico Amor e Palavra" />
+          </div>
+
+          {/* Módulo atual e progresso */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            <div>
+              <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Módulo Atual</label>
+              <select style={{ ...inputSt, appearance: 'none' }} value={data.moduloAtualIdx} onChange={e => setData(d => ({ ...d, moduloAtualIdx: parseInt(e.target.value), progressoAulas: 0 }))}>
+                {data.modulos.map((m, i) => <option key={m.id} value={i}>{m.nome}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                Aulas Concluídas {moduloAtual ? `(de ${moduloAtual.totalAulas})` : ''}
+              </label>
+              <input style={inputSt} type="number" min="0" max={moduloAtual?.totalAulas || 99} value={data.progressoAulas} onChange={e => setData(d => ({ ...d, progressoAulas: parseInt(e.target.value) || 0 }))} />
+            </div>
+          </div>
+
+          {/* Lista de módulos */}
+          <div>
+            <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '10px' }}>Módulos do Curso</label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+              {data.modulos.map((m, i) => (
+                <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: 'var(--bg-surface-elevated)', border: `1px solid ${i === data.moduloAtualIdx ? 'var(--accent-color)' : 'var(--border-color)'}`, borderRadius: 'var(--radius-md)' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', width: '20px', flexShrink: 0 }}>{i + 1}</span>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: '0.9rem', fontWeight: 600, margin: 0 }}>{m.nome}</p>
+                    <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: 0 }}>{m.totalAulas} aulas</p>
+                  </div>
+                  <button onClick={() => handleDeleteModulo(m.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '1rem', padding: '2px' }}>
+                    <i className="ph ph-trash"></i>
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* Adicionar módulo */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 40px', gap: '8px', alignItems: 'flex-end' }}>
+              <div>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Nome do módulo</label>
+                <input style={inputSt} placeholder="Ex: Cristologia" value={novoModulo.nome} onChange={e => setNovoModulo(n => ({ ...n, nome: e.target.value }))} onKeyDown={e => e.key === 'Enter' && handleAddModulo()} />
+              </div>
+              <div>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Nº aulas</label>
+                <input style={inputSt} type="number" min="1" placeholder="10" value={novoModulo.totalAulas} onChange={e => setNovoModulo(n => ({ ...n, totalAulas: e.target.value }))} onKeyDown={e => e.key === 'Enter' && handleAddModulo()} />
+              </div>
+              <button onClick={handleAddModulo} style={{ height: '40px', background: 'var(--accent-color)', border: 'none', borderRadius: 'var(--radius-md)', color: 'var(--bg-color)', fontWeight: 700, cursor: 'pointer', fontSize: '1.1rem' }}>
+                <i className="ph ph-plus"></i>
+              </button>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '10px', paddingTop: '4px' }}>
+            <button onClick={onClose} style={{ flex: 1, padding: '11px', background: 'transparent', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 600 }}>Cancelar</button>
+            <button onClick={handleSalvar} style={{ flex: 1, padding: '11px', background: 'var(--accent-color)', border: 'none', borderRadius: 'var(--radius-md)', color: 'var(--bg-color)', cursor: 'pointer', fontWeight: 700 }}>Salvar</button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Modal Evangelismo ──────────────────────────────────────────── */
+const DIAS_SEMANA_NOME = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+
+function ModalEvangelismo({ onClose, onSaved }) {
+  const [saidas, setSaidas] = useState(() => loadSaidas());
+  const [form, setForm] = useState({ titulo: '', data: '', horario: '', pontoEncontro: '', local: '', lider: '', descricao: '', vagas: 20 });
+
+  const set = (campo, valor) => setForm(f => ({ ...f, [campo]: valor }));
+
+  const inputSt = {
+    width: '100%', background: 'var(--bg-surface-elevated)',
+    border: '1px solid var(--border-color)', color: 'var(--text-primary)',
+    padding: '11px 14px', borderRadius: 'var(--radius-md)',
+    fontFamily: 'var(--font-body)', fontSize: '0.9rem', outline: 'none',
+  };
+
+  const handleAdicionar = () => {
+    if (!form.titulo.trim() || !form.data || !form.horario) return;
+    const [ano, mes, dia] = form.data.split('-');
+    const dataObj = new Date(Number(ano), Number(mes) - 1, Number(dia));
+    const nova = {
+      ...form,
+      id: Date.now(),
+      diaSemana: DIAS_SEMANA_NOME[dataObj.getDay()],
+      data: `${dia}/${mes}/${ano}`,
+      vagas: Number(form.vagas),
+    };
+    setSaidas(s => [...s, nova]);
+    setForm({ titulo: '', data: '', horario: '', pontoEncontro: '', local: '', lider: '', descricao: '', vagas: 20 });
+  };
+
+  const handleSalvar = () => {
+    saveSaidas(saidas);
+    onSaved();
+    onClose();
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'flex-end', zIndex: 1000 }}>
+      <div style={{ background: 'var(--bg-color)', borderRadius: 'var(--radius-lg) var(--radius-lg) 0 0', width: '100%', maxHeight: '90vh', overflowY: 'auto', padding: 'var(--spacing-lg)' }}>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-lg)' }}>
+          <h3 className="font-heading" style={{ fontSize: '1.1rem' }}>Saídas de Evangelismo</h3>
+          <button onClick={onClose} className="icon-btn"><i className="ph ph-x"></i></button>
+        </div>
+
+        {/* Formulário nova saída */}
+        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: 'var(--spacing-md)', marginBottom: 'var(--spacing-lg)' }}>
+          <p style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '12px' }}>Nova Saída</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <input style={inputSt} placeholder="Título *" value={form.titulo} onChange={e => set('titulo', e.target.value)} />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <input type="date" style={inputSt} value={form.data} onChange={e => set('data', e.target.value)} />
+              <input type="time" style={inputSt} value={form.horario} onChange={e => set('horario', e.target.value)} />
+            </div>
+            <input style={inputSt} placeholder="Local" value={form.local} onChange={e => set('local', e.target.value)} />
+            <input style={inputSt} placeholder="Ponto de encontro" value={form.pontoEncontro} onChange={e => set('pontoEncontro', e.target.value)} />
+            <input style={inputSt} placeholder="Líder responsável" value={form.lider} onChange={e => set('lider', e.target.value)} />
+            <textarea style={{ ...inputSt, minHeight: '72px', resize: 'vertical' }} placeholder="Descrição" value={form.descricao} onChange={e => set('descricao', e.target.value)} />
+            <input type="number" style={inputSt} placeholder="Vagas" min={1} value={form.vagas} onChange={e => set('vagas', e.target.value)} />
+          </div>
+          <button
+            onClick={handleAdicionar}
+            disabled={!form.titulo.trim() || !form.data || !form.horario}
+            style={{ marginTop: '12px', width: '100%', padding: '11px', background: 'var(--accent-color)', border: 'none', borderRadius: 'var(--radius-md)', color: 'var(--bg-color)', fontWeight: 700, cursor: 'pointer', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', opacity: (!form.titulo.trim() || !form.data || !form.horario) ? 0.5 : 1 }}
+          >
+            <i className="ph ph-plus"></i> Adicionar
+          </button>
+        </div>
+
+        {/* Lista das saídas */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: 'var(--spacing-lg)' }}>
+          {saidas.length === 0 ? (
+            <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 'var(--spacing-lg)' }}>Nenhuma saída cadastrada.</p>
+          ) : saidas.map(s => (
+            <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)' }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-primary)', marginBottom: '2px' }}>{s.titulo}</p>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{s.data} · {s.horario} · {s.local || '—'}</p>
+              </div>
+              <button onClick={() => setSaidas(prev => prev.filter(x => x.id !== s.id))} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '1.1rem', flexShrink: 0 }}>
+                <i className="ph ph-trash"></i>
+              </button>
+            </div>
           ))}
         </div>
 
-        <div style={{ padding: '20px' }}>
-
-          {/* ── ABA: FOTOS ── */}
-          {aba === 'fotos' && (
-            <>
-              {!adicionando ? (
-                <>
-                  <button
-                    onClick={() => setAdicionando(true)}
-                    style={{ width: '100%', padding: '11px', background: 'var(--accent-color)', border: 'none', borderRadius: 'var(--radius-md)', color: 'var(--bg-color)', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '16px' }}
-                  >
-                    <i className="ph ph-plus"></i> Adicionar Foto
-                  </button>
-
-                  {fotos.length === 0 ? (
-                    <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem', padding: '32px 0' }}>Nenhuma foto adicionada ainda.</p>
-                  ) : (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                      {fotos.map(foto => (
-                        <div key={foto.id} style={{ position: 'relative', borderRadius: 'var(--radius-md)', overflow: 'hidden', aspectRatio: '1', background: 'var(--bg-surface)' }}>
-                          <img src={foto.img} alt={foto.titulo} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(transparent 40%, rgba(0,0,0,0.85))', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '8px' }}>
-                            <p style={{ color: '#fff', fontSize: '0.72rem', fontWeight: 600, margin: 0, lineHeight: 1.3 }}>{foto.titulo}</p>
-                            <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.62rem', margin: '2px 0 0' }}>{foto.categoria}{foto.data ? ` · ${foto.data}` : ''}</p>
-                          </div>
-                          <button
-                            onClick={() => handleExcluirFoto(foto.id)}
-                            style={{ position: 'absolute', top: '6px', right: '6px', width: '26px', height: '26px', borderRadius: '50%', background: 'rgba(239,68,68,0.85)', border: 'none', color: '#fff', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                          >
-                            <i className="ph ph-trash"></i>
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </>
-              ) : (
-                /* Formulário de nova foto */
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                  <h4 style={{ margin: 0, fontWeight: 600 }}>Nova Foto</h4>
-
-                  {/* Upload da imagem */}
-                  <label style={{ cursor: 'pointer', display: 'block' }}>
-                    <div style={{ width: '100%', height: '160px', borderRadius: 'var(--radius-md)', border: '2px dashed var(--border-color)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-surface)', overflow: 'hidden', position: 'relative' }}>
-                      {preview ? (
-                        <img src={preview} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      ) : (
-                        <>
-                          <i className="ph ph-camera-plus" style={{ fontSize: '2rem', color: 'var(--text-muted)', marginBottom: '8px' }}></i>
-                          <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Toque para escolher a foto</span>
-                        </>
-                      )}
-                    </div>
-                    <input type="file" accept="image/*" onChange={handleFoto} style={{ display: 'none' }} />
-                  </label>
-
-                  <div>
-                    <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Título *</label>
-                    <input style={inputSt} placeholder="Ex: Culto dos Jovens — Junho" value={form.titulo} onChange={set('titulo')} />
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Tema *</label>
-                    <select style={{ ...inputSt, appearance: 'none' }} value={form.categoria} onChange={set('categoria')}>
-                      <option value="">Selecione um tema...</option>
-                      {temas.map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Data (opcional)</label>
-                    <input style={inputSt} placeholder="Ex: Jun 2025" value={form.data} onChange={set('data')} />
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
-                    <button onClick={() => { setAdicionando(false); setPreview(null); }} style={{ flex: 1, padding: '11px', background: 'transparent', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 600 }}>Cancelar</button>
-                    <button onClick={handleSalvarFoto} style={{ flex: 1, padding: '11px', background: 'var(--accent-color)', border: 'none', borderRadius: 'var(--radius-md)', color: 'var(--bg-color)', cursor: 'pointer', fontWeight: 700 }}>Salvar</button>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-
-          {/* ── ABA: TEMAS ── */}
-          {aba === 'temas' && (
-            <>
-              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>
-                Temas são as categorias das fotos da galeria. Adicione eventos especiais como Culto dos Jovens, Culto das Mulheres etc.
-              </p>
-
-              {/* Adicionar novo tema */}
-              <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
-                <input
-                  style={{ ...inputSt, flex: 1 }}
-                  placeholder="Ex: Culto dos Jovens"
-                  value={novoTema}
-                  onChange={e => setNovoTema(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleAddTema()}
-                />
-                <button onClick={handleAddTema} style={{ padding: '11px 18px', background: 'var(--accent-color)', border: 'none', borderRadius: 'var(--radius-md)', color: 'var(--bg-color)', fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
-                  <i className="ph ph-plus"></i>
-                </button>
-              </div>
-
-              {/* Lista de temas */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {temas.map(t => (
-                  <div key={t} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 14px', background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <i className="ph ph-tag" style={{ color: 'var(--accent-color)', fontSize: '1rem' }}></i>
-                      <span style={{ fontWeight: 500 }}>{t}</span>
-                    </div>
-                    {!TEMAS_DEFAULT.includes(t) && (
-                      <button onClick={() => handleDeleteTema(t)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '1rem' }}>
-                        <i className="ph ph-trash"></i>
-                      </button>
-                    )}
-                    {TEMAS_DEFAULT.includes(t) && (
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>padrão</span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-
-        </div>
+        <button onClick={handleSalvar} className="primary-btn" style={{ width: '100%', justifyContent: 'center', gap: '8px' }}>
+          <i className="ph ph-floppy-disk"></i> Salvar Alterações
+        </button>
       </div>
     </div>
   );
@@ -1530,8 +1554,9 @@ export default function Admin() {
   const [modalComunicado, setModalComunicado] = useState(false);
   const [modalConfig, setModalConfig] = useState(false);
   const [modalContribs, setModalContribs] = useState(false);
-  const [modalGaleria, setModalGaleria] = useState(false);
   const [modalAconselhamento, setModalAconselhamento] = useState(false);
+  const [modalEvangelismo, setModalEvangelismo] = useState(false);
+  const [modalITEAP, setModalITEAP]             = useState(false);
   const [aconselhamentos] = useState(loadAconselhamentos);
   const [toast, setToast] = useState('');
 
@@ -1672,14 +1697,27 @@ export default function Admin() {
           </button>
 
           <button
-            onClick={() => setModalGaleria(true)}
+            onClick={() => setModalEvangelismo(true)}
             className="event-list-item"
             style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: 'var(--spacing-md)', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', background: 'none', cursor: 'pointer', color: 'var(--text-primary)', width: '100%' }}
           >
-            <i className="ph ph-images" style={{ fontSize: '1.5rem', color: 'var(--accent-color)' }}></i>
+            <i className="ph ph-megaphone" style={{ fontSize: '1.5rem', color: 'var(--accent-color)' }}></i>
             <div style={{ flex: 1 }}>
-              <h4 style={{ fontWeight: 500 }}>Galeria & Temas</h4>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Fotos e categorias de eventos</p>
+              <h4 style={{ fontWeight: 500 }}>Saídas de Evangelismo</h4>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Adicionar e remover saídas da agenda</p>
+            </div>
+            <i className="ph ph-caret-right"></i>
+          </button>
+
+          <button
+            onClick={() => setModalITEAP(true)}
+            className="event-list-item"
+            style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: 'var(--spacing-md)', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', background: 'none', cursor: 'pointer', color: 'var(--text-primary)', width: '100%' }}
+          >
+            <i className="ph ph-graduation-cap" style={{ fontSize: '1.5rem', color: 'var(--accent-color)' }}></i>
+            <div style={{ flex: 1 }}>
+              <h4 style={{ fontWeight: 500 }}>ITEAP — Teologia</h4>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Professor, módulos e progresso do curso</p>
             </div>
             <i className="ph ph-caret-right"></i>
           </button>
@@ -1738,15 +1776,22 @@ export default function Admin() {
         />
       )}
 
-      {modalGaleria && (
-        <ModalGerenciarGaleria
-          onClose={() => setModalGaleria(false)}
-          onSaved={() => setToast('Galeria atualizada!')}
+      {modalAconselhamento && (
+        <ModalAconselhamento onClose={() => setModalAconselhamento(false)} />
+      )}
+
+      {modalEvangelismo && (
+        <ModalEvangelismo
+          onClose={() => setModalEvangelismo(false)}
+          onSaved={() => setToast('Saídas de evangelismo salvas!')}
         />
       )}
 
-      {modalAconselhamento && (
-        <ModalAconselhamento onClose={() => setModalAconselhamento(false)} />
+      {modalITEAP && (
+        <ModalITEAP
+          onClose={() => setModalITEAP(false)}
+          onSaved={() => setToast('ITEAP atualizado com sucesso!')}
+        />
       )}
 
       {toast && <Toast message={toast} icon="ph-check-circle" type="success" onClose={() => setToast('')} duration={4000} />}

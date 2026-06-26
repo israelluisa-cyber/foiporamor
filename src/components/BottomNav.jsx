@@ -3,21 +3,12 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { getUnreadCount } from '../pages/Avisos';
 
 const MAIS_ITEMS = [
-  { label: 'Oração',         icon: 'ph-hands-praying',       to: '/oracao' },
-  { label: 'Contribuir',     icon: 'ph-hand-coins',          to: '/contribuir' },
-  { label: 'Agenda',         icon: 'ph-calendar-check',      to: '/programacao' },
-  { label: 'Teologia',       icon: 'ph-book-open-text',      to: '/teologia' },
-  { label: 'Perfil',         icon: 'ph-user-circle',         to: '/perfil',   apenasLogado: true },
-  { label: 'Grupos',         icon: 'ph-users',               to: '/grupos' },
-  { label: 'Devocional',     icon: 'ph-sun-horizon',         to: '/devocional' },
-  { label: 'Bíblia',         icon: 'ph-book-bookmark',       to: '/biblia' },
-  { label: 'Testemunhos',    icon: 'ph-star',                to: '/testemunhos' },
-  { label: 'Voluntários',    icon: 'ph-heart',               to: '/voluntarios' },
-  { label: 'Galeria',        icon: 'ph-images',              to: '/galeria' },
-  { label: 'Aconselhamento', icon: 'ph-chat-circle-dots',    to: '/aconselhamento' },
-  { label: 'Carteira',       icon: 'ph-identification-card', to: '/carteira' },
-  { label: 'Buscar',         icon: 'ph-magnifying-glass',    to: '/busca' },
   { label: 'Admin',          icon: 'ph-shield-check',        to: '/admin' },
+  { label: 'Carteira',       icon: 'ph-identification-card', to: '/carteira',       apenasLogado: true },
+  { label: 'Aconselhamento', icon: 'ph-chat-circle-dots',    to: '/aconselhamento' },
+  { label: 'Voluntários',    icon: 'ph-heart',               to: '/voluntarios' },
+  { label: 'Bíblia',         icon: 'ph-book-bookmark',       to: '/biblia' },
+  { label: 'Devocional',     icon: 'ph-sun-horizon',         to: '/devocional' },
 ];
 
 function isLogado() {
@@ -50,10 +41,9 @@ export default function BottomNav() {
   }
 
   const navItems = [
-    { to: '/',         icon: 'ph-house',           label: 'Início' },
-    { to: '/sermoes',  icon: 'ph-play-circle',      label: 'Sermões' },
-    { to: '/financeiro', icon: 'ph-wallet',         label: 'Financeiro' },
-    { to: '/avisos',   icon: 'ph-bell',             label: 'Avisos', badge: unread },
+    { to: '/',            icon: 'ph-house',     label: 'Início' },
+    { to: '/evangelismo', icon: 'ph-megaphone', label: 'Evangelismo' },
+    { to: '/avisos',      icon: 'ph-bell',      label: 'Avisos', badge: unread },
   ];
 
   return (

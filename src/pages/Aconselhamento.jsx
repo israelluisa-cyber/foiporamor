@@ -15,7 +15,7 @@ function getSession() {
 }
 
 function getNome() {
-  try { return JSON.parse(localStorage.getItem('membro_perfil'))?.nome || ''; }
+  try { return JSON.parse(sessionStorage.getItem('user_session'))?.nome || ''; }
   catch { return ''; }
 }
 

@@ -5,7 +5,8 @@ export const DEFAULT_CONFIG = {
   endereco:    'Rua da Igreja, 100 — Centro',
   cidade:      'Sua Cidade — SP',
   mapsLink:    'https://maps.google.com/?q=Igreja+Foi+Por+Amor',
-  heroBg:      null, // base64 ou null (usa /hero_bg.png)
+  heroBg:         null, // base64 ou null (usa /hero_bg.png)
+  heroBgPosition: 'center',
   youtubeLink: 'https://www.youtube.com/@IgrejaFoiPorAmorOficial/live',
   avisoHome:   'Reunião de Líderes na próxima segunda-feira às 19h30.',
   pixKey:      'igrejafoiporamor@exemplo.com.br',
@@ -39,7 +40,7 @@ export function loadConfig() {
       ...saved,
       whatsapp: { ...DEFAULT_CONFIG.whatsapp, ...(saved.whatsapp || {}) },
       cultos: saved.cultos && saved.cultos.length
-      ? DEFAULT_CONFIG.cultos.map(c => ({ ...c, ...((saved.cultos || []).find(s => s.id === c.id) || {}), nome: c.nome }))
+      ? DEFAULT_CONFIG.cultos.map(c => ({ ...c, ...((saved.cultos || []).find(s => s.id === c.id) || {}) }))
       : DEFAULT_CONFIG.cultos,
       obras,
     };

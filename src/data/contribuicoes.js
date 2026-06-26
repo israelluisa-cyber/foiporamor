@@ -21,7 +21,7 @@ export function saveContribuicao({ tipo, valorNum, valorFormatado }) {
 
 export function clearContribuicoes() {
   localStorage.setItem(KEY, JSON.stringify([]));
-  supabase.from('contribuicoes').delete().neq('id', '').catch(() => {});
+  try { supabase?.from('contribuicoes').delete().neq('id', '').catch(() => {}); } catch { }
 }
 
 export function totalContribuicoes(lista) {

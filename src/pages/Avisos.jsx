@@ -26,11 +26,20 @@ const TIPO_CORES = {
   Informativo: { bg: 'rgba(255,255,255,0.04)', border: 'var(--border-color)',   text: 'var(--text-secondary)' },
 };
 
+const DUAS_SEMANAS_MS = 14 * 24 * 60 * 60 * 1000;
+
+function isAvisoValido(aviso) {
+  try {
+    const [dia, mes, ano] = aviso.data.split('/').map(Number);
+    return (Date.now() - new Date(ano, mes - 1, dia).getTime()) <= DUAS_SEMANAS_MS;
+  } catch { return true; }
+}
+
 export function getUnreadCount() {
   try {
     const lidos = JSON.parse(localStorage.getItem(READ_KEY)) || [];
     const adminAvisos = loadAdminAvisos();
-    const todos = [...adminAvisos, ...AVISOS];
+    const todos = [...adminAvisos, ...AVISOS].filter(isAvisoValido);
     return todos.filter(a => !lidos.includes(a.id)).length;
   } catch { return AVISOS.length; }
 }
@@ -40,13 +49,13 @@ export default function Avisos() {
   const [expandido, setExpandido] = useState(null);
   const [adminAvisos] = useState(loadAdminAvisos);
 
-  const todosAvisos = [...adminAvisos, ...AVISOS];
+  const todosAvisos = [...adminAvisos, ...AVISOS].filter(isAvisoValido);
 
   useEffect(() => {
     localStorage.setItem(READ_KEY, JSON.stringify(todosAvisos.map(a => a.id)));
   }, []);
 
-  const filtrados = filtro === 'Todos' ? todosAvisos : todosAvisos.filter(a => a.tipo === filtro);
+  const filtrados = (filtro === 'Todos' ? todosAvisos : todosAvisos.filter(a => a.tipo === filtro)).slice(0, 5);
 
   return (
     <div className="container" style={{ paddingBottom: 'var(--spacing-xl)' }}>

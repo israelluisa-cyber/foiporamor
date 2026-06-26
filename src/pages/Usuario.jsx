@@ -27,7 +27,7 @@ function getInitials(nome) {
 function ModalCadastroMembro({ isOpen, onClose, onSuccess }) {
   const [formData, setFormData] = useState({
     nome: '', email: '', celular: '', dataNascimento: '',
-    bairro: '', celula: 'Geração de Fogo (Jovens)',
+    bairro: '', celula: '',
     experiencia: '', password: '', confirmPassword: '',
   });
   const [previewFoto, setPreviewFoto] = useState(null);
@@ -128,17 +128,54 @@ function ModalCadastroMembro({ isOpen, onClose, onSuccess }) {
           {field('Nome Completo *', 'nome', 'text', 'Seu nome completo')}
           {field('E-mail *', 'email', 'email', 'seu@email.com')}
           {field('Celular *', 'celular', 'tel', '(11) 99999-9999')}
-          {field('Data de Nascimento', 'dataNascimento', 'date')}
-          {field('Bairro', 'bairro', 'text', 'Seu bairro')}
-
+          {/* Data de Nascimento — 3 selects para evitar problema de formato */}
           <div>
-            <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Célula</label>
-            <select value={formData.celula} onChange={set('celula')} style={{ ...inputStyle, padding: '10px' }}>
-              <option>Geração de Fogo (Jovens)</option>
-              <option>Lar de Paz (Famílias)</option>
-              <option>Ainda não escolhi</option>
-            </select>
+            <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+              Data de Nascimento
+            </label>
+            <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr 90px', gap: '8px' }}>
+              <select
+                value={formData.dataNascimento ? (formData.dataNascimento.split('-')[2] || '') : ''}
+                onChange={e => setFormData(fd => {
+                  const p = (fd.dataNascimento || '--').split('-');
+                  return { ...fd, dataNascimento: `${p[0]||''}-${p[1]||''}-${e.target.value}` };
+                })}
+                style={{ ...inputStyle, padding: '10px' }}
+              >
+                <option value="">Dia</option>
+                {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
+                  <option key={d} value={String(d).padStart(2, '0')}>{String(d).padStart(2, '0')}</option>
+                ))}
+              </select>
+              <select
+                value={formData.dataNascimento ? (formData.dataNascimento.split('-')[1] || '') : ''}
+                onChange={e => setFormData(fd => {
+                  const p = (fd.dataNascimento || '--').split('-');
+                  return { ...fd, dataNascimento: `${p[0]||''}-${e.target.value}-${p[2]||''}` };
+                })}
+                style={{ ...inputStyle, padding: '10px' }}
+              >
+                <option value="">Mês</option>
+                {['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'].map((m, i) => (
+                  <option key={i} value={String(i + 1).padStart(2, '0')}>{m}</option>
+                ))}
+              </select>
+              <select
+                value={formData.dataNascimento ? (formData.dataNascimento.split('-')[0] || '') : ''}
+                onChange={e => setFormData(fd => {
+                  const p = (fd.dataNascimento || '--').split('-');
+                  return { ...fd, dataNascimento: `${e.target.value}-${p[1]||''}-${p[2]||''}` };
+                })}
+                style={{ ...inputStyle, padding: '10px' }}
+              >
+                <option value="">Ano</option>
+                {Array.from({ length: new Date().getFullYear() - 1930 + 1 }, (_, i) => new Date().getFullYear() - i).map(y => (
+                  <option key={y} value={String(y)}>{y}</option>
+                ))}
+              </select>
+            </div>
           </div>
+          {field('Bairro', 'bairro', 'text', 'Seu bairro')}
 
           <div>
             <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Experiência com a Igreja</label>
@@ -212,6 +249,7 @@ export default function Usuario() {
     const sessionData = {
       id: user.id, nome: user.nome, email: user.email,
       celular: user.celular, celula: user.celula, bairro: user.bairro,
+      dataNascimento: user.dataNascimento || null,
     };
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
     setFotoAtual(user.foto || null);

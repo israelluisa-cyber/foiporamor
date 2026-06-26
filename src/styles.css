@@ -130,6 +130,10 @@ button {
   padding: var(--spacing-md) 0;
 }
 
+body.light .app-header {
+  background: rgba(255, 255, 255, 0.92);
+}
+
 .header-content {
   display: flex;
   justify-content: space-between;
@@ -272,6 +276,13 @@ button {
   z-index: 1;
 }
 
+/* Hero sempre tem fundo escuro (imagem + overlay), texto deve ser sempre branco */
+.hero-card.image-bg .hero-title,
+.hero-card.image-bg .hero-tag,
+.hero-card.image-bg .hero-time {
+  color: #fff;
+}
+
 /* ===========================
    BOTÃO PRINCIPAL — Branco com texto preto
 =========================== */
@@ -376,6 +387,10 @@ button {
   padding: var(--spacing-sm) 0;
   padding-bottom: calc(var(--spacing-sm) + env(safe-area-inset-bottom));
   z-index: 100;
+}
+
+body.light .bottom-nav {
+  background: rgba(255, 255, 255, 0.95);
 }
 
 .nav-item {

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import Header from '../components/Header';
 import { loadMembros } from '../data/membros';
 import { loadConfig, DIAS_ABBR, formatHora, cultoIcon } from '../data/config';
+import { loadSaidas } from '../data/evangelismo';
 
 // EVENTOS_SEMANA é derivado dinamicamente do config no componente
 
@@ -115,6 +116,29 @@ function getAniversariantesSemana() {
 
 const DIAS_SEMANA_NOME = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
 
+function eventosSaidasProximas() {
+  const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  const limite = new Date(hoje); limite.setDate(hoje.getDate() + 7);
+  return loadSaidas()
+    .filter(s => {
+      const [dia, mes, ano] = s.data.split('/').map(Number);
+      const d = new Date(ano, mes - 1, dia);
+      return d >= hoje && d <= limite;
+    })
+    .map(s => ({
+      dia:          s.data.split('/')[0] + '/' + s.data.split('/')[1],
+      icon:         'ph-megaphone',
+      nome:         s.titulo,
+      horario:      s.horario,
+      restrito:     false,
+      periodo:      s.horario + (s.local ? ' · ' + s.local : ''),
+      diaNome:      s.diaSemana,
+      gradiente:    'linear-gradient(135deg, #14532d 0%, #166534 100%)',
+      foto:         null,
+      isEvangelismo: true,
+    }));
+}
+
 function cultoEmAndamento(cultos) {
   const now = new Date();
   const diaSemana = now.getDay();
@@ -164,7 +188,8 @@ export default function Home() {
       periodo: `${formatHora(c.hora, c.min)} às ${formatHora(c.horaFim, c.minFim)}`,
     }));
   const aviso    = config.avisoHome;
-  const heroBg   = config.heroBg || '/hero_bg.png';
+  const heroBg         = config.heroBg || '/hero_bg.png';
+  const heroBgPosition = config.heroBgPosition || 'center';
 
   const CULTO_TEMAS = {
     'teologia': { gradiente: 'linear-gradient(135deg, #4c1d95 0%, #1e40af 100%)' },
@@ -202,7 +227,10 @@ export default function Home() {
   const versoDia        = getVersoDia();
   const aniversariantes = getAniversariantesSemana();
 
-  const eventosFiltrados = eventosSemana.filter(ev => !ev.restrito || logado);
+  const eventosFiltrados = [
+    ...eventosSemana.filter(ev => !ev.restrito || logado),
+    ...eventosSaidasProximas(),
+  ];
   const [bannerIdx, setBannerIdx] = useState(0);
   const [bannerAnim, setBannerAnim] = useState('slideInRight');
 
@@ -218,15 +246,17 @@ export default function Home() {
     return () => clearInterval(timer);
   }, [eventosFiltrados.length]);
 
-  const [aoVivo, setAoVivo]       = useState(() => cultoEmAndamento(cultos));
-  const [culto, setCulto]         = useState(() => proximoCulto(cultos));
-  const [countdown, setCountdown] = useState(() => calcularCountdown(proximoCulto(cultos).target));
+  const cultosVisiveis = cultos.filter(c => !c.restrito || logado);
+
+  const [aoVivo, setAoVivo]       = useState(() => cultoEmAndamento(cultosVisiveis));
+  const [culto, setCulto]         = useState(() => proximoCulto(cultosVisiveis));
+  const [countdown, setCountdown] = useState(() => calcularCountdown(proximoCulto(cultosVisiveis).target));
 
   useEffect(() => {
     const tick = () => {
-      const vivo = cultoEmAndamento(cultos);
+      const vivo = cultoEmAndamento(cultosVisiveis);
       setAoVivo(vivo);
-      const prox = proximoCulto(cultos);
+      const prox = proximoCulto(cultosVisiveis);
       setCulto(prox);
       setCountdown(calcularCountdown(prox.target));
     };
@@ -241,8 +271,8 @@ export default function Home() {
       <main style={{ paddingTop: 'var(--spacing-md)' }}>
 
         {/* Hero — Ao Vivo ou Próximo Culto */}
-        <section className="glass-card hero-card image-bg" style={{ marginBottom: 'var(--spacing-lg)', backgroundImage: `url(${heroBg})`, backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative', overflow: 'hidden', borderRadius: 'var(--radius-lg)' }}>
-          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: aoVivo ? 'rgba(0,0,0,0.55)' : 'rgba(0,0,0,0.4)', zIndex: 1 }} />
+        <section className="glass-card hero-card image-bg" style={{ marginBottom: 'var(--spacing-lg)', backgroundImage: `url(${heroBg})`, backgroundSize: 'cover', backgroundPosition: heroBgPosition, position: 'relative', overflow: 'hidden', borderRadius: 'var(--radius-lg)' }}>
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: aoVivo ? 'rgba(0,0,0,0.55)' : 'rgba(0,0,0,0)', zIndex: 1 }} />
           <div style={{ position: 'relative', zIndex: 2 }}>
 
             {aoVivo ? (
@@ -283,10 +313,10 @@ export default function Home() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: 'var(--spacing-lg)', background: 'rgba(0,0,0,0.3)', padding: '16px', borderRadius: 'var(--radius-md)' }}>
                   {[['DIAS', countdown.dias], ['HORAS', countdown.horas], ['MINUTOS', countdown.minutos], ['SEGUNDOS', countdown.segundos]].map(([label, val]) => (
                     <div key={label} style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: '1.8rem', fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-heading)' }}>
+                      <div style={{ fontSize: '1.8rem', fontWeight: 700, color: '#fff', fontFamily: 'var(--font-heading)' }}>
                         {String(val).padStart(2, '0')}
                       </div>
-                      <div style={{ fontSize: '0.65rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginTop: '4px', letterSpacing: '0.5px' }}>{label}</div>
+                      <div style={{ fontSize: '0.65rem', fontWeight: 600, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', marginTop: '4px', letterSpacing: '0.5px' }}>{label}</div>
                     </div>
                   ))}
                 </div>
@@ -364,7 +394,7 @@ export default function Home() {
           {[
             { to: '/oracao',      icon: 'ph-hands-praying', label: 'Oração',     delay: '0s'    },
             { to: '/financeiro',  icon: 'ph-hand-heart',    label: 'Contribuir', delay: '0.07s' },
-            { to: '/programacao', icon: 'ph-calendar-check',label: 'Agenda',     delay: '0.14s' },
+            { to: '/evangelismo', icon: 'ph-megaphone',      label: 'Evangelismo', delay: '0.14s' },
             { to: '/teologia',    icon: 'ph-graduation-cap',label: 'Teologia',   delay: '0.21s' },
           ].map(item => (
             <Link key={item.to} to={item.to} className="quick-btn" style={{ animationDelay: item.delay }}>
@@ -377,19 +407,14 @@ export default function Home() {
         </section>
 
         {/* Programação da Semana — carrossel */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-md)' }}>
-          <h3 className="section-title" style={{ margin: 0 }}>Programação da Semana</h3>
-          <Link to="/programacao" style={{ fontSize: '0.85rem', color: 'var(--accent-color)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            Ver mais <i className="ph ph-caret-right"></i>
-          </Link>
-        </div>
+        <h3 className="section-title">Programação da Semana</h3>
         {eventosFiltrados.length > 0 && (
           <div style={{ marginBottom: 'var(--spacing-lg)' }}>
             <div style={{ overflow: 'hidden', borderRadius: 'var(--radius-md)' }}>
               <div key={bannerIdx} style={{ animation: `${bannerAnim} 0.3s ease both` }}>
                 {(() => {
                   const ev = eventosFiltrados[bannerIdx];
-                  return (
+                  const inner = (
                     <div style={{ borderRadius: 'var(--radius-lg)', overflow: 'hidden', border: '1px solid var(--border-color)', boxShadow: '0 4px 20px rgba(0,0,0,0.3)' }}>
                       {/* Banner */}
                       <div style={{ position: 'relative', height: '110px', background: ev.gradiente, backgroundImage: ev.foto ? `url(${ev.foto})` : undefined, backgroundSize: 'cover', backgroundPosition: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -402,6 +427,11 @@ export default function Home() {
                           </div>
                         </>}
                         <span style={{ position: 'absolute', top: '10px', left: '14px', fontSize: '0.65rem', fontWeight: 700, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '1.5px', zIndex: 1 }}>{ev.dia}</span>
+                        {ev.isEvangelismo && (
+                          <span style={{ position: 'absolute', top: '10px', right: '14px', fontSize: '0.6rem', fontWeight: 700, color: '#fff', background: 'rgba(22,101,52,0.85)', padding: '2px 8px', borderRadius: 'var(--radius-full)', letterSpacing: '0.5px', zIndex: 1 }}>
+                            EVANGELISMO
+                          </span>
+                        )}
                       </div>
                       {/* Info */}
                       <div style={{ background: 'var(--bg-surface)', padding: '14px 16px' }}>
@@ -412,6 +442,9 @@ export default function Home() {
                       </div>
                     </div>
                   );
+                  return ev.isEvangelismo
+                    ? <Link to="/evangelismo" style={{ textDecoration: 'none', display: 'block' }}>{inner}</Link>
+                    : inner;
                 })()}
               </div>
             </div>

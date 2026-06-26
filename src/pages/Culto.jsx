@@ -1,6 +1,17 @@
 import { useState } from 'react';
 import Header from '../components/Header';
 import Toast from '../components/Toast';
+import { loadConfig } from '../data/config';
+
+function toEmbedUrl(url) {
+  if (!url) return null;
+  if (url.includes('/embed/')) return url.includes('autoplay') ? url : url + (url.includes('?') ? '&' : '?') + 'autoplay=1&mute=1';
+  const watchMatch = url.match(/[?&]v=([^&]+)/);
+  if (watchMatch) return `https://www.youtube.com/embed/${watchMatch[1]}?autoplay=1&mute=1`;
+  const shortMatch = url.match(/youtu\.be\/([^?]+)/);
+  if (shortMatch) return `https://www.youtube.com/embed/${shortMatch[1]}?autoplay=1&mute=1`;
+  return null;
+}
 
 const MUSICAS = [
   {
@@ -130,6 +141,9 @@ function ModalVisitante({ onClose }) {
 }
 
 export default function Culto() {
+  const config = loadConfig();
+  const embedUrl = toEmbedUrl(config.youtubeLink) || 'https://www.youtube.com/embed/jfKfPfyJRdk?autoplay=1&mute=1';
+
   const [toastMessage, setToastMessage] = useState('');
   const [notes, setNotes] = useState(() => localStorage.getItem('culto_notes') || '');
   const [musicaAberta, setMusicaAberta] = useState(null);
@@ -153,7 +167,7 @@ export default function Culto() {
             Ao Vivo
           </div>
           <iframe
-            src="https://www.youtube.com/embed/jfKfPfyJRdk?autoplay=1&mute=1"
+            src={embedUrl}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
           />

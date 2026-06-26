@@ -5,10 +5,6 @@ function getSession() {
   try { return JSON.parse(sessionStorage.getItem('user_session')); } catch { return null; }
 }
 
-function getPerfil() {
-  try { return JSON.parse(localStorage.getItem('membro_perfil')); } catch { return null; }
-}
-
 function getInitials(nome) {
   if (!nome) return '?';
   return nome.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase();
@@ -16,20 +12,19 @@ function getInitials(nome) {
 
 export default function Carteira() {
   const session = getSession();
-  const perfil  = getPerfil();
   const [virado, setVirado] = useState(false);
 
-  const nome   = perfil?.nome   || session?.nome   || 'Membro IFPA';
-  const cargo  = perfil?.cargo  || 'Membro';
-  const celula = perfil?.celula || session?.celula || '—';
-  const desde  = perfil?.membroDesde || perfil?.anoMembro || '2024';
+  const nome   = session?.nome  || 'Membro IFPA';
+  const cargo  = session?.cargo || 'Membro';
+  const celula = session?.celula || '—';
+  const desde  = session?.id ? new Date(parseInt(session.id)).getFullYear() : new Date().getFullYear();
   const codigo = session ? `IFPA-${String(session.id).slice(-6).toUpperCase()}` : 'IFPA-XXXXXX';
 
   if (!session) {
     return (
       <div className="container" style={{ paddingBottom: 'var(--spacing-xl)' }}>
         <Header title="Carteira de Membro" backButton={true} />
-        <main style={{ paddingTop: 'var(--spacing-md)', textAlign: 'center', paddingTop: '60px' }}>
+        <main style={{ paddingTop: '60px', textAlign: 'center' }}>
           <i className="ph ph-identification-card" style={{ fontSize: '3rem', color: 'var(--text-muted)', display: 'block', marginBottom: '16px' }}></i>
           <h2 style={{ fontFamily: 'var(--font-heading)', marginBottom: '8px' }}>Acesso restrito</h2>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>Faça login para visualizar sua carteira de membro.</p>

@@ -11,7 +11,7 @@ function loadInscricoes() {
 }
 
 function getNome() {
-  try { return JSON.parse(localStorage.getItem('membro_perfil'))?.nome || 'Você'; }
+  try { return JSON.parse(sessionStorage.getItem('user_session'))?.nome?.split(' ')[0] || 'Você'; }
   catch { return 'Você'; }
 }
 

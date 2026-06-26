@@ -2,8 +2,9 @@ import { useState } from 'react';
 import Header from '../components/Header';
 import Toast from '../components/Toast';
 
-const STORAGE_KEY = 'pedidos_oracao';
-const AMENS_KEY   = 'oracao_amens';
+const STORAGE_KEY  = 'pedidos_oracao';
+const AMENS_KEY    = 'oracao_amens';
+const SETE_DIAS_MS = 7 * 24 * 60 * 60 * 1000;
 
 const MURAL_MOCK = [
   { id: 'm1', nome: 'Maria L.',     texto: 'Peço oração pela saúde da minha mãe que está internada. Deus é o médico dos médicos.', data: '19/06/2025', amens: 18 },
@@ -14,8 +15,13 @@ const MURAL_MOCK = [
 ];
 
 function loadPedidos() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
-  catch { return []; }
+  try {
+    const todos   = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    const validos = todos.filter(p => Date.now() - p.id < SETE_DIAS_MS);
+    if (validos.length !== todos.length)
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(validos));
+    return validos;
+  } catch { return []; }
 }
 
 function loadAmens() {
