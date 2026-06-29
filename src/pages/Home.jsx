@@ -151,32 +151,17 @@ function cultoEmAndamento(cultos) {
   }) || null;
 }
 
-function proximoCulto(cultos) {
+function cultoTerminouHoje(cultos) {
   const now = new Date();
-  const candidatos = cultos.map(c => {
-    let diasAte = (c.diaSemana - now.getDay() + 7) % 7;
-    if (diasAte === 0) {
-      const hoje = new Date(now);
-      hoje.setHours(c.hora, c.min, 0, 0);
-      if (now >= hoje) diasAte = 7;
-    }
-    const target = new Date(now);
-    target.setDate(target.getDate() + diasAte);
-    target.setHours(c.hora, c.min, 0, 0);
-    return { ...c, target };
-  });
-  return candidatos.reduce((a, b) => (a.target < b.target ? a : b));
+  const diaSemana = now.getDay();
+  const hhmm = now.getHours() * 60 + now.getMinutes();
+  return cultos.find(c => {
+    if (c.diaSemana !== diaSemana) return false;
+    const fim = c.horaFim * 60 + c.minFim;
+    return hhmm >= fim;
+  }) || null;
 }
 
-function calcularCountdown(target) {
-  const diff = Math.max(0, target - new Date());
-  return {
-    dias:     Math.floor(diff / (1000 * 60 * 60 * 24)),
-    horas:    Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
-    minutos:  Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
-    segundos: Math.floor((diff % (1000 * 60)) / 1000),
-  };
-}
 
 export default function Home() {
   const config   = loadConfig();
@@ -248,17 +233,13 @@ export default function Home() {
 
   const cultosVisiveis = cultos.filter(c => !c.restrito || logado);
 
-  const [aoVivo, setAoVivo]       = useState(() => cultoEmAndamento(cultosVisiveis));
-  const [culto, setCulto]         = useState(() => proximoCulto(cultosVisiveis));
-  const [countdown, setCountdown] = useState(() => calcularCountdown(proximoCulto(cultosVisiveis).target));
+  const [aoVivo, setAoVivo]             = useState(() => cultoEmAndamento(cultosVisiveis));
+  const [terminouHoje, setTerminouHoje] = useState(() => cultoTerminouHoje(cultosVisiveis));
 
   useEffect(() => {
     const tick = () => {
-      const vivo = cultoEmAndamento(cultosVisiveis);
-      setAoVivo(vivo);
-      const prox = proximoCulto(cultosVisiveis);
-      setCulto(prox);
-      setCountdown(calcularCountdown(prox.target));
+      setAoVivo(cultoEmAndamento(cultosVisiveis));
+      setTerminouHoje(cultoTerminouHoje(cultosVisiveis));
     };
     const timer = setInterval(tick, 1000);
     return () => clearInterval(timer);
@@ -270,9 +251,9 @@ export default function Home() {
 
       <main style={{ paddingTop: 'var(--spacing-md)' }}>
 
-        {/* Hero — Ao Vivo ou Próximo Culto */}
-        <section className="glass-card hero-card image-bg" style={{ marginBottom: 'var(--spacing-lg)', backgroundImage: `url(${heroBg})`, backgroundSize: 'cover', backgroundPosition: heroBgPosition, position: 'relative', overflow: 'hidden', borderRadius: 'var(--radius-lg)' }}>
-          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: aoVivo ? 'rgba(0,0,0,0.55)' : 'rgba(0,0,0,0)', zIndex: 1 }} />
+        {/* Hero */}
+        <section className="glass-card hero-card image-bg" style={{ marginBottom: 'var(--spacing-lg)', backgroundImage: `url(${heroBg})`, backgroundSize: 'cover', backgroundPosition: heroBgPosition, position: 'relative', overflow: 'hidden', borderRadius: 'var(--radius-lg)', minHeight: '260px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.15)', zIndex: 1 }} />
           <div style={{ position: 'relative', zIndex: 2 }}>
 
             {aoVivo ? (
@@ -293,38 +274,39 @@ export default function Home() {
                 </p>
                 <button onClick={() => window.open(config.youtubeLink || 'https://youtube.com', '_blank')} className="primary-btn" style={{ width: '100%', justifyContent: 'center', gap: '8px', background: '#dc2626', color: '#fff', fontWeight: 700, fontSize: '1rem', border: 'none', cursor: 'pointer' }}>
                   <i className="ph ph-play-circle"></i>
-                  ENTRAR NO CULTO AO VIVO
+                  ENTRAR NA LIVE
+                </button>
+              </>
+            ) : terminouHoje && terminouHoje.diaSemana === 0 ? (
+              /* ── Culto de domingo encerrado ── */
+              <>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 'var(--spacing-md)', background: 'rgba(30,30,30,0.7)', padding: '5px 12px', borderRadius: 'var(--radius-full)' }}>
+                  <i className="ph ph-check-circle" style={{ fontSize: '0.9rem' }}></i>
+                  CULTO ENCERRADO
+                </span>
+                <h1 className="hero-title font-heading" style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '10px', lineHeight: 1.2 }}>
+                  QUE CULTO LINDO!
+                </h1>
+                <p style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.75)', marginBottom: 'var(--spacing-lg)' }}>
+                  Assista a pregação de hoje no YouTube
+                </p>
+                <button onClick={() => window.open(config.youtubeLink || 'https://youtube.com', '_blank')} className="primary-btn" style={{ width: '100%', justifyContent: 'center', gap: '8px', background: '#c4302b', color: '#fff', fontWeight: 700, fontSize: '1rem', border: 'none', cursor: 'pointer' }}>
+                  <i className="ph ph-youtube-logo"></i>
+                  ACESSAR YOUTUBE
                 </button>
               </>
             ) : (
-              /* ── Próximo culto ── */
+              /* ── Boas-vindas ── */
               <>
-                <span className="hero-tag" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-primary)', textTransform: 'uppercase', marginBottom: 'var(--spacing-md)', letterSpacing: '0.5px' }}>
-                  <i className="ph ph-calendar"></i> PRÓXIMO CULTO
-                </span>
-                <h1 className="hero-title font-heading" style={{ fontSize: '2.2rem', fontWeight: 700, marginBottom: '16px', lineHeight: 1.2 }}>
-                  {culto.nome.toUpperCase()}
+                <p style={{ fontSize: '0.8rem', fontWeight: 600, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '10px' }}>
+                  Seja bem-vindo à
+                </p>
+                <h1 className="hero-title font-heading" style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '12px', lineHeight: 1.2 }}>
+                  IGREJA FOI POR AMOR
                 </h1>
-                <div className="hero-time" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.95rem', color: 'rgba(255,255,255,0.9)', marginBottom: 'var(--spacing-lg)' }}>
-                  <i className="ph ph-calendar-blank"></i>
-                  <span>{culto.diaNome} · {culto.periodo}</span>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: 'var(--spacing-lg)', background: 'rgba(0,0,0,0.3)', padding: '16px', borderRadius: 'var(--radius-md)' }}>
-                  {[['DIAS', countdown.dias], ['HORAS', countdown.horas], ['MINUTOS', countdown.minutos], ['SEGUNDOS', countdown.segundos]].map(([label, val]) => (
-                    <div key={label} style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: '1.8rem', fontWeight: 700, color: '#fff', fontFamily: 'var(--font-heading)' }}>
-                        {String(val).padStart(2, '0')}
-                      </div>
-                      <div style={{ fontSize: '0.65rem', fontWeight: 600, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', marginTop: '4px', letterSpacing: '0.5px' }}>{label}</div>
-                    </div>
-                  ))}
-                </div>
-
-                <button onClick={() => window.open(config.youtubeLink || 'https://youtube.com', '_blank')} className="primary-btn" style={{ width: '50%', justifyContent: 'center', gap: '8px', background: 'rgba(255,255,255,0.95)', color: 'var(--bg-color)', fontWeight: 600, fontSize: '0.8rem', padding: '11px 20px', border: 'none', cursor: 'pointer' }}>
-                  <i className="ph ph-play"></i>
-                  ASSISTIR AO VIVO
-                </button>
+                <p style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.7)', lineHeight: 1.6 }}>
+                  Um lugar de fé, amor e comunidade.
+                </p>
               </>
             )}
 
@@ -389,15 +371,16 @@ export default function Home() {
           }
         `}</style>
 
-        {/* Acesso Rápido — 4 botões em linha única */}
-        <section style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginBottom: 'var(--spacing-lg)' }}>
+        {/* Acesso Rápido — scroll horizontal */}
+        <section style={{ display: 'flex', gap: '10px', marginBottom: 'var(--spacing-lg)', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
           {[
-            { to: '/oracao',      icon: 'ph-hands-praying', label: 'Oração',     delay: '0s'    },
-            { to: '/financeiro',  icon: 'ph-hand-heart',    label: 'Contribuir', delay: '0.07s' },
-            { to: '/evangelismo', icon: 'ph-megaphone',      label: 'Evangelismo', delay: '0.14s' },
-            { to: '/teologia',    icon: 'ph-graduation-cap',label: 'Teologia',   delay: '0.21s' },
+            { to: '/oracao',        icon: 'ph-hands-praying',  label: 'Oração',       delay: '0s'    },
+            { to: '/financeiro',    icon: 'ph-hand-heart',     label: 'Contribuir',   delay: '0.07s' },
+            { to: '/evangelismo',   icon: 'ph-megaphone',       label: 'Evangelismo',  delay: '0.14s' },
+            { to: '/teologia',      icon: 'ph-graduation-cap', label: 'Teologia',     delay: '0.21s' },
+            { to: '/ministerios',   icon: 'ph-users-three',    label: 'Ministérios',  delay: '0.28s' },
           ].map(item => (
-            <Link key={item.to} to={item.to} className="quick-btn" style={{ animationDelay: item.delay }}>
+            <Link key={item.to} to={item.to} className="quick-btn" style={{ animationDelay: item.delay, minWidth: '72px', flex: '0 0 auto' }}>
               <div className="quick-icon">
                 <i className={`ph ${item.icon}`} style={{ fontSize: '1.2rem', color: 'var(--accent-color)' }}></i>
               </div>
@@ -417,7 +400,7 @@ export default function Home() {
                   const inner = (
                     <div style={{ borderRadius: 'var(--radius-lg)', overflow: 'hidden', border: '1px solid var(--border-color)', boxShadow: '0 4px 20px rgba(0,0,0,0.3)' }}>
                       {/* Banner */}
-                      <div style={{ position: 'relative', height: '110px', background: ev.gradiente, backgroundImage: ev.foto ? `url(${ev.foto})` : undefined, backgroundSize: 'cover', backgroundPosition: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <div style={{ position: 'relative', height: '150px', background: ev.gradiente, backgroundImage: ev.foto ? `url(${ev.foto})` : undefined, backgroundSize: 'cover', backgroundPosition: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         {ev.foto && <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.38)' }} />}
                         {!ev.foto && <>
                           <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', pointerEvents: 'none' }} />

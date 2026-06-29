@@ -17,7 +17,8 @@ import Aconselhamento from './pages/Aconselhamento';
 import Voluntarios from './pages/Voluntarios';
 import Carteira    from './pages/Carteira';
 import Contribuir  from './pages/Contribuir';
-import Evangelismo from './pages/Evangelismo';
+import Evangelismo  from './pages/Evangelismo';
+import Ministerios  from './pages/Ministerios';
 
 function App() {
   return (
@@ -40,6 +41,7 @@ function App() {
         <Route path="/carteira"      element={<Carteira />} />
         <Route path="/contribuir"    element={<Contribuir />} />
         <Route path="/evangelismo"   element={<Evangelismo />} />
+        <Route path="/ministerios"   element={<Ministerios />} />
       </Routes>
       <BottomNav />
     </Router>

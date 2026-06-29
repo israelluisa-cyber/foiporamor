@@ -5,6 +5,7 @@ import { getUnreadCount } from '../pages/Avisos';
 const MAIS_ITEMS = [
   { label: 'Admin',          icon: 'ph-shield-check',        to: '/admin' },
   { label: 'Carteira',       icon: 'ph-identification-card', to: '/carteira',       apenasLogado: true },
+  { label: 'Ministérios',    icon: 'ph-users-three',         to: '/ministerios' },
   { label: 'Aconselhamento', icon: 'ph-chat-circle-dots',    to: '/aconselhamento' },
   { label: 'Voluntários',    icon: 'ph-heart',               to: '/voluntarios' },
   { label: 'Bíblia',         icon: 'ph-book-bookmark',       to: '/biblia' },

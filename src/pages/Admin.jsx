@@ -5,12 +5,25 @@ import { loadMembros, saveMembros } from '../data/membros';
 import { loadConfig, saveConfig, DIAS_SEMANA, formatHora } from '../data/config';
 import { loadContribuicoes, clearContribuicoes, totalContribuicoes, totalPorObra } from '../data/contribuicoes';
 import { MINISTERIOS, loadVagas, saveVagas, VAGAS_KEY } from '../data/vagas';
+import { loadMinisterios, saveMinisterios, ICON_OPTIONS, COLOR_PRESETS } from '../data/ministeriosData';
 import { EVANGELISMO_KEY, loadSaidas, saveSaidas, SAIDAS_DEFAULT } from '../data/evangelismo';
 import { loadTeologia, saveTeologia, TEOLOGIA_DEFAULT } from '../data/teologia';
 
 const ADMIN_PIN = '1234';
 const CADASTROS_KEY = 'cadastros_pendentes';
 const ADMIN_AVISOS_KEY = 'admin_avisos';
+
+const PROTECAO_ADMIN  = 'admin_protecao';
+const MAX_TENTATIVAS  = 3;
+const BLOQUEIO_MS     = 5 * 60 * 1000;
+
+function getProtecaoAdmin() {
+  try { return JSON.parse(localStorage.getItem(PROTECAO_ADMIN)) || { tentativas: 0, bloqueadoAte: null }; }
+  catch { return { tentativas: 0, bloqueadoAte: null }; }
+}
+function setProtecaoAdmin(data) {
+  localStorage.setItem(PROTECAO_ADMIN, JSON.stringify(data));
+}
 
 function loadCadastros() {
   try { return JSON.parse(localStorage.getItem(CADASTROS_KEY)) || []; }
@@ -567,28 +580,65 @@ function ModalContribuicoes({ onClose, contribs, onLimpar }) {
 
 function PinGate({ onAuthenticated }) {
   const [pin, setPin] = useState('');
-  const [error, setError] = useState(false);
+  const [erro, setErro] = useState('');
+  const [tempoRestante, setTempoRestante] = useState(() => {
+    const p = getProtecaoAdmin();
+    return p.bloqueadoAte ? Math.max(0, p.bloqueadoAte - Date.now()) : 0;
+  });
+
+  useEffect(() => {
+    if (tempoRestante <= 0) return;
+    const timer = setInterval(() => {
+      const p = getProtecaoAdmin();
+      const restante = p.bloqueadoAte ? Math.max(0, p.bloqueadoAte - Date.now()) : 0;
+      setTempoRestante(restante);
+      if (restante === 0) setErro('');
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [tempoRestante]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    const protecao = getProtecaoAdmin();
+
+    if (protecao.bloqueadoAte && Date.now() < protecao.bloqueadoAte) {
+      const min = Math.ceil((protecao.bloqueadoAte - Date.now()) / 60000);
+      setErro(`Bloqueado. Tente novamente em ${min} minuto${min > 1 ? 's' : ''}.`);
+      setTempoRestante(protecao.bloqueadoAte - Date.now());
+      return;
+    }
+
     if (pin === ADMIN_PIN) {
+      setProtecaoAdmin({ tentativas: 0, bloqueadoAte: null });
       sessionStorage.setItem('adminAuth', 'true');
       onAuthenticated();
     } else {
-      setError(true);
+      const novasTentativas = (protecao.tentativas || 0) + 1;
+      const restantes = MAX_TENTATIVAS - novasTentativas;
+      if (novasTentativas >= MAX_TENTATIVAS) {
+        const bloqueadoAte = Date.now() + BLOQUEIO_MS;
+        setProtecaoAdmin({ tentativas: novasTentativas, bloqueadoAte });
+        setTempoRestante(BLOQUEIO_MS);
+        setErro('Muitas tentativas incorretas. Bloqueado por 5 minutos.');
+      } else {
+        setProtecaoAdmin({ tentativas: novasTentativas, bloqueadoAte: null });
+        setErro(`PIN incorreto. ${restantes} tentativa${restantes > 1 ? 's' : ''} restante${restantes > 1 ? 's' : ''}.`);
+      }
       setPin('');
     }
   };
 
+  const bloqueado = tempoRestante > 0;
+
   return (
     <div className="container" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingBottom: '80px' }}>
       <div className="glass-card" style={{ width: '100%', maxWidth: '360px', textAlign: 'center' }}>
-        <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto var(--spacing-md)' }}>
-          <i className="ph ph-lock" style={{ fontSize: '1.8rem', color: 'var(--accent-color)' }}></i>
+        <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: bloqueado ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto var(--spacing-md)' }}>
+          <i className={`ph ${bloqueado ? 'ph-lock-key' : 'ph-lock'}`} style={{ fontSize: '1.8rem', color: bloqueado ? '#ef4444' : 'var(--accent-color)' }}></i>
         </div>
         <h2 className="font-heading" style={{ marginBottom: '4px' }}>Área Restrita</h2>
         <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: 'var(--spacing-lg)' }}>
-          Insira o PIN de acesso da liderança.
+          {bloqueado ? 'Acesso temporariamente bloqueado.' : 'Insira o PIN de acesso da liderança.'}
         </p>
 
         <form onSubmit={handleSubmit}>
@@ -598,24 +648,27 @@ function PinGate({ onAuthenticated }) {
             maxLength={6}
             placeholder="••••"
             value={pin}
-            onChange={e => { setPin(e.target.value); setError(false); }}
+            onChange={e => { setPin(e.target.value); if (!bloqueado) setErro(''); }}
             autoFocus
+            disabled={bloqueado}
             style={{
               width: '100%', background: 'var(--bg-surface-elevated)',
-              border: `1px solid ${error ? '#ef4444' : 'var(--border-color)'}`,
+              border: `1px solid ${erro ? '#ef4444' : 'var(--border-color)'}`,
               color: 'var(--text-primary)', padding: '14px', borderRadius: 'var(--radius-md)',
               fontFamily: 'var(--font-body)', fontSize: '1.5rem', fontWeight: '600',
               letterSpacing: '8px', textAlign: 'center', outline: 'none',
               marginBottom: 'var(--spacing-sm)',
+              opacity: bloqueado ? 0.4 : 1,
             }}
           />
-          {error && (
-            <p style={{ color: '#ef4444', fontSize: '0.85rem', marginBottom: 'var(--spacing-sm)' }}>
-              PIN incorreto. Tente novamente.
-            </p>
+          {erro && (
+            <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 'var(--radius-md)', padding: '10px 12px', marginBottom: 'var(--spacing-sm)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <i className="ph ph-warning-circle" style={{ color: '#ef4444', flexShrink: 0 }}></i>
+              <p style={{ color: '#ef4444', fontSize: '0.82rem', margin: 0, textAlign: 'left' }}>{erro}</p>
+            </div>
           )}
-          <button type="submit" className="primary-btn" style={{ width: '100%', marginTop: 'var(--spacing-sm)', justifyContent: 'center' }}>
-            Entrar
+          <button type="submit" className="primary-btn" disabled={bloqueado} style={{ width: '100%', marginTop: 'var(--spacing-sm)', justifyContent: 'center', opacity: bloqueado ? 0.5 : 1, cursor: bloqueado ? 'not-allowed' : 'pointer' }}>
+            {bloqueado ? `Aguarde ${Math.ceil(tempoRestante / 1000)}s` : 'Entrar'}
           </button>
         </form>
       </div>
@@ -1542,6 +1595,190 @@ function ModalEvangelismo({ onClose, onSaved }) {
   );
 }
 
+function ModalMinisteriosAdmin({ onClose, onSaved, membros }) {
+  const [lista, setLista] = useState(loadMinisterios);
+  const [tela, setTela] = useState('lista'); // lista | form
+  const [editando, setEditando] = useState(null);
+  const inputSt = { width: '100%', background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', padding: '10px 12px', fontSize: '0.9rem', boxSizing: 'border-box' };
+
+  const FORM_EMPTY = { id: '', nome: '', descricao: '', tag: '', icon: 'ph-users-three', gradient: COLOR_PRESETS[0].gradient, glow: COLOR_PRESETS[0].glow, ring: COLOR_PRESETS[0].ring, membros: 0, sobreNos: { resumo: '', atividades: '', visao: '' }, lideres: [], ativo: true };
+  const [form, setForm] = useState(FORM_EMPTY);
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const setSN = (k, v) => setForm(f => ({ ...f, sobreNos: { ...f.sobreNos, [k]: v } }));
+
+  const abrirNovo = () => { setForm(FORM_EMPTY); setEditando(null); setTela('form'); };
+  const abrirEditar = (m) => {
+    setForm({ ...m, sobreNos: { resumo: m.sobreNos?.resumo || '', atividades: (m.sobreNos?.atividades || []).join('\n'), visao: m.sobreNos?.visao || '' }, lideres: m.lideres || [] });
+    setEditando(m.id);
+    setTela('form');
+  };
+
+  const salvarForm = () => {
+    if (!form.nome.trim()) return;
+    const atividadesArr = form.sobreNos.atividades.split('\n').map(a => a.trim()).filter(Boolean);
+    const item = { ...form, id: editando || form.nome.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, ''), sobreNos: { resumo: form.sobreNos.resumo, atividades: atividadesArr, visao: form.sobreNos.visao } };
+    const novaLista = editando ? lista.map(m => m.id === editando ? item : m) : [...lista, item];
+    setLista(novaLista);
+    saveMinisterios(novaLista);
+    setTela('lista');
+  };
+
+  const excluir = (id) => {
+    if (!confirm('Excluir este ministério?')) return;
+    const novaLista = lista.filter(m => m.id !== id);
+    setLista(novaLista);
+    saveMinisterios(novaLista);
+  };
+
+  const toggleLider = (membro) => {
+    const jaEsta = form.lideres.some(l => l.id === membro.id);
+    const novosLideres = jaEsta ? form.lideres.filter(l => l.id !== membro.id) : [...form.lideres, { id: membro.id, nome: membro.nome, foto: membro.foto || null }];
+    set('lideres', novosLideres);
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+      <div style={{ background: 'var(--bg-color)', borderRadius: 'var(--radius-lg)', width: '100%', maxWidth: '600px', maxHeight: '90vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+        {/* Header */}
+        <div style={{ padding: '20px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {tela === 'form' && (
+            <button onClick={() => setTela('lista')} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}>
+              <i className="ph ph-arrow-left" style={{ fontSize: '1.2rem' }}></i>
+            </button>
+          )}
+          <h3 style={{ margin: 0, fontFamily: 'var(--font-heading)', flex: 1 }}>
+            {tela === 'lista' ? 'Gerenciar Ministérios' : editando ? 'Editar Ministério' : 'Novo Ministério'}
+          </h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: 0, width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <i className="ph ph-x" style={{ fontSize: '1.2rem' }}></i>
+          </button>
+        </div>
+
+        <div style={{ padding: '20px' }}>
+          {tela === 'lista' ? (
+            <>
+              <button onClick={abrirNovo} style={{ width: '100%', padding: '12px', background: 'rgba(255,255,255,0.06)', border: '1px dashed var(--border-color)', borderRadius: 'var(--radius-md)', color: 'var(--accent-color)', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '16px' }}>
+                <i className="ph ph-plus-circle"></i> Adicionar Ministério
+              </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {lista.map(m => (
+                  <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: m.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <i className={`ph ${m.icon}`} style={{ fontSize: '1.1rem', color: '#fff' }}></i>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-primary)', margin: 0 }}>{m.nome}</p>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>{m.membros} membros · {m.lideres?.length || 0} líder(es)</p>
+                    </div>
+                    <button onClick={() => abrirEditar(m)} style={{ background: 'none', border: 'none', color: 'var(--accent-color)', cursor: 'pointer', padding: '6px', display: 'flex', alignItems: 'center' }}>
+                      <i className="ph ph-pencil" style={{ fontSize: '1rem' }}></i>
+                    </button>
+                    <button onClick={() => excluir(m.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '6px', display: 'flex', alignItems: 'center' }}>
+                      <i className="ph ph-trash" style={{ fontSize: '1rem' }}></i>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {/* Nome */}
+              <div>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Nome do ministério *</label>
+                <input style={inputSt} value={form.nome} onChange={e => set('nome', e.target.value)} placeholder="Ex: Ministério de Intercessão" />
+              </div>
+              {/* Tag */}
+              <div>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Categoria / Tag</label>
+                <input style={inputSt} value={form.tag} onChange={e => set('tag', e.target.value)} placeholder="Ex: Oração, Música, Serviço..." />
+              </div>
+              {/* Descrição curta */}
+              <div>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Descrição curta</label>
+                <input style={inputSt} value={form.descricao} onChange={e => set('descricao', e.target.value)} placeholder="Uma linha descrevendo o ministério" />
+              </div>
+              {/* Membros */}
+              <div>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Quantidade de membros</label>
+                <input type="number" min={0} style={{ ...inputSt, width: '120px' }} value={form.membros} onChange={e => set('membros', Number(e.target.value))} />
+              </div>
+              {/* Ícone */}
+              <div>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>Ícone</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {ICON_OPTIONS.map(opt => (
+                    <button key={opt.value} onClick={() => set('icon', opt.value)} style={{ width: '44px', height: '44px', borderRadius: 'var(--radius-sm)', background: form.icon === opt.value ? 'var(--accent-color)' : 'var(--bg-surface-elevated)', border: `1px solid ${form.icon === opt.value ? 'var(--accent-color)' : 'var(--border-color)'}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: form.icon === opt.value ? 'var(--bg-color)' : 'var(--text-secondary)' }}>
+                      <i className={`ph ${opt.value}`} style={{ fontSize: '1.2rem' }}></i>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {/* Cor */}
+              <div>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>Cor do emblema</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {COLOR_PRESETS.map((c, i) => (
+                    <button key={i} onClick={() => set('gradient', c.gradient) || set('glow', c.glow) || set('ring', c.ring) || setForm(f => ({ ...f, gradient: c.gradient, glow: c.glow, ring: c.ring }))} style={{ width: '36px', height: '36px', borderRadius: '50%', background: c.gradient, border: form.gradient === c.gradient ? '3px solid #fff' : '3px solid transparent', cursor: 'pointer', boxShadow: form.gradient === c.gradient ? '0 0 0 2px var(--accent-color)' : 'none', transition: 'all 0.15s' }} title={c.label} />
+                  ))}
+                </div>
+              </div>
+
+              {/* Sobre Nós — Resumo */}
+              <div>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Sobre Nós — Resumo</label>
+                <textarea rows={3} style={{ ...inputSt, resize: 'vertical' }} value={form.sobreNos.resumo} onChange={e => setSN('resumo', e.target.value)} placeholder="Apresente o ministério em 2-3 frases..." />
+              </div>
+              {/* Atividades */}
+              <div>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Atividades (uma por linha)</label>
+                <textarea rows={4} style={{ ...inputSt, resize: 'vertical' }} value={form.sobreNos.atividades} onChange={e => setSN('atividades', e.target.value)} placeholder={'Exemplo:\nCultos semanais\nVisitas a hospitais\nDistribuição de alimentos'} />
+              </div>
+              {/* Visão */}
+              <div>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Visão do ministério</label>
+                <input style={inputSt} value={form.sobreNos.visao} onChange={e => setSN('visao', e.target.value)} placeholder="A visão que guia o ministério..." />
+              </div>
+
+              {/* Líderes */}
+              <div>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '8px' }}>Líderes do ministério</label>
+                {form.lideres.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>
+                    {form.lideres.map(l => (
+                      <span key={l.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 10px', background: 'rgba(255,255,255,0.08)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-full)', fontSize: '0.8rem', color: 'var(--text-primary)' }}>
+                        {l.nome}
+                        <button onClick={() => toggleLider(l)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0, lineHeight: 1 }}>×</button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div style={{ maxHeight: '160px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', background: 'var(--bg-surface-elevated)' }}>
+                  {membros.map(m => {
+                    const selecionado = form.lideres.some(l => l.id === m.id);
+                    return (
+                      <button key={m.id} onClick={() => toggleLider(m)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', background: selecionado ? 'rgba(255,255,255,0.06)' : 'none', border: 'none', borderBottom: '1px solid var(--border-color)', cursor: 'pointer', color: 'var(--text-primary)', textAlign: 'left' }}>
+                        <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--bg-surface)', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 700, flexShrink: 0 }}>
+                          {m.nome.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()}
+                        </div>
+                        <span style={{ fontSize: '0.85rem', flex: 1 }}>{m.nome}</span>
+                        {selecionado && <i className="ph ph-check-circle" style={{ color: 'var(--accent-color)', fontSize: '1rem' }}></i>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <button onClick={salvarForm} style={{ width: '100%', padding: '12px', background: 'var(--accent-color)', border: 'none', borderRadius: 'var(--radius-md)', color: 'var(--bg-color)', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                <i className="ph ph-floppy-disk"></i> Salvar Ministério
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Admin() {
   const [isAuthenticated, setIsAuthenticated] = useState(
     () => sessionStorage.getItem('adminAuth') === 'true'
@@ -1555,8 +1792,9 @@ export default function Admin() {
   const [modalConfig, setModalConfig] = useState(false);
   const [modalContribs, setModalContribs] = useState(false);
   const [modalAconselhamento, setModalAconselhamento] = useState(false);
-  const [modalEvangelismo, setModalEvangelismo] = useState(false);
-  const [modalITEAP, setModalITEAP]             = useState(false);
+  const [modalEvangelismo, setModalEvangelismo]   = useState(false);
+  const [modalITEAP, setModalITEAP]               = useState(false);
+  const [modalMinisterios, setModalMinisterios]   = useState(false);
   const [aconselhamentos] = useState(loadAconselhamentos);
   const [toast, setToast] = useState('');
 
@@ -1723,6 +1961,19 @@ export default function Admin() {
           </button>
 
           <button
+            onClick={() => setModalMinisterios(true)}
+            className="event-list-item"
+            style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: 'var(--spacing-md)', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', background: 'none', cursor: 'pointer', color: 'var(--text-primary)', width: '100%' }}
+          >
+            <i className="ph ph-users-three" style={{ fontSize: '1.5rem', color: 'var(--accent-color)' }}></i>
+            <div style={{ flex: 1 }}>
+              <h4 style={{ fontWeight: 500 }}>Ministérios da Igreja</h4>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Adicionar, editar e definir líderes</p>
+            </div>
+            <i className="ph ph-caret-right"></i>
+          </button>
+
+          <button
             onClick={handleLogout}
             style={{ border: '1px solid rgba(239,68,68,0.3)', borderRadius: 'var(--radius-md)', padding: 'var(--spacing-md)', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', background: 'none', cursor: 'pointer', color: '#ef4444', width: '100%' }}
           >
@@ -1791,6 +2042,14 @@ export default function Admin() {
         <ModalITEAP
           onClose={() => setModalITEAP(false)}
           onSaved={() => setToast('ITEAP atualizado com sucesso!')}
+        />
+      )}
+
+      {modalMinisterios && (
+        <ModalMinisteriosAdmin
+          onClose={() => setModalMinisterios(false)}
+          onSaved={() => setToast('Ministérios salvos com sucesso!')}
+          membros={membros}
         />
       )}
 
