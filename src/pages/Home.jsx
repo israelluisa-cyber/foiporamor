@@ -162,6 +162,47 @@ function cultoTerminouHoje(cultos) {
   }) || null;
 }
 
+function proximoCulto(cultos) {
+  const now = new Date();
+  let melhor = null;
+  let melhorMs = Infinity;
+  cultos.forEach(c => {
+    const diasAte = (c.diaSemana - now.getDay() + 7) % 7;
+    const prox = new Date(now);
+    prox.setDate(now.getDate() + diasAte);
+    prox.setHours(c.hora, c.min, 0, 0);
+    if (prox.getTime() <= now.getTime()) prox.setDate(prox.getDate() + 7);
+    const diff = prox.getTime() - now.getTime();
+    if (diff < melhorMs) { melhorMs = diff; melhor = { ...c, proximaData: prox }; }
+  });
+  return melhor;
+}
+
+function formatCountdown(proximaData) {
+  const diff = proximaData.getTime() - Date.now();
+  if (diff <= 0) return '00:00:00';
+  const total = Math.floor(diff / 1000);
+  const dias  = Math.floor(total / 86400);
+  const horas = Math.floor((total % 86400) / 3600);
+  const min   = Math.floor((total % 3600) / 60);
+  const seg   = total % 60;
+  const hms = `${String(horas).padStart(2,'0')}:${String(min).padStart(2,'0')}:${String(seg).padStart(2,'0')}`;
+  return dias > 0 ? `${dias}d ${hms}` : hms;
+}
+
+function tipoMsgCulto(culto) {
+  const nome = (culto.nome || '').toLowerCase();
+  if (culto.diaSemana === 0)
+    return { titulo: 'ESTAMOS ONLINE!', badge: 'AO VIVO', cor: '#dc2626', pulso: true, youtube: true };
+  if (nome.includes('oração') || nome.includes('oracao'))
+    return { titulo: 'ESTAMOS EM ORAÇÃO', badge: 'EM ORAÇÃO', cor: '#0c4a6e', pulso: false, youtube: false };
+  if (nome.includes('ensino') || nome.includes('estudo'))
+    return { titulo: 'ESTAMOS NO ESTUDO', badge: 'ESTUDO', cor: '#4c1d95', pulso: false, youtube: false };
+  if (nome.includes('louvor') || nome.includes('adoração') || nome.includes('adoracao'))
+    return { titulo: 'ESTAMOS EM ADORAÇÃO', badge: 'ADORAÇÃO', cor: '#92400e', pulso: false, youtube: false };
+  return { titulo: 'ESTAMOS CULTUANDO', badge: 'EM CULTO', cor: '#1f2937', pulso: false, youtube: false };
+}
+
 
 export default function Home() {
   const config   = loadConfig();
@@ -233,13 +274,15 @@ export default function Home() {
 
   const cultosVisiveis = cultos.filter(c => !c.restrito || logado);
 
-  const [aoVivo, setAoVivo]             = useState(() => cultoEmAndamento(cultosVisiveis));
-  const [terminouHoje, setTerminouHoje] = useState(() => cultoTerminouHoje(cultosVisiveis));
+  const [aoVivo, setAoVivo]                   = useState(() => cultoEmAndamento(cultosVisiveis));
+  const [terminouHoje, setTerminouHoje]       = useState(() => cultoTerminouHoje(cultosVisiveis));
+  const [proximoInfo, setProximoInfo]         = useState(() => proximoCulto(cultosVisiveis));
 
   useEffect(() => {
     const tick = () => {
       setAoVivo(cultoEmAndamento(cultosVisiveis));
       setTerminouHoje(cultoTerminouHoje(cultosVisiveis));
+      setProximoInfo(proximoCulto(cultosVisiveis));
     };
     const timer = setInterval(tick, 1000);
     return () => clearInterval(timer);
@@ -256,28 +299,36 @@ export default function Home() {
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.15)', zIndex: 1 }} />
           <div style={{ position: 'relative', zIndex: 2 }}>
 
-            {aoVivo ? (
-              /* ── Culto em andamento ── */
-              <>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 'var(--spacing-md)', background: 'rgba(220,38,38,0.85)', padding: '5px 12px', borderRadius: 'var(--radius-full)' }}>
-                  <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#fff', display: 'inline-block', animation: 'pulseAoVivo 1.2s ease-in-out infinite' }} />
-                  AO VIVO
-                </span>
-                <h1 className="hero-title font-heading" style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '10px', lineHeight: 1.2 }}>
-                  ESTAMOS CULTUANDO!
-                </h1>
-                <p style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.9)', marginBottom: '6px', fontWeight: 600 }}>
-                  {aoVivo.nome}
-                </p>
-                <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.65)', marginBottom: 'var(--spacing-lg)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <i className="ph ph-clock"></i> {aoVivo.periodo}
-                </p>
-                <button onClick={() => window.open(config.youtubeLink || 'https://youtube.com', '_blank')} className="primary-btn" style={{ width: '100%', justifyContent: 'center', gap: '8px', background: '#dc2626', color: '#fff', fontWeight: 700, fontSize: '1rem', border: 'none', cursor: 'pointer' }}>
-                  <i className="ph ph-play-circle"></i>
-                  ENTRAR NA LIVE
-                </button>
-              </>
-            ) : terminouHoje && terminouHoje.diaSemana === 0 ? (
+            {aoVivo ? (() => {
+              const msg = tipoMsgCulto(aoVivo);
+              return (
+                <>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 'var(--spacing-md)', background: `${msg.cor}dd`, padding: '5px 12px', borderRadius: 'var(--radius-full)' }}>
+                    {msg.pulso
+                      ? <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#fff', display: 'inline-block', animation: 'pulseAoVivo 1.2s ease-in-out infinite' }} />
+                      : <i className="ph ph-broadcast" style={{ fontSize: '0.9rem' }}></i>
+                    }
+                    {msg.badge}
+                  </span>
+                  <h1 className="hero-title font-heading" style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '10px', lineHeight: 1.2 }}>
+                    {msg.titulo}
+                  </h1>
+                  <p style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.9)', marginBottom: '6px', fontWeight: 600 }}>
+                    {aoVivo.nome}
+                  </p>
+                  <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.65)', marginBottom: msg.youtube ? 'var(--spacing-lg)' : '0', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <i className="ph ph-clock"></i> {aoVivo.periodo}
+                  </p>
+                  {msg.youtube && (
+                    <button onClick={() => window.open(config.youtubeLink || 'https://youtube.com', '_blank')} className="primary-btn" style={{ width: '100%', justifyContent: 'center', gap: '8px', background: '#dc2626', color: '#fff', fontWeight: 700, fontSize: '1rem', border: 'none', cursor: 'pointer', marginTop: 'var(--spacing-lg)' }}>
+                      <i className="ph ph-play-circle"></i>
+                      ENTRAR NA LIVE
+                    </button>
+                  )}
+                </>
+              );
+            })()
+            : terminouHoje && terminouHoje.diaSemana === 0 ? (
               /* ── Culto de domingo encerrado ── */
               <>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 'var(--spacing-md)', background: 'rgba(30,30,30,0.7)', padding: '5px 12px', borderRadius: 'var(--radius-full)' }}>
@@ -296,17 +347,32 @@ export default function Home() {
                 </button>
               </>
             ) : (
-              /* ── Boas-vindas ── */
+              /* ── Próximo culto + contagem regressiva ── */
               <>
-                <p style={{ fontSize: '0.8rem', fontWeight: 600, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '10px' }}>
-                  Seja bem-vindo à
+                <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '10px' }}>
+                  Próximo culto
                 </p>
-                <h1 className="hero-title font-heading" style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '12px', lineHeight: 1.2 }}>
-                  IGREJA FOI POR AMOR
-                </h1>
-                <p style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.7)', lineHeight: 1.6 }}>
-                  Um lugar de fé, amor e comunidade.
-                </p>
+                {proximoInfo ? (
+                  <>
+                    <h1 className="hero-title font-heading" style={{ fontSize: '1.8rem', fontWeight: 700, marginBottom: '6px', lineHeight: 1.2 }}>
+                      {proximoInfo.nome}
+                    </h1>
+                    <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.65)', marginBottom: '18px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <i className="ph ph-calendar-blank"></i>
+                      {DIAS_SEMANA_NOME[proximoInfo.diaSemana]} · {formatHora(proximoInfo.hora, proximoInfo.min)}
+                    </p>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', background: 'rgba(0,0,0,0.4)', borderRadius: 'var(--radius-md)', padding: '10px 18px', backdropFilter: 'blur(4px)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                      <i className="ph ph-timer" style={{ color: 'rgba(255,255,255,0.5)', fontSize: '1.1rem' }}></i>
+                      <span style={{ fontSize: '1.6rem', fontWeight: 700, letterSpacing: '3px', color: '#fff', fontVariantNumeric: 'tabular-nums', fontFamily: 'monospace' }}>
+                        {formatCountdown(proximoInfo.proximaData)}
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <h1 className="hero-title font-heading" style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '12px', lineHeight: 1.2 }}>
+                    IGREJA FOI POR AMOR
+                  </h1>
+                )}
               </>
             )}
 
