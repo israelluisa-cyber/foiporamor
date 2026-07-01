@@ -6,18 +6,20 @@ const QR_URL  = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&color=
 
 function detectar() {
   const ua = navigator.userAgent || '';
-  const isIOS     = /iphone|ipad|ipod/i.test(ua);
-  const isSafari  = /safari/i.test(ua) && !/chrome/i.test(ua);
-  const isAndroid = /android/i.test(ua);
+  const isIOS      = /iphone|ipad|ipod/i.test(ua);
+  const isChrome   = /crios|chrome/i.test(ua);
+  const isSafari   = /safari/i.test(ua) && !isChrome;
+  const isAndroid  = /android/i.test(ua);
+  const isIOSChrome = isIOS && isChrome;
   const isInstalled = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-  return { isIOS, isSafari, isAndroid, isInstalled };
+  return { isIOS, isSafari, isAndroid, isIOSChrome, isInstalled };
 }
 
 export default function Instalar() {
   const [copiado, setCopiado]       = useState(false);
   const [podInstalar, setPodInstalar] = useState(false);
   const [instalado, setInstalado]   = useState(false);
-  const { isIOS, isAndroid, isInstalled } = detectar();
+  const { isIOS, isAndroid, isIOSChrome, isInstalled } = detectar();
 
   useEffect(() => {
     if (isInstalled) { setInstalado(true); return; }
@@ -46,6 +48,28 @@ export default function Instalar() {
       <Header title="Instalar App" backButton={true} />
 
       <main style={{ paddingTop: 'var(--spacing-md)' }}>
+
+        {/* Aviso: iPhone com Chrome */}
+        {isIOSChrome && (
+          <section style={{ marginBottom: 'var(--spacing-lg)', padding: '16px', background: 'rgba(251,146,60,0.08)', border: '1px solid rgba(251,146,60,0.35)', borderRadius: 'var(--radius-md)', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+            <i className="ph ph-warning" style={{ fontSize: '1.4rem', color: '#fb923c', flexShrink: 0, marginTop: '2px' }}></i>
+            <div>
+              <p style={{ fontWeight: 700, fontSize: '0.9rem', color: '#fb923c', marginBottom: '6px' }}>
+                Você está usando o Chrome no iPhone
+              </p>
+              <p style={{ fontSize: '0.83rem', color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: '10px' }}>
+                No iPhone, a instalação do app só funciona pelo <strong>Safari</strong>. Copie o link abaixo e abra no Safari para continuar.
+              </p>
+              <button
+                onClick={() => { navigator.clipboard.writeText(APP_URL + '/instalar'); setCopiado(true); setTimeout(() => setCopiado(false), 2000); }}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px', background: '#fb923c', border: 'none', borderRadius: 'var(--radius-md)', color: '#fff', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer' }}
+              >
+                <i className={`ph ${copiado ? 'ph-check' : 'ph-copy'}`}></i>
+                {copiado ? 'Copiado!' : 'Copiar link'}
+              </button>
+            </div>
+          </section>
+        )}
 
         {/* Já instalado */}
         {instalado && (
