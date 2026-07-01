@@ -7,6 +7,12 @@ import { syncFromSupabase } from './data/supabase'
 
 syncFromSupabase();
 
+// Captura o prompt de instalação nativo do Android/Chrome
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  window._installPrompt = e;
+});
+
 function hideSplash() {
   const splash = document.getElementById('splash');
   if (!splash) return;

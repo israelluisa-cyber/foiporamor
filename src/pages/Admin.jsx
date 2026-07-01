@@ -1825,6 +1825,79 @@ function ModalMinisteriosAdmin({ onClose, onSaved, membros }) {
   );
 }
 
+/* ── Modal Pedidos de Oração ─────────────────────────────────────── */
+function ModalPedidosOracao({ onClose }) {
+  const [pedidos, setPedidos] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('pedidos_oracao')) || []; }
+    catch { return []; }
+  });
+
+  const handleExcluir = (id) => {
+    const atualizados = pedidos.filter(p => p.id !== id && p.id !== String(id));
+    setPedidos(atualizados);
+    localStorage.setItem('pedidos_oracao', JSON.stringify(atualizados));
+  };
+
+  const handleLimparTodos = () => {
+    if (!confirm('Excluir todos os pedidos de oração?')) return;
+    setPedidos([]);
+    localStorage.setItem('pedidos_oracao', JSON.stringify([]));
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'flex-end', backdropFilter: 'blur(4px)' }}>
+      <div style={{ background: 'var(--bg-surface)', borderRadius: 'var(--radius-lg) var(--radius-lg) 0 0', width: '100%', maxHeight: '85vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{ padding: 'var(--spacing-lg)', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+          <div>
+            <h3 style={{ margin: 0, fontFamily: 'var(--font-heading)' }}>Pedidos de Oração</h3>
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '2px 0 0' }}>{pedidos.length} pedido{pedidos.length !== 1 ? 's' : ''}</p>
+          </div>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {pedidos.length > 0 && (
+              <button onClick={handleLimparTodos} style={{ fontSize: '0.78rem', color: '#ef4444', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 'var(--radius-md)', padding: '6px 12px', cursor: 'pointer', fontWeight: 600 }}>
+                Limpar todos
+              </button>
+            )}
+            <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '1.4rem', lineHeight: 1 }}>×</button>
+          </div>
+        </div>
+
+        <div style={{ overflowY: 'auto', flex: 1 }}>
+          {pedidos.length === 0 ? (
+            <div style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--text-muted)' }}>
+              <i className="ph ph-hands-praying" style={{ fontSize: '2rem', display: 'block', marginBottom: '8px' }}></i>
+              Nenhum pedido de oração no momento.
+            </div>
+          ) : (
+            pedidos.map(p => (
+              <div key={p.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '14px 16px', borderBottom: '1px solid var(--border-color)' }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>{p.nome || 'Anônimo'}</span>
+                    <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>· {p.data}</span>
+                    {p.privado && (
+                      <span style={{ fontSize: '0.65rem', background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-full)', padding: '1px 7px', color: 'var(--text-muted)' }}>
+                        Privado
+                      </span>
+                    )}
+                  </div>
+                  <p style={{ fontSize: '0.88rem', color: 'var(--text-primary)', lineHeight: 1.5 }}>{p.texto}</p>
+                </div>
+                <button
+                  onClick={() => handleExcluir(p.id)}
+                  style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 'var(--radius-sm)', padding: '6px 10px', cursor: 'pointer', color: '#ef4444', flexShrink: 0 }}
+                >
+                  <i className="ph ph-trash"></i>
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Admin() {
   const [isAuthenticated, setIsAuthenticated] = useState(
     () => sessionStorage.getItem('adminAuth') === 'true'
@@ -1841,6 +1914,7 @@ export default function Admin() {
   const [modalEvangelismo, setModalEvangelismo]   = useState(false);
   const [modalITEAP, setModalITEAP]               = useState(false);
 const [modalMinisterios, setModalMinisterios]   = useState(false);
+  const [modalOracao, setModalOracao]             = useState(false);
   const [aconselhamentos] = useState(loadAconselhamentos);
   const [toast, setToast] = useState('');
 
@@ -2007,6 +2081,19 @@ const [modalMinisterios, setModalMinisterios]   = useState(false);
           </button>
 
 <button
+            onClick={() => setModalOracao(true)}
+            className="event-list-item"
+            style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: 'var(--spacing-md)', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', background: 'none', cursor: 'pointer', color: 'var(--text-primary)', width: '100%' }}
+          >
+            <i className="ph ph-hands-praying" style={{ fontSize: '1.5rem', color: 'var(--accent-color)' }}></i>
+            <div style={{ flex: 1 }}>
+              <h4 style={{ fontWeight: 500 }}>Pedidos de Oração</h4>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Visualizar e excluir pedidos inadequados</p>
+            </div>
+            <i className="ph ph-caret-right"></i>
+          </button>
+
+          <button
             onClick={() => setModalMinisterios(true)}
             className="event-list-item"
             style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: 'var(--spacing-md)', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', background: 'none', cursor: 'pointer', color: 'var(--text-primary)', width: '100%' }}
@@ -2025,7 +2112,7 @@ const [modalMinisterios, setModalMinisterios]   = useState(false);
               <i className="ph ph-qr-code" style={{ marginRight: '6px' }}></i>QR Code do App
             </p>
             <img
-              src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&color=ffffff&bgcolor=0d0d0d&data=${encodeURIComponent('https://foiporamor.vercel.app')}`}
+              src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&color=ffffff&bgcolor=0d0d0d&data=${encodeURIComponent('https://foiporamor.vercel.app/instalar')}`}
               alt="QR Code"
               width={160} height={160}
               style={{ borderRadius: '8px', display: 'block', margin: '0 auto 10px' }}
@@ -2120,6 +2207,8 @@ const [modalMinisterios, setModalMinisterios]   = useState(false);
           membros={membros}
         />
       )}
+
+      {modalOracao && <ModalPedidosOracao onClose={() => setModalOracao(false)} />}
 
       {toast && <Toast message={toast} icon="ph-check-circle" type="success" onClose={() => setToast('')} duration={4000} />}
     </div>
