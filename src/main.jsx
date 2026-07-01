@@ -11,7 +11,8 @@ function hideSplash() {
   const splash = document.getElementById('splash');
   if (!splash) return;
   // Aguarda animações de entrada terminarem (mínimo 1.2s), depois some
-  const delay = Math.max(0, 3000 - performance.now());
+  const elapsed = Date.now() - (window._splashStart || Date.now());
+  const delay = Math.max(0, 3000 - elapsed);
   setTimeout(() => {
     splash.classList.add('hide');
     setTimeout(() => splash.remove(), 650);
