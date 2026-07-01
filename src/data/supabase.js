@@ -6,6 +6,38 @@ const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
 export const supabase = url && key ? createClient(url, key) : null;
 
 // -------------------------------------------------------
+// Storage: faz upload de base64 para o bucket "fotos"
+// e retorna a URL pública. Nunca lança exceção — em caso
+// de falha retorna o base64 original como fallback.
+// -------------------------------------------------------
+function base64ToBlob(dataUrl) {
+  const [header, data] = dataUrl.split(',');
+  const mime = header.match(/:(.*?);/)[1];
+  const binary = atob(data);
+  const arr = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) arr[i] = binary.charCodeAt(i);
+  return new Blob([arr], { type: mime });
+}
+
+export async function uploadFotoToStorage(base64DataUrl, pasta = 'geral') {
+  if (!supabase || !base64DataUrl) return base64DataUrl;
+  if (!base64DataUrl.startsWith('data:')) return base64DataUrl; // já é URL
+  try {
+    const blob = base64ToBlob(base64DataUrl);
+    const filename = `${pasta}/${Date.now()}.jpg`;
+    const { error } = await supabase.storage
+      .from('fotos')
+      .upload(filename, blob, { contentType: 'image/jpeg', upsert: false });
+    if (error) throw error;
+    const { data: { publicUrl } } = supabase.storage.from('fotos').getPublicUrl(filename);
+    return publicUrl;
+  } catch (e) {
+    console.warn('[Storage] Upload falhou, usando base64:', e.message);
+    return base64DataUrl;
+  }
+}
+
+// -------------------------------------------------------
 // Sync: puxa dados do Supabase e atualiza localStorage
 // Chamado uma vez na inicialização do app
 // -------------------------------------------------------

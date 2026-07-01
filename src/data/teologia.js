@@ -25,3 +25,4 @@ export function loadTeologia() {
 export function saveTeologia(data) {
   localStorage.setItem(TEOLOGIA_KEY, JSON.stringify(data));
 }
+

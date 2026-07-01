@@ -1,10 +1,25 @@
 import { useState } from 'react';
 import Header from '../components/Header';
 import Toast from '../components/Toast';
+import { loadConfig } from '../data/config';
 
-const STORAGE_KEY  = 'pedidos_oracao';
-const AMENS_KEY    = 'oracao_amens';
-const SETE_DIAS_MS = 7 * 24 * 60 * 60 * 1000;
+const STORAGE_KEY = 'pedidos_oracao';
+const AMENS_KEY   = 'oracao_amens';
+
+// Retorna o timestamp do fim do último culto de oração (quinta-feira)
+function ultimoCultoOracaoMs() {
+  const cultos = loadConfig().cultos || [];
+  const culto  = cultos.find(c => c.diaSemana === 4); // 4 = quinta-feira
+  if (!culto) return null;
+  const now      = new Date();
+  const daysBack = (now.getDay() - 4 + 7) % 7;
+  const candidate = new Date(now);
+  candidate.setDate(now.getDate() - daysBack);
+  candidate.setHours(culto.horaFim, culto.minFim, 0, 0);
+  // Se o culto desta semana ainda não terminou, volta uma semana
+  if (candidate.getTime() > Date.now()) candidate.setDate(candidate.getDate() - 7);
+  return candidate.getTime();
+}
 
 const MURAL_MOCK = [
   { id: 'm1', nome: 'Maria L.',     texto: 'Peço oração pela saúde da minha mãe que está internada. Deus é o médico dos médicos.', data: '19/06/2025', amens: 18 },
@@ -16,8 +31,12 @@ const MURAL_MOCK = [
 
 function loadPedidos() {
   try {
-    const todos   = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-    const validos = todos.filter(p => Date.now() - p.id < SETE_DIAS_MS);
+    const todos  = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    const corte  = ultimoCultoOracaoMs();
+    // Mantém apenas pedidos enviados APÓS o último culto de quinta (já foram orados → excluir)
+    const validos = corte
+      ? todos.filter(p => typeof p.id === 'string' || p.id >= corte)
+      : todos;
     if (validos.length !== todos.length)
       localStorage.setItem(STORAGE_KEY, JSON.stringify(validos));
     return validos;
@@ -97,8 +116,17 @@ export default function Oracao() {
             placeholder="Compartilhe seu pedido de oração. Nossa equipe pastoral intercederá por você..."
             value={texto}
             onChange={e => setTexto(e.target.value)}
-            style={{ marginTop: 0, marginBottom: 'var(--spacing-md)' }}
+            style={{ marginTop: 0, marginBottom: '10px' }}
           />
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--spacing-md)', padding: '10px 12px', background: 'rgba(255,255,255,0.04)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
+            <i className="ph ph-calendar-check" style={{ color: 'var(--accent-color)', fontSize: '1rem', flexShrink: 0 }}></i>
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.4 }}>
+              Seu pedido será orado no{' '}
+              <strong style={{ color: 'var(--text-secondary)' }}>Culto de Oração — toda Quinta-feira às 19h30.</strong>{' '}
+              Após o culto ele é removido automaticamente.
+            </p>
+          </div>
 
           <div
             onClick={() => setPrivado(p => !p)}

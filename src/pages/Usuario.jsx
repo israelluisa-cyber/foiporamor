@@ -1,11 +1,24 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import Toast from '../components/Toast';
+import { uploadFotoToStorage } from '../data/supabase';
 
-const CADASTROS_KEY = 'cadastros_pendentes';
-const USER_KEY     = 'user_cadastro';
-const SESSION_KEY  = 'user_session';
+const CADASTROS_KEY   = 'cadastros_pendentes';
+const USER_KEY        = 'user_cadastro';
+const SESSION_KEY     = 'user_session';
+const PROTECAO_LOGIN  = 'login_protecao';
+
+const MAX_TENTATIVAS    = 3;
+const BLOQUEIO_MS       = 5 * 60 * 1000;
+
+function getProtecaoLogin() {
+  try { return JSON.parse(localStorage.getItem(PROTECAO_LOGIN)) || { tentativas: 0, bloqueadoAte: null }; }
+  catch { return { tentativas: 0, bloqueadoAte: null }; }
+}
+function setProtecaoLogin(data) {
+  localStorage.setItem(PROTECAO_LOGIN, JSON.stringify(data));
+}
 
 function loadCadastros() {
   try { return JSON.parse(localStorage.getItem(CADASTROS_KEY)) || []; }
@@ -39,7 +52,21 @@ function ModalCadastroMembro({ isOpen, onClose, onSuccess }) {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (ev) => setPreviewFoto(ev.target.result);
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = async () => {
+        const MAX = 400;
+        const ratio = Math.min(MAX / img.width, MAX / img.height, 1);
+        const canvas = document.createElement('canvas');
+        canvas.width  = img.width  * ratio;
+        canvas.height = img.height * ratio;
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        const compressed = canvas.toDataURL('image/jpeg', 0.8);
+        const url = await uploadFotoToStorage(compressed, 'perfil');
+        setPreviewFoto(url);
+      };
+      img.src = ev.target.result;
+    };
     reader.readAsDataURL(file);
   };
 
@@ -52,6 +79,17 @@ function ModalCadastroMembro({ isOpen, onClose, onSuccess }) {
       setErro('As senhas não conferem.'); return;
     }
 
+    const cadastros = loadCadastros();
+    const emailNorm = formData.email.trim().toLowerCase();
+    const celularNorm = formData.celular.replace(/\D/g, '');
+
+    if (cadastros.some(c => c.email?.trim().toLowerCase() === emailNorm)) {
+      setErro('Já existe um cadastro com este e-mail.'); return;
+    }
+    if (celularNorm.length >= 8 && cadastros.some(c => c.celular?.replace(/\D/g, '') === celularNorm)) {
+      setErro('Já existe um cadastro com este celular.'); return;
+    }
+
     const novoCadastro = {
       id: Date.now(), ...formData,
       foto: previewFoto || null,
@@ -59,7 +97,6 @@ function ModalCadastroMembro({ isOpen, onClose, onSuccess }) {
       dataCadastro: new Date().toLocaleDateString('pt-BR'),
     };
 
-    const cadastros = loadCadastros();
     cadastros.push(novoCadastro);
     localStorage.setItem(CADASTROS_KEY, JSON.stringify(cadastros));
     localStorage.setItem(USER_KEY, JSON.stringify(novoCadastro));
@@ -226,6 +263,18 @@ export default function Usuario() {
   const [erro, setErro]     = useState('');
   const [modalCadastro, setModalCadastro] = useState(false);
   const [toast, setToast]   = useState('');
+  const [tempoRestante, setTempoRestante] = useState(0);
+
+  useEffect(() => {
+    if (tempoRestante <= 0) return;
+    const timer = setInterval(() => {
+      const p = getProtecaoLogin();
+      const restante = p.bloqueadoAte ? Math.max(0, p.bloqueadoAte - Date.now()) : 0;
+      setTempoRestante(restante);
+      if (restante === 0) setErro('');
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [tempoRestante]);
 
   const [fotoAtual, setFotoAtual] = useState(() => {
     try {
@@ -239,13 +288,39 @@ export default function Usuario() {
   /* Login */
   const handleLogin = (e) => {
     e.preventDefault();
+    const protecao = getProtecaoLogin();
+
+    if (protecao.bloqueadoAte && Date.now() < protecao.bloqueadoAte) {
+      const seg = Math.ceil((protecao.bloqueadoAte - Date.now()) / 1000);
+      const min = Math.ceil(seg / 60);
+      setErro(`Conta bloqueada. Tente novamente em ${min} minuto${min > 1 ? 's' : ''}.`);
+      setTempoRestante(protecao.bloqueadoAte - Date.now());
+      return;
+    }
+
     const cadastros = loadCadastros();
     const user = cadastros.find(c => c.email === email && c.password === senha);
 
-    if (!user) { setErro('E-mail ou senha incorretos.'); return; }
+    if (!user) {
+      const novasTentativas = (protecao.tentativas || 0) + 1;
+      const restantes = MAX_TENTATIVAS - novasTentativas;
+      if (novasTentativas >= MAX_TENTATIVAS) {
+        const bloqueadoAte = Date.now() + BLOQUEIO_MS;
+        setProtecaoLogin({ tentativas: novasTentativas, bloqueadoAte });
+        setTempoRestante(BLOQUEIO_MS);
+        setErro('Muitas tentativas incorretas. Acesso bloqueado por 5 minutos.');
+      } else {
+        setProtecaoLogin({ tentativas: novasTentativas, bloqueadoAte: null });
+        setErro(`E-mail ou senha incorretos. ${restantes} tentativa${restantes > 1 ? 's' : ''} restante${restantes > 1 ? 's' : ''}.`);
+      }
+      setSenha('');
+      return;
+    }
+
     if (user.status === 'pendente') { setErro('Seu cadastro ainda está aguardando aprovação.'); return; }
     if (user.status === 'rejeitado') { setErro('Seu cadastro foi recusado. Fale com a secretaria.'); return; }
 
+    setProtecaoLogin({ tentativas: 0, bloqueadoAte: null });
     const sessionData = {
       id: user.id, nome: user.nome, email: user.email,
       celular: user.celular, celula: user.celula, bairro: user.bairro,
@@ -264,15 +339,25 @@ export default function Usuario() {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
-      const novaFoto = ev.target.result;
-      setFotoAtual(novaFoto);
-      // Salva no cadastro em localStorage
-      const cadastros = loadCadastros();
-      const atualizados = cadastros.map(c =>
-        c.id === session.id ? { ...c, foto: novaFoto } : c
-      );
-      localStorage.setItem(CADASTROS_KEY, JSON.stringify(atualizados));
-      setToast('Foto atualizada com sucesso!');
+      const img = new Image();
+      img.onload = async () => {
+        const MAX = 400;
+        const ratio = Math.min(MAX / img.width, MAX / img.height, 1);
+        const canvas = document.createElement('canvas');
+        canvas.width  = img.width  * ratio;
+        canvas.height = img.height * ratio;
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        const compressed = canvas.toDataURL('image/jpeg', 0.8);
+        const novaFoto = await uploadFotoToStorage(compressed, 'perfil');
+        setFotoAtual(novaFoto);
+        const cadastros = loadCadastros();
+        const atualizados = cadastros.map(c =>
+          c.id === session.id ? { ...c, foto: novaFoto } : c
+        );
+        localStorage.setItem(CADASTROS_KEY, JSON.stringify(atualizados));
+        setToast('Foto atualizada com sucesso!');
+      };
+      img.src = ev.target.result;
     };
     reader.readAsDataURL(file);
   };
@@ -500,9 +585,9 @@ export default function Usuario() {
                 </div>
               )}
 
-              <button type="submit" className="primary-btn" style={{ width: '100%', justifyContent: 'center', padding: '14px', marginTop: 'var(--spacing-sm)' }}>
+              <button type="submit" className="primary-btn" disabled={tempoRestante > 0} style={{ width: '100%', justifyContent: 'center', padding: '14px', marginTop: 'var(--spacing-sm)', opacity: tempoRestante > 0 ? 0.5 : 1, cursor: tempoRestante > 0 ? 'not-allowed' : 'pointer' }}>
                 <i className="ph ph-sign-in"></i>
-                <span>Entrar</span>
+                <span>{tempoRestante > 0 ? `Aguarde ${Math.ceil(tempoRestante / 1000)}s` : 'Entrar'}</span>
               </button>
             </form>
 

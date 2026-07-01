@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import Header from '../components/Header';
 import Toast from '../components/Toast';
 import { loadMembros, saveMembros } from '../data/membros';
+import { uploadFotoToStorage } from '../data/supabase';
 import { loadConfig, saveConfig, DIAS_SEMANA, formatHora } from '../data/config';
 import { loadContribuicoes, clearContribuicoes, totalContribuicoes, totalPorObra } from '../data/contribuicoes';
 import { MINISTERIOS, loadVagas, saveVagas, VAGAS_KEY } from '../data/vagas';
@@ -58,7 +59,7 @@ function ModalGerenciarCadastros({ isOpen, onClose, cadastros, setCadastros, mem
       celula: cadastro.celula,
       bairro: cadastro.bairro,
       dataNascimento: cadastro.dataNascimento || null,
-      foto: null,
+      foto: cadastro.foto || null,
     };
 
     const novosMembros = [...membros, novoMembro];
@@ -721,7 +722,7 @@ function ModalConfiguracoes({ onClose, onSaved }) {
     const reader = new FileReader();
     reader.onload = ev => {
       const img = new Image();
-      img.onload = () => {
+      img.onload = async () => {
         const MAX = 800;
         const ratio = Math.min(MAX / img.width, MAX / img.height, 1);
         const canvas = document.createElement('canvas');
@@ -729,7 +730,8 @@ function ModalConfiguracoes({ onClose, onSaved }) {
         canvas.height = img.height * ratio;
         canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
         const compressed = canvas.toDataURL('image/jpeg', 0.75);
-        setCfg(c => ({ ...c, obras: c.obras.map(o => o.id === id ? { ...o, foto: compressed } : o) }));
+        const url = await uploadFotoToStorage(compressed, 'obras');
+        setCfg(c => ({ ...c, obras: c.obras.map(o => o.id === id ? { ...o, foto: url } : o) }));
       };
       img.src = ev.target.result;
     };
@@ -746,7 +748,7 @@ function ModalConfiguracoes({ onClose, onSaved }) {
     const reader = new FileReader();
     reader.onload = ev => {
       const img = new Image();
-      img.onload = () => {
+      img.onload = async () => {
         const MAX = 900;
         const ratio = Math.min(MAX / img.width, MAX / img.height, 1);
         const canvas = document.createElement('canvas');
@@ -754,7 +756,8 @@ function ModalConfiguracoes({ onClose, onSaved }) {
         canvas.height = img.height * ratio;
         canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
         const compressed = canvas.toDataURL('image/jpeg', 0.78);
-        setCfg(c => ({ ...c, cultos: c.cultos.map(cu => cu.id === id ? { ...cu, foto: compressed } : cu) }));
+        const url = await uploadFotoToStorage(compressed, 'cultos');
+        setCfg(c => ({ ...c, cultos: c.cultos.map(cu => cu.id === id ? { ...cu, foto: url } : cu) }));
       };
       img.src = ev.target.result;
     };
@@ -771,7 +774,7 @@ function ModalConfiguracoes({ onClose, onSaved }) {
     const reader = new FileReader();
     reader.onload = ev => {
       const img = new Image();
-      img.onload = () => {
+      img.onload = async () => {
         const MAX = 1200;
         const ratio = Math.min(MAX / img.width, MAX / img.height, 1);
         const canvas = document.createElement('canvas');
@@ -779,8 +782,9 @@ function ModalConfiguracoes({ onClose, onSaved }) {
         canvas.height = img.height * ratio;
         canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
         const compressed = canvas.toDataURL('image/jpeg', 0.8);
-        setHeroBgPreview(compressed);
-        setCfg(c => ({ ...c, heroBg: compressed }));
+        const url = await uploadFotoToStorage(compressed, 'hero');
+        setHeroBgPreview(url);
+        setCfg(c => ({ ...c, heroBg: url }));
       };
       img.src = ev.target.result;
     };
@@ -943,7 +947,26 @@ function ModalConfiguracoes({ onClose, onSaved }) {
           {/* WHATSAPP */}
           {secao === 'whatsapp' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0 }}>Números de WhatsApp dos grupos de célula. Use o formato: 5511999999999 (com DDI e DDD, sem espaços).</p>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0 }}>Use o formato: 5511999999999 (DDI + DDD + número, sem espaços ou traços).</p>
+
+              <div>
+                <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
+                  WhatsApp do Pastor <span style={{ color: '#25D366', fontSize: '0.75rem' }}>— para aconselhamento</span>
+                </label>
+                <input
+                  type="tel"
+                  value={cfg.whatsappPastor || ''}
+                  onChange={e => set('whatsappPastor', e.target.value)}
+                  style={inputSt}
+                  placeholder="5511999999999"
+                />
+                <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                  Exibido como botão de contato direto na página de aconselhamento.
+                </p>
+              </div>
+
+              <div style={{ height: '1px', background: 'var(--border-color)' }} />
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0, fontWeight: 600 }}>Grupos de Célula</p>
               {[
                 ['Geração de Fogo (Jovens)', 'geracaoFogo'],
                 ['Lar de Paz (Famílias)',    'larDePaz'],
@@ -1228,6 +1251,11 @@ function ModalAconselhamento({ onClose }) {
     localStorage.setItem(ACONSELHAMENTO_KEY, JSON.stringify(novos));
   };
 
+  const formatarWa = (tel) => {
+    const digits = tel.replace(/\D/g, '');
+    return digits.startsWith('55') ? digits : `55${digits}`;
+  };
+
   const CONTATO_ICON = {
     'WhatsApp': 'ph-whatsapp-logo',
     'Ligação telefônica': 'ph-phone',
@@ -1289,13 +1317,30 @@ function ModalAconselhamento({ onClose }) {
                     <div style={{ paddingTop: '12px', marginBottom: '10px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <i className={`ph ${CONTATO_ICON[p.contato] || 'ph-chat'}`} style={{ color: '#6d28d9', fontSize: '1rem' }}></i>
-                        <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Contato preferido: {p.contato}</span>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Prefere: {p.contato}</span>
                         {!p.membro && <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-full)', padding: '1px 7px' }}>Visitante</span>}
                       </div>
                       {p.telefone && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 10px', background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.25)', borderRadius: 'var(--radius-sm)' }}>
-                          <i className="ph ph-phone" style={{ color: '#22c55e', fontSize: '1rem' }}></i>
-                          <span style={{ fontSize: '0.88rem', color: 'var(--text-primary)', fontWeight: 700, letterSpacing: '0.3px' }}>{p.telefone}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.25)', borderRadius: 'var(--radius-sm)' }}>
+                          <i className="ph ph-phone" style={{ color: '#22c55e', fontSize: '1rem', flexShrink: 0 }}></i>
+                          <span style={{ fontSize: '0.95rem', color: 'var(--text-primary)', fontWeight: 700, letterSpacing: '0.5px', flex: 1 }}>{p.telefone}</span>
+                          {p.contato === 'WhatsApp' && (
+                            <a
+                              href={`https://wa.me/${formatarWa(p.telefone)}?text=${encodeURIComponent(`Olá ${p.nome || ''}! Sou pastor(a) da Igreja Foi Por Amor. Recebi seu pedido de aconselhamento sobre "${p.tipo}" e gostaria de conversar com você. Quando teria um bom momento?`)}`}
+                              target="_blank" rel="noopener noreferrer"
+                              style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 12px', background: '#25D366', color: '#fff', borderRadius: 'var(--radius-md)', fontSize: '0.78rem', fontWeight: 700, textDecoration: 'none', flexShrink: 0 }}
+                            >
+                              <i className="ph ph-whatsapp-logo"></i> Abrir WhatsApp
+                            </a>
+                          )}
+                          {p.contato === 'Ligação telefônica' && (
+                            <a
+                              href={`tel:${p.telefone.replace(/\D/g, '')}`}
+                              style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 12px', background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.4)', color: '#22c55e', borderRadius: 'var(--radius-md)', fontSize: '0.78rem', fontWeight: 700, textDecoration: 'none', flexShrink: 0 }}
+                            >
+                              <i className="ph ph-phone"></i> Ligar
+                            </a>
+                          )}
                         </div>
                       )}
                     </div>
@@ -1794,7 +1839,7 @@ export default function Admin() {
   const [modalAconselhamento, setModalAconselhamento] = useState(false);
   const [modalEvangelismo, setModalEvangelismo]   = useState(false);
   const [modalITEAP, setModalITEAP]               = useState(false);
-  const [modalMinisterios, setModalMinisterios]   = useState(false);
+const [modalMinisterios, setModalMinisterios]   = useState(false);
   const [aconselhamentos] = useState(loadAconselhamentos);
   const [toast, setToast] = useState('');
 
@@ -1960,7 +2005,7 @@ export default function Admin() {
             <i className="ph ph-caret-right"></i>
           </button>
 
-          <button
+<button
             onClick={() => setModalMinisterios(true)}
             className="event-list-item"
             style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: 'var(--spacing-md)', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', background: 'none', cursor: 'pointer', color: 'var(--text-primary)', width: '100%' }}
@@ -2045,7 +2090,7 @@ export default function Admin() {
         />
       )}
 
-      {modalMinisterios && (
+{modalMinisterios && (
         <ModalMinisteriosAdmin
           onClose={() => setModalMinisterios(false)}
           onSaved={() => setToast('Ministérios salvos com sucesso!')}

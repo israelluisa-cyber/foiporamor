@@ -7,8 +7,23 @@ import { syncFromSupabase } from './data/supabase'
 
 syncFromSupabase();
 
-ReactDOM.createRoot(document.getElementById('root')).render(
+function hideSplash() {
+  const splash = document.getElementById('splash');
+  if (!splash) return;
+  // Aguarda animações de entrada terminarem (mínimo 1.2s), depois some
+  const delay = Math.max(0, 1400 - performance.now());
+  setTimeout(() => {
+    splash.classList.add('hide');
+    setTimeout(() => splash.remove(), 650);
+  }, delay);
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
   <React.StrictMode>
     <App />
   </React.StrictMode>,
-)
+);
+
+// Remove splash após React montar e animações concluírem
+hideSplash();

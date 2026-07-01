@@ -1,14 +1,11 @@
 import { useState } from 'react';
 import Header from '../components/Header';
 import Toast from '../components/Toast';
+import { loadConfig } from '../data/config';
+import { supabase } from '../data/supabase';
 
 const KEY = 'pedidos_aconselhamento';
 const TIPOS = ['Casamento / Família', 'Saúde / Luto', 'Ansiedade / Depressão', 'Finanças', 'Vocação / Propósito', 'Outro'];
-
-const CONTATOS_MEMBRO   = ['WhatsApp', 'Ligação telefônica', 'Presencial na Igreja', 'E-mail'];
-const CONTATOS_VISITANTE = ['Presencial na Igreja'];
-
-const EXIGE_TELEFONE = ['WhatsApp', 'Ligação telefônica'];
 
 function getSession() {
   try { return JSON.parse(sessionStorage.getItem('user_session')); } catch { return null; }
@@ -26,36 +23,63 @@ function loadPedidos() {
 
 export default function Aconselhamento() {
   const logado = !!getSession();
-  const contatos = logado ? CONTATOS_MEMBRO : CONTATOS_VISITANTE;
+  const cfg = loadConfig();
+  const whatsappPastor = cfg.whatsappPastor?.replace(/\D/g, '') || '';
 
   const [pedidos] = useState(loadPedidos);
   const [enviado, setEnviado] = useState(false);
+  const [enviando, setEnviando] = useState(false);
   const [toast, setToast] = useState('');
   const [form, setForm] = useState({
     nome: getNome(),
     tipo: TIPOS[0],
-    contato: contatos[0],
-    telefone: '',
     mensagem: '',
   });
 
-  const precisaTelefone = EXIGE_TELEFONE.includes(form.contato);
+  const podeSalvar = !!form.mensagem.trim();
 
-  const podeSalvar = form.mensagem.trim() &&
-    (!precisaTelefone || form.telefone.trim().length >= 8);
+  const buildMsgPastor = (f) => [
+    '📋 *Pedido de Aconselhamento*',
+    '',
+    `👤 *Nome:* ${f.nome || 'Não informado'}`,
+    `📌 *Área:* ${f.tipo}`,
+    '',
+    '💬 *Mensagem:*',
+    f.mensagem,
+  ].filter(l => l !== undefined).join('\n');
 
-  const handleEnviar = () => {
-    if (!podeSalvar) return;
+  const handleEnviar = async () => {
+    if (!podeSalvar || enviando) return;
+    setEnviando(true);
     const novo = {
       ...form,
-      telefone: precisaTelefone ? form.telefone.trim() : '',
       membro: logado,
       data: new Date().toLocaleDateString('pt-BR'),
       id: Date.now(),
     };
     localStorage.setItem(KEY, JSON.stringify([novo, ...pedidos]));
+    if (supabase) {
+      try {
+        await supabase.from('pedidos_aconselhamento').insert({
+          id: String(novo.id),
+          nome: novo.nome,
+          tipo: novo.tipo,
+          mensagem: novo.mensagem,
+          membro: novo.membro,
+          data: novo.data,
+          atendido: false,
+        });
+      } catch (e) {
+        console.warn('[Supabase] Erro ao salvar aconselhamento:', e.message);
+      }
+    }
+    if (whatsappPastor) {
+      const url = `https://wa.me/${whatsappPastor}?text=${encodeURIComponent(buildMsgPastor(novo))}`;
+      window.open(url, '_blank');
+    }
+    setEnviando(false);
     setEnviado(true);
-    setToast('Pedido enviado. Um pastor entrará em contato em breve.');
+    setToast(whatsappPastor ? 'WhatsApp do pastor aberto!' : 'Pedido enviado com sucesso!');
   };
 
   const inputStyle = {
@@ -75,21 +99,42 @@ export default function Aconselhamento() {
   );
 
   if (enviado) {
+    const msgWa = encodeURIComponent(
+      `Olá! Acabei de enviar um pedido de aconselhamento sobre "${form.tipo}" pelo app da Igreja Foi Por Amor. Podemos conversar?`
+    );
     return (
       <div className="container" style={{ paddingBottom: 'var(--spacing-xl)' }}>
         <Header title="Aconselhamento" backButton={true} />
         <main style={{ paddingTop: 'var(--spacing-md)' }}>
           <section className="glass-card" style={{ textAlign: 'center', padding: 'var(--spacing-xl)' }}>
-            <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto var(--spacing-md)' }}>
-              <i className="ph ph-check-circle" style={{ fontSize: '2rem', color: 'var(--text-primary)' }}></i>
+            <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto var(--spacing-md)' }}>
+              <i className="ph ph-check-circle" style={{ fontSize: '2rem', color: '#22c55e' }}></i>
             </div>
             <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.2rem', marginBottom: '8px' }}>Pedido Enviado</h3>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.6, marginBottom: 'var(--spacing-lg)' }}>
               {form.contato === 'Presencial na Igreja'
                 ? 'Passe na secretaria da igreja para agendar seu atendimento com um dos pastores. Você não está sozinho(a).'
-                : 'Um pastor da Igreja Foi Por Amor entrará em contato pelo meio escolhido em até 48 horas. Você não está sozinho(a).'}
+                : 'Um pastor da Igreja Foi Por Amor entrará em contato pelo meio escolhido em breve. Você não está sozinho(a).'}
             </p>
-            <button onClick={() => setEnviado(false)} className="primary-btn" style={{ width: '100%', justifyContent: 'center' }}>
+
+            {/* Botão WhatsApp do pastor (se configurado) */}
+            {whatsappPastor && (
+              <div style={{ marginBottom: 'var(--spacing-md)', padding: '16px', background: 'rgba(37,211,102,0.06)', border: '1px solid rgba(37,211,102,0.2)', borderRadius: 'var(--radius-md)' }}>
+                <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>
+                  Prefere falar agora? Abra uma conversa diretamente com o pastor:
+                </p>
+                <a
+                  href={`https://wa.me/${whatsappPastor}?text=${msgWa}`}
+                  target="_blank" rel="noopener noreferrer"
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px', background: '#25D366', color: '#fff', borderRadius: 'var(--radius-md)', fontWeight: 700, fontSize: '0.95rem', textDecoration: 'none' }}
+                >
+                  <i className="ph ph-whatsapp-logo" style={{ fontSize: '1.2rem' }}></i>
+                  Falar com o Pastor pelo WhatsApp
+                </a>
+              </div>
+            )}
+
+            <button onClick={() => setEnviado(false)} className="primary-btn" style={{ width: '100%', justifyContent: 'center', background: 'var(--bg-surface-elevated)', color: 'var(--text-secondary)', border: '1px solid var(--border-color)' }}>
               Fazer Novo Pedido
             </button>
           </section>
@@ -116,15 +161,6 @@ export default function Aconselhamento() {
           Nossa equipe pastoral está disponível para te ouvir e caminhar com você. Todas as conversas são sigilosas.
         </p>
 
-        {/* Aviso para visitantes */}
-        {!logado && (
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', padding: '12px 14px', background: 'rgba(109,40,217,0.08)', border: '1px solid rgba(109,40,217,0.25)', borderRadius: 'var(--radius-md)', marginBottom: 'var(--spacing-md)' }}>
-            <i className="ph ph-info" style={{ color: '#6d28d9', fontSize: '1.1rem', flexShrink: 0, marginTop: '1px' }}></i>
-            <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>
-              O atendimento presencial é feito na sede da Igreja Foi Por Amor. Membros cadastrados têm acesso a mais formas de contato.
-            </p>
-          </div>
-        )}
 
         <section className="glass-card">
 
@@ -154,47 +190,6 @@ export default function Aconselhamento() {
             </select>
           </div>
 
-          {/* Forma de contato */}
-          <div style={{ marginBottom: 'var(--spacing-md)' }}>
-            <Label txt="Como Prefere ser Contactado" />
-            <div style={{ display: 'grid', gridTemplateColumns: contatos.length > 1 ? '1fr 1fr' : '1fr', gap: '8px' }}>
-              {contatos.map(c => (
-                <button
-                  key={c}
-                  onClick={() => setForm(f => ({ ...f, contato: c, telefone: '' }))}
-                  style={{
-                    padding: '10px', borderRadius: 'var(--radius-md)', fontSize: '0.82rem',
-                    background: form.contato === c ? 'var(--accent-color)' : 'var(--bg-surface-elevated)',
-                    color: form.contato === c ? 'var(--bg-color)' : 'var(--text-secondary)',
-                    border: `1px solid ${form.contato === c ? 'var(--accent-color)' : 'var(--border-color)'}`,
-                    fontWeight: form.contato === c ? 700 : 400, transition: 'all 0.2s', cursor: 'pointer',
-                  }}
-                >
-                  {c}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Telefone — aparece apenas quando necessário */}
-          {precisaTelefone && (
-            <div style={{ marginBottom: 'var(--spacing-md)', animation: 'fadeIn 0.2s ease' }}>
-              <Label txt={`Seu ${form.contato === 'WhatsApp' ? 'WhatsApp' : 'Telefone'} para contato`} />
-              <input
-                type="tel"
-                value={form.telefone}
-                onChange={e => setForm(f => ({ ...f, telefone: e.target.value }))}
-                style={inputStyle}
-                onFocus={focusStyle}
-                onBlur={blurStyle}
-                placeholder="(11) 99999-9999"
-              />
-              <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                Usado apenas pelo pastor para retornar seu contato.
-              </p>
-            </div>
-          )}
-
           {/* Mensagem */}
           <div style={{ marginBottom: 'var(--spacing-lg)' }}>
             <Label txt="Conte um pouco mais" />
@@ -207,14 +202,32 @@ export default function Aconselhamento() {
             />
           </div>
 
-          <button
-            className="primary-btn"
-            onClick={handleEnviar}
-            disabled={!podeSalvar}
-            style={{ width: '100%', justifyContent: 'center', opacity: podeSalvar ? 1 : 0.5 }}
-          >
-            <i className="ph ph-paper-plane-tilt"></i> Enviar Pedido
-          </button>
+          {whatsappPastor ? (
+            <button
+              onClick={handleEnviar}
+              disabled={!podeSalvar || enviando}
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                padding: '14px', borderRadius: 'var(--radius-md)', border: 'none', cursor: 'pointer',
+                background: podeSalvar && !enviando ? '#25D366' : 'rgba(37,211,102,0.3)',
+                color: '#fff', fontWeight: 700, fontSize: '1rem', fontFamily: 'var(--font-body)',
+                transition: 'opacity 0.2s',
+              }}
+            >
+              <i className={`ph ${enviando ? 'ph-circle-notch' : 'ph-whatsapp-logo'}`} style={{ fontSize: '1.2rem', ...(enviando ? { animation: 'spin 1s linear infinite' } : {}) }}></i>
+              {enviando ? 'Abrindo WhatsApp...' : 'Enviar mensagem ao Pastor'}
+            </button>
+          ) : (
+            <button
+              className="primary-btn"
+              onClick={handleEnviar}
+              disabled={!podeSalvar || enviando}
+              style={{ width: '100%', justifyContent: 'center', opacity: podeSalvar && !enviando ? 1 : 0.5 }}
+            >
+              <i className={`ph ${enviando ? 'ph-circle-notch' : 'ph-paper-plane-tilt'}`} style={enviando ? { animation: 'spin 1s linear infinite' } : {}}></i>
+              {enviando ? 'Enviando...' : 'Enviar Pedido'}
+            </button>
+          )}
 
         </section>
       </main>

@@ -11,7 +11,15 @@
       "Bash(git --version)",
       "Bash(git init *)",
       "Bash(git remote *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git config *)",
+      "Bash(git branch *)",
+      "Bash(git push *)",
+      "Bash(npm run *)",
+      "Bash(git *)",
+      "Skill(run)",
+      "PowerShell(node -e \"const puppeteer = require\\('puppeteer'\\)\" 2>&1 | Select-Object -First 3)"
     ]
   }
 }

@@ -9,7 +9,8 @@ export const DEFAULT_CONFIG = {
   heroBgPosition: 'center',
   youtubeLink: 'https://www.youtube.com/@IgrejaFoiPorAmorOficial/live',
   avisoHome:   'Reunião de Líderes na próxima segunda-feira às 19h30.',
-  pixKey:      'igrejafoiporamor@exemplo.com.br',
+  pixKey:         'igrejafoiporamor@exemplo.com.br',
+  whatsappPastor: '',
   whatsapp: {
     geracaoFogo: '5511999999001',
     larDePaz:    '5511999999002',
@@ -38,6 +39,7 @@ export function loadConfig() {
     return {
       ...DEFAULT_CONFIG,
       ...saved,
+      whatsappPastor: saved.whatsappPastor ?? DEFAULT_CONFIG.whatsappPastor,
       whatsapp: { ...DEFAULT_CONFIG.whatsapp, ...(saved.whatsapp || {}) },
       cultos: saved.cultos && saved.cultos.length
       ? DEFAULT_CONFIG.cultos.map(c => ({ ...c, ...((saved.cultos || []).find(s => s.id === c.id) || {}) }))
