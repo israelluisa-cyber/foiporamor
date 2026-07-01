@@ -1378,53 +1378,116 @@ function ModalAconselhamento({ onClose }) {
 
 function ModalComunicado({ onClose, onSent }) {
   const [form, setForm] = useState({ titulo: '', texto: '', tipo: 'Informativo' });
+  const [avisos, setAvisos] = useState(() => JSON.parse(localStorage.getItem(ADMIN_AVISOS_KEY) || '[]'));
+  const [aba, setAba] = useState('novo');
   const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }));
   const inputSt = { width: '100%', padding: '10px', background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', color: 'var(--text-primary)', fontFamily: 'var(--font-body)', boxSizing: 'border-box', outline: 'none' };
 
   const handleEnviar = (e) => {
     e.preventDefault();
     if (!form.titulo.trim() || !form.texto.trim()) return;
-    const avisos = JSON.parse(localStorage.getItem(ADMIN_AVISOS_KEY) || '[]');
     const novoAviso = {
       id: Date.now(), tipo: form.tipo, titulo: form.titulo, texto: form.texto,
       data: new Date().toLocaleDateString('pt-BR'), icone: 'ph-megaphone', admin: true,
     };
-    localStorage.setItem(ADMIN_AVISOS_KEY, JSON.stringify([novoAviso, ...avisos]));
+    const atualizados = [novoAviso, ...avisos];
+    localStorage.setItem(ADMIN_AVISOS_KEY, JSON.stringify(atualizados));
+    setAvisos(atualizados);
+    setForm({ titulo: '', texto: '', tipo: 'Informativo' });
+    setAba('gerenciar');
     onSent();
-    onClose();
+  };
+
+  const handleExcluir = (id) => {
+    const atualizados = avisos.filter(a => a.id !== id);
+    localStorage.setItem(ADMIN_AVISOS_KEY, JSON.stringify(atualizados));
+    setAvisos(atualizados);
+  };
+
+  const TIPO_COR = {
+    Urgente:     '#ef4444',
+    Evento:      'var(--accent-color)',
+    Informativo: 'var(--text-muted)',
   };
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}>
-      <div style={{ background: 'var(--bg-color)', borderRadius: 'var(--radius-lg)', width: '100%', maxWidth: '480px', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
-        <div style={{ padding: 'var(--spacing-lg)', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3 style={{ margin: 0, fontFamily: 'var(--font-heading)' }}>Enviar Comunicado</h3>
+      <div style={{ background: 'var(--bg-color)', borderRadius: 'var(--radius-lg)', width: '100%', maxWidth: '480px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+
+        {/* Header */}
+        <div style={{ padding: 'var(--spacing-lg)', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+          <h3 style={{ margin: 0, fontFamily: 'var(--font-heading)' }}>Comunicados</h3>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '1.2rem' }}><i className="ph ph-x"></i></button>
         </div>
-        <form onSubmit={handleEnviar} style={{ padding: 'var(--spacing-lg)', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
-          <div>
-            <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Tipo</label>
-            <select value={form.tipo} onChange={set('tipo')} style={inputSt}>
-              <option>Informativo</option>
-              <option>Evento</option>
-              <option>Urgente</option>
-            </select>
-          </div>
-          <div>
-            <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Título *</label>
-            <input type="text" value={form.titulo} onChange={set('titulo')} style={inputSt} placeholder="Título do comunicado" required />
-          </div>
-          <div>
-            <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Mensagem *</label>
-            <textarea value={form.texto} onChange={set('texto')} style={{ ...inputSt, resize: 'none', minHeight: '100px' }} placeholder="Escreva o comunicado aqui..." required />
-          </div>
-          <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
-            <button type="button" onClick={onClose} style={{ flex: 1, padding: '11px', background: 'transparent', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 600 }}>Cancelar</button>
-            <button type="submit" style={{ flex: 1, padding: '11px', background: 'var(--accent-color)', border: 'none', borderRadius: 'var(--radius-md)', color: 'var(--bg-color)', cursor: 'pointer', fontWeight: 700 }}>
-              <i className="ph ph-megaphone"></i> Enviar
+
+        {/* Abas */}
+        <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', flexShrink: 0 }}>
+          {[{ key: 'novo', label: 'Novo comunicado' }, { key: 'gerenciar', label: `Publicados (${avisos.length})` }].map(a => (
+            <button key={a.key} onClick={() => setAba(a.key)} style={{ flex: 1, padding: '12px', background: 'none', border: 'none', borderBottom: `2px solid ${aba === a.key ? 'var(--accent-color)' : 'transparent'}`, color: aba === a.key ? 'var(--accent-color)' : 'var(--text-secondary)', cursor: 'pointer', fontWeight: aba === a.key ? 700 : 400, fontSize: '0.85rem', transition: 'all 0.2s' }}>
+              {a.label}
             </button>
-          </div>
-        </form>
+          ))}
+        </div>
+
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+
+          {/* Aba: Novo */}
+          {aba === 'novo' && (
+            <form onSubmit={handleEnviar} style={{ padding: 'var(--spacing-lg)', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
+              <div>
+                <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Tipo</label>
+                <select value={form.tipo} onChange={set('tipo')} style={inputSt}>
+                  <option>Informativo</option>
+                  <option>Evento</option>
+                  <option>Urgente</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Título *</label>
+                <input type="text" value={form.titulo} onChange={set('titulo')} style={inputSt} placeholder="Título do comunicado" required />
+              </div>
+              <div>
+                <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Mensagem *</label>
+                <textarea value={form.texto} onChange={set('texto')} style={{ ...inputSt, resize: 'none', minHeight: '100px' }} placeholder="Escreva o comunicado aqui..." required />
+              </div>
+              <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
+                <button type="button" onClick={onClose} style={{ flex: 1, padding: '11px', background: 'transparent', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 600 }}>Cancelar</button>
+                <button type="submit" style={{ flex: 1, padding: '11px', background: 'var(--accent-color)', border: 'none', borderRadius: 'var(--radius-md)', color: 'var(--bg-color)', cursor: 'pointer', fontWeight: 700 }}>
+                  <i className="ph ph-megaphone"></i> Publicar
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* Aba: Gerenciar */}
+          {aba === 'gerenciar' && (
+            <div style={{ padding: 'var(--spacing-lg)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {avisos.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
+                  <i className="ph ph-megaphone" style={{ fontSize: '2rem', display: 'block', marginBottom: '10px' }}></i>
+                  <p style={{ fontSize: '0.9rem' }}>Nenhum comunicado publicado.</p>
+                </div>
+              ) : (
+                avisos.map(a => (
+                  <div key={a.id} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '12px 14px', display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <span style={{ fontSize: '0.65rem', fontWeight: 700, color: TIPO_COR[a.tipo] || 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{a.tipo}</span>
+                      <p style={{ fontWeight: 600, fontSize: '0.88rem', color: 'var(--text-primary)', margin: '2px 0' }}>{a.titulo}</p>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>{a.data}</p>
+                    </div>
+                    <button
+                      onClick={() => handleExcluir(a.id)}
+                      style={{ padding: '7px 10px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 'var(--radius-md)', color: '#ef4444', cursor: 'pointer', flexShrink: 0 }}
+                    >
+                      <i className="ph ph-trash"></i>
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+
+        </div>
       </div>
     </div>
   );
