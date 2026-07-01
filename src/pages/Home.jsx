@@ -298,7 +298,7 @@ export default function Home() {
         {(() => {
           const fotoCulto = !aoVivo && !(terminouHoje?.diaSemana === 0) && proximoInfo?.foto;
           const heroBgAtual = fotoCulto ? proximoInfo.foto : heroBg;
-          const overlayOpacity = fotoCulto ? 0.2 : 0.15;
+          const overlayOpacity = 0.15;
           return (
         <section className="glass-card hero-card image-bg" style={{ marginBottom: 'var(--spacing-lg)', backgroundImage: `url(${heroBgAtual})`, backgroundSize: 'cover', backgroundPosition: heroBgPosition, position: 'relative', overflow: 'hidden', borderRadius: 'var(--radius-lg)', minHeight: '260px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: `rgba(0,0,0,${overlayOpacity})`, zIndex: 1 }} />
