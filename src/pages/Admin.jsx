@@ -2019,6 +2019,28 @@ const [modalMinisterios, setModalMinisterios]   = useState(false);
             <i className="ph ph-caret-right"></i>
           </button>
 
+          {/* QR Code do App */}
+          <div style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: 'var(--spacing-md)', background: 'var(--bg-surface-elevated)', textAlign: 'center' }}>
+            <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '12px' }}>
+              <i className="ph ph-qr-code" style={{ marginRight: '6px' }}></i>QR Code do App
+            </p>
+            <img
+              src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&color=ffffff&bgcolor=0d0d0d&data=${encodeURIComponent('https://foiporamor.vercel.app')}`}
+              alt="QR Code"
+              width={160} height={160}
+              style={{ borderRadius: '8px', display: 'block', margin: '0 auto 10px' }}
+            />
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: '10px' }}>foiporamor.vercel.app</p>
+            <a
+              href="/instalar"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: 'var(--accent-color)', fontWeight: 600, textDecoration: 'none' }}
+            >
+              <i className="ph ph-arrow-square-out"></i> Ver página de instalação
+            </a>
+          </div>
+
           <button
             onClick={handleLogout}
             style={{ border: '1px solid rgba(239,68,68,0.3)', borderRadius: 'var(--radius-md)', padding: 'var(--spacing-md)', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', background: 'none', cursor: 'pointer', color: '#ef4444', width: '100%' }}

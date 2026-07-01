@@ -19,6 +19,7 @@ import Carteira    from './pages/Carteira';
 import Contribuir  from './pages/Contribuir';
 import Evangelismo  from './pages/Evangelismo';
 import Ministerios  from './pages/Ministerios';
+import Instalar     from './pages/Instalar';
 
 function App() {
   return (
@@ -42,6 +43,7 @@ function App() {
         <Route path="/contribuir"    element={<Contribuir />} />
         <Route path="/evangelismo"   element={<Evangelismo />} />
         <Route path="/ministerios"   element={<Ministerios />} />
+        <Route path="/instalar"      element={<Instalar />} />
       </Routes>
       <BottomNav />
     </Router>
