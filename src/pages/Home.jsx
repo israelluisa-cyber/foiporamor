@@ -354,15 +354,15 @@ export default function Home() {
             ) : (
               /* ── Próximo culto + contagem regressiva ── */
               <>
-                <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '10px' }}>
+                <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.9)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '10px', textShadow: '0 1px 6px rgba(0,0,0,0.9)' }}>
                   Próximo culto
                 </p>
                 {proximoInfo ? (
                   <>
-                    <h1 className="hero-title font-heading" style={{ fontSize: '1.8rem', fontWeight: 700, marginBottom: '6px', lineHeight: 1.2 }}>
+                    <h1 className="hero-title font-heading" style={{ fontSize: '1.8rem', fontWeight: 700, marginBottom: '6px', lineHeight: 1.2, textShadow: '0 2px 8px rgba(0,0,0,0.8)' }}>
                       {proximoInfo.nome}
                     </h1>
-                    <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.65)', marginBottom: '18px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.95)', marginBottom: '18px', display: 'flex', alignItems: 'center', gap: '6px', textShadow: '0 1px 6px rgba(0,0,0,0.9)' }}>
                       <i className="ph ph-calendar-blank"></i>
                       {DIAS_SEMANA_NOME[proximoInfo.diaSemana]} · {formatHora(proximoInfo.hora, proximoInfo.min)}
                     </p>
