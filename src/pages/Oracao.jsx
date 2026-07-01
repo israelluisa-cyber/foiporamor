@@ -113,7 +113,7 @@ export default function Oracao() {
           <h3 className="font-heading" style={{ marginBottom: 'var(--spacing-sm)' }}>Novo Pedido</h3>
           <textarea
             className="notes-area"
-            placeholder="Compartilhe seu pedido de oração. Nossa equipe pastoral intercederá por você..."
+            placeholder="Compartilhe seu pedido de oração. Ele será intercedido na quinta-feira pelo time pastoral..."
             value={texto}
             onChange={e => setTexto(e.target.value)}
             style={{ marginTop: 0, marginBottom: '10px' }}
@@ -121,10 +121,10 @@ export default function Oracao() {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--spacing-md)', padding: '10px 12px', background: 'rgba(255,255,255,0.04)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
             <i className="ph ph-calendar-check" style={{ color: 'var(--accent-color)', fontSize: '1rem', flexShrink: 0 }}></i>
-            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.4 }}>
-              Seu pedido será orado no{' '}
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.5 }}>
+              Seu pedido será levado ao altar e intercedido pela equipe pastoral no{' '}
               <strong style={{ color: 'var(--text-secondary)' }}>Culto de Oração — toda Quinta-feira às 19h30.</strong>{' '}
-              Após o culto ele é removido automaticamente.
+              Após a intercessão, o pedido é removido automaticamente.
             </p>
           </div>
 
