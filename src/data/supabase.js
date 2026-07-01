@@ -38,6 +38,40 @@ export async function uploadFotoToStorage(base64DataUrl, pasta = 'geral') {
 }
 
 // -------------------------------------------------------
+// Cadastros: salva novo cadastro de membro no Supabase
+// -------------------------------------------------------
+export async function saveCadastroToSupabase(cadastro) {
+  if (!supabase) return;
+  try {
+    await supabase.from('cadastros').upsert({
+      id:              String(cadastro.id),
+      nome:            cadastro.nome            || null,
+      email:           cadastro.email           || null,
+      celular:         cadastro.celular         || null,
+      data_nascimento: cadastro.dataNascimento  || null,
+      bairro:          cadastro.bairro          || null,
+      celula:          cadastro.celula          || null,
+      experiencia:     cadastro.experiencia     || null,
+      foto:            cadastro.foto            || null,
+      password:        cadastro.password        || null,
+      status:          cadastro.status          || 'pendente',
+      data_cadastro:   cadastro.dataCadastro    || null,
+    });
+  } catch (e) {
+    console.warn('[Supabase] Erro ao salvar cadastro:', e.message);
+  }
+}
+
+export async function updateCadastroStatusSupabase(id, status) {
+  if (!supabase) return;
+  try {
+    await supabase.from('cadastros').update({ status }).eq('id', String(id));
+  } catch (e) {
+    console.warn('[Supabase] Erro ao atualizar cadastro:', e.message);
+  }
+}
+
+// -------------------------------------------------------
 // Config: salva a configuração do app no Supabase
 // para sincronizar entre dispositivos
 // -------------------------------------------------------
@@ -83,7 +117,7 @@ export async function syncFromSupabase() {
 
     if (membros?.length)        localStorage.setItem('membros_data',           JSON.stringify(mapMembros(membros)));
     if (contribuicoes?.length)  localStorage.setItem('contribuicoes',          JSON.stringify(mapContribuicoes(contribuicoes)));
-    if (cadastros?.length)      localStorage.setItem('cadastros_pendentes',    JSON.stringify(cadastros));
+    if (cadastros?.length)      localStorage.setItem('cadastros_pendentes',    JSON.stringify(mapCadastros(cadastros)));
     if (avisos?.length)         localStorage.setItem('admin_avisos',           JSON.stringify(avisos));
     if (oracao?.length)         localStorage.setItem('pedidos_oracao',         JSON.stringify(oracao));
     if (visitantes?.length)     localStorage.setItem('visitantes',             JSON.stringify(visitantes));
@@ -106,6 +140,23 @@ function mapMembros(rows) {
     bairro: r.bairro,
     foto: r.foto,
     dataNascimento: r.data_nascimento,
+  }));
+}
+
+function mapCadastros(rows) {
+  return rows.map(r => ({
+    id:              r.id,
+    nome:            r.nome,
+    email:           r.email,
+    celular:         r.celular,
+    dataNascimento:  r.data_nascimento,
+    bairro:          r.bairro,
+    celula:          r.celula,
+    experiencia:     r.experiencia,
+    foto:            r.foto,
+    password:        r.password,
+    status:          r.status,
+    dataCadastro:    r.data_cadastro,
   }));
 }
 

@@ -126,6 +126,9 @@ CREATE POLICY "allow_all_fotos_insert"
 CREATE POLICY "allow_all_fotos_delete"
   ON storage.objects FOR DELETE USING (bucket_id = 'fotos');
 
+-- Adiciona coluna password à tabela cadastros (se ainda não existir)
+ALTER TABLE cadastros ADD COLUMN IF NOT EXISTS password TEXT;
+
 -- CONFIGURAÇÕES DO APP (sincroniza entre dispositivos)
 CREATE TABLE IF NOT EXISTS app_config (
   id         TEXT PRIMARY KEY DEFAULT 'main',

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import Header from '../components/Header';
 import Toast from '../components/Toast';
 import { loadMembros, saveMembros } from '../data/membros';
-import { uploadFotoToStorage, saveConfigToSupabase } from '../data/supabase';
+import { uploadFotoToStorage, saveConfigToSupabase, updateCadastroStatusSupabase } from '../data/supabase';
 import { loadConfig, saveConfig, DIAS_SEMANA, formatHora } from '../data/config';
 import { loadContribuicoes, clearContribuicoes, totalContribuicoes, totalPorObra } from '../data/contribuicoes';
 import { MINISTERIOS, loadVagas, saveVagas, VAGAS_KEY } from '../data/vagas';
@@ -71,6 +71,7 @@ function ModalGerenciarCadastros({ isOpen, onClose, cadastros, setCadastros, mem
     );
     setCadastros(novosCadastros);
     saveCadastros(novosCadastros);
+    updateCadastroStatusSupabase(id, 'aprovado');
 
     setAprovadoNome(cadastro.nome);
   };
@@ -83,6 +84,7 @@ function ModalGerenciarCadastros({ isOpen, onClose, cadastros, setCadastros, mem
     );
     setCadastros(novosCadastros);
     saveCadastros(novosCadastros);
+    updateCadastroStatusSupabase(id, 'rejeitado');
   };
 
   if (!isOpen) return null;
