@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import Header from '../components/Header';
 import Toast from '../components/Toast';
 import { loadMembros, saveMembros } from '../data/membros';
-import { uploadFotoToStorage } from '../data/supabase';
+import { uploadFotoToStorage, saveConfigToSupabase } from '../data/supabase';
 import { loadConfig, saveConfig, DIAS_SEMANA, formatHora } from '../data/config';
 import { loadContribuicoes, clearContribuicoes, totalContribuicoes, totalPorObra } from '../data/contribuicoes';
 import { MINISTERIOS, loadVagas, saveVagas, VAGAS_KEY } from '../data/vagas';
@@ -802,9 +802,10 @@ function ModalConfiguracoes({ onClose, onSaved }) {
 
   const removerVaga = (id) => setVagas(v => v.filter(vg => vg.id !== id));
 
-  const handleSalvar = () => {
+  const handleSalvar = async () => {
     saveConfig(cfg);
     saveVagas(vagas);
+    saveConfigToSupabase(cfg);
     onSaved();
     onClose();
   };

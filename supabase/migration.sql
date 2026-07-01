@@ -126,6 +126,13 @@ CREATE POLICY "allow_all_fotos_insert"
 CREATE POLICY "allow_all_fotos_delete"
   ON storage.objects FOR DELETE USING (bucket_id = 'fotos');
 
+-- CONFIGURAÇÕES DO APP (sincroniza entre dispositivos)
+CREATE TABLE IF NOT EXISTS app_config (
+  id         TEXT PRIMARY KEY DEFAULT 'main',
+  data       JSONB NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- -------------------------------------------------------
 -- Row Level Security — acesso público (sem autenticação)
 -- -------------------------------------------------------
@@ -138,6 +145,7 @@ ALTER TABLE testemunhos            ENABLE ROW LEVEL SECURITY;
 ALTER TABLE visitantes             ENABLE ROW LEVEL SECURITY;
 ALTER TABLE checkin_infantil       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pedidos_aconselhamento ENABLE ROW LEVEL SECURITY;
+ALTER TABLE app_config             ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "allow_all_membros"    ON membros                FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "allow_all_contrib"    ON contribuicoes          FOR ALL USING (true) WITH CHECK (true);
@@ -148,3 +156,4 @@ CREATE POLICY "allow_all_testemu"    ON testemunhos            FOR ALL USING (tr
 CREATE POLICY "allow_all_visitantes" ON visitantes             FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "allow_all_checkin"    ON checkin_infantil       FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "allow_all_aconselh"   ON pedidos_aconselhamento FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_config"     ON app_config             FOR ALL USING (true) WITH CHECK (true);

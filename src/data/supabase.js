@@ -38,6 +38,23 @@ export async function uploadFotoToStorage(base64DataUrl, pasta = 'geral') {
 }
 
 // -------------------------------------------------------
+// Config: salva a configuração do app no Supabase
+// para sincronizar entre dispositivos
+// -------------------------------------------------------
+export async function saveConfigToSupabase(config) {
+  if (!supabase) return;
+  try {
+    await supabase.from('app_config').upsert({
+      id: 'main',
+      data: config,
+      updated_at: new Date().toISOString(),
+    });
+  } catch (e) {
+    console.warn('[Supabase] Erro ao salvar config:', e.message);
+  }
+}
+
+// -------------------------------------------------------
 // Sync: puxa dados do Supabase e atualiza localStorage
 // Chamado uma vez na inicialização do app
 // -------------------------------------------------------
@@ -52,6 +69,7 @@ export async function syncFromSupabase() {
       { data: oracao },
       { data: visitantes },
       { data: aconselhamento },
+      { data: appConfig },
     ] = await Promise.all([
       supabase.from('membros').select('*').order('created_at'),
       supabase.from('contribuicoes').select('*').order('created_at', { ascending: false }),
@@ -60,6 +78,7 @@ export async function syncFromSupabase() {
       supabase.from('pedidos_oracao').select('*').order('created_at', { ascending: false }),
       supabase.from('visitantes').select('*').order('created_at', { ascending: false }),
       supabase.from('pedidos_aconselhamento').select('*').order('created_at', { ascending: false }),
+      supabase.from('app_config').select('data').eq('id', 'main').single(),
     ]);
 
     if (membros?.length)        localStorage.setItem('membros_data',           JSON.stringify(mapMembros(membros)));
@@ -69,6 +88,7 @@ export async function syncFromSupabase() {
     if (oracao?.length)         localStorage.setItem('pedidos_oracao',         JSON.stringify(oracao));
     if (visitantes?.length)     localStorage.setItem('visitantes',             JSON.stringify(visitantes));
     if (aconselhamento?.length) localStorage.setItem('pedidos_aconselhamento', JSON.stringify(aconselhamento));
+    if (appConfig?.data)        localStorage.setItem('igreja_config',          JSON.stringify(appConfig.data));
   } catch (e) {
     console.warn('[Supabase] Sync falhou, usando dados locais:', e.message);
   }
