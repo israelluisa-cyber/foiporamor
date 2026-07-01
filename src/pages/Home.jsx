@@ -178,16 +178,16 @@ function proximoCulto(cultos) {
   return melhor;
 }
 
-function formatCountdown(proximaData) {
+function getCountdownParts(proximaData) {
   const diff = proximaData.getTime() - Date.now();
-  if (diff <= 0) return '00:00:00';
+  if (diff <= 0) return { dias: 0, horas: 0, min: 0, seg: 0 };
   const total = Math.floor(diff / 1000);
-  const dias  = Math.floor(total / 86400);
-  const horas = Math.floor((total % 86400) / 3600);
-  const min   = Math.floor((total % 3600) / 60);
-  const seg   = total % 60;
-  const hms = `${String(horas).padStart(2,'0')}:${String(min).padStart(2,'0')}:${String(seg).padStart(2,'0')}`;
-  return dias > 0 ? `${dias}d ${hms}` : hms;
+  return {
+    dias:  Math.floor(total / 86400),
+    horas: Math.floor((total % 86400) / 3600),
+    min:   Math.floor((total % 3600) / 60),
+    seg:   total % 60,
+  };
 }
 
 function tipoMsgCulto(culto) {
@@ -366,12 +366,26 @@ export default function Home() {
                       <i className="ph ph-calendar-blank"></i>
                       {DIAS_SEMANA_NOME[proximoInfo.diaSemana]} · {formatHora(proximoInfo.hora, proximoInfo.min)}
                     </p>
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', background: 'rgba(0,0,0,0.4)', borderRadius: 'var(--radius-md)', padding: '10px 18px', backdropFilter: 'blur(4px)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                      <i className="ph ph-timer" style={{ color: 'rgba(255,255,255,0.5)', fontSize: '1.1rem' }}></i>
-                      <span style={{ fontSize: '1.6rem', fontWeight: 700, letterSpacing: '3px', color: '#fff', fontVariantNumeric: 'tabular-nums', fontFamily: 'monospace' }}>
-                        {formatCountdown(proximoInfo.proximaData)}
-                      </span>
-                    </div>
+                    {(() => {
+                      const { dias, horas, min, seg } = getCountdownParts(proximoInfo.proximaData);
+                      const partes = dias > 0
+                        ? [{ v: dias, l: dias === 1 ? 'DIA' : 'DIAS' }, { v: horas, l: 'HRS' }, { v: min, l: 'MIN' }, { v: seg, l: 'SEG' }]
+                        : [{ v: horas, l: 'HRS' }, { v: min, l: 'MIN' }, { v: seg, l: 'SEG' }];
+                      return (
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          {partes.map(({ v, l }) => (
+                            <div key={l} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: 'rgba(0,0,0,0.45)', borderRadius: 'var(--radius-md)', padding: '10px 14px', backdropFilter: 'blur(4px)', border: '1px solid rgba(255,255,255,0.12)', minWidth: '52px' }}>
+                              <span style={{ fontSize: '1.6rem', fontWeight: 700, color: '#fff', fontVariantNumeric: 'tabular-nums', fontFamily: 'monospace', lineHeight: 1 }}>
+                                {String(v).padStart(2, '0')}
+                              </span>
+                              <span style={{ fontSize: '0.58rem', fontWeight: 700, color: 'rgba(255,255,255,0.45)', letterSpacing: '1.5px', marginTop: '5px' }}>
+                                {l}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
                   </>
                 ) : (
                   <h1 className="hero-title font-heading" style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '12px', lineHeight: 1.2 }}>
