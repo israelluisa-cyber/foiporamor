@@ -441,12 +441,11 @@ export default function Home() {
           .quick-icon {
             width: 40px; height: 40px;
             border-radius: var(--radius-sm);
-            background: var(--bg-surface-elevated);
             display: flex; align-items: center; justify-content: center;
-            transition: background 0.18s ease;
+            transition: filter 0.18s ease;
           }
           .quick-btn:hover .quick-icon {
-            background: rgba(255,255,255,0.08);
+            filter: brightness(1.25);
           }
           @keyframes slideInRight {
             from { opacity: 0; transform: translateX(40px); }
@@ -461,15 +460,15 @@ export default function Home() {
         {/* Acesso Rápido — scroll horizontal */}
         <section style={{ display: 'flex', gap: '10px', marginBottom: 'var(--spacing-lg)', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
           {[
-            { to: '/oracao',        icon: 'ph-hands-praying',  label: 'Oração',       delay: '0s'    },
-            { to: '/financeiro',    icon: 'ph-hand-heart',     label: 'Contribuir',   delay: '0.07s' },
-            { to: '/evangelismo',   icon: 'ph-megaphone',       label: 'Evangelismo',  delay: '0.14s' },
-            { to: '/teologia',      icon: 'ph-graduation-cap', label: 'Teologia',     delay: '0.21s' },
-            { to: '/ministerios',   icon: 'ph-users-three',    label: 'Ministérios',  delay: '0.28s' },
+            { to: '/oracao',        icon: 'ph-hands-praying',  label: 'Oração',       delay: '0s',    color: '#c084fc', bg: 'rgba(192,132,252,0.15)' },
+            { to: '/financeiro',    icon: 'ph-hand-heart',     label: 'Contribuir',   delay: '0.07s', color: '#facc15', bg: 'rgba(250,204,21,0.15)'  },
+            { to: '/evangelismo',   icon: 'ph-megaphone',       label: 'Evangelismo',  delay: '0.14s', color: '#fb923c', bg: 'rgba(251,146,60,0.15)'  },
+            { to: '/teologia',      icon: 'ph-graduation-cap', label: 'Teologia',     delay: '0.21s', color: '#94a3b8', bg: 'rgba(148,163,184,0.12)' },
+            { to: '/ministerios',   icon: 'ph-users-three',    label: 'Ministérios',  delay: '0.28s', color: '#818cf8', bg: 'rgba(129,140,248,0.15)' },
           ].map(item => (
             <Link key={item.to} to={item.to} className="quick-btn" style={{ animationDelay: item.delay, minWidth: '72px', flex: '0 0 auto' }}>
-              <div className="quick-icon">
-                <i className={`ph ${item.icon}`} style={{ fontSize: '1.2rem', color: 'var(--accent-color)' }}></i>
+              <div className="quick-icon" style={{ background: item.bg }}>
+                <i className={`ph ${item.icon}`} style={{ fontSize: '1.2rem', color: item.color }}></i>
               </div>
               <span style={{ fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-secondary)', textAlign: 'center', lineHeight: 1.2 }}>{item.label}</span>
             </Link>
