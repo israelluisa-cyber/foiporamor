@@ -5,20 +5,21 @@ import Toast from '../components/Toast';
 import { uploadFotoToStorage, saveCadastroToSupabase, updateCadastroSenhaSupabase, syncFromSupabase } from '../data/supabase';
 import { hashPassword, verifyPassword } from '../data/crypto';
 
-const CADASTROS_KEY   = 'cadastros_pendentes';
-const USER_KEY        = 'user_cadastro';
-const SESSION_KEY     = 'user_session';
-const PROTECAO_LOGIN  = 'login_protecao';
+const CADASTROS_KEY      = 'cadastros_pendentes';
+const USER_KEY           = 'user_cadastro';
+const SESSION_KEY        = 'user_session';
+const PROTECAO_LOGIN     = 'login_protecao';
+const PROTECAO_RECUPERAR = 'recuperar_protecao';
 
 const MAX_TENTATIVAS    = 3;
 const BLOQUEIO_MS       = 5 * 60 * 1000;
 
-function getProtecaoLogin() {
-  try { return JSON.parse(localStorage.getItem(PROTECAO_LOGIN)) || { tentativas: 0, bloqueadoAte: null }; }
+function getProtecao(key) {
+  try { return JSON.parse(localStorage.getItem(key)) || { tentativas: 0, bloqueadoAte: null }; }
   catch { return { tentativas: 0, bloqueadoAte: null }; }
 }
-function setProtecaoLogin(data) {
-  localStorage.setItem(PROTECAO_LOGIN, JSON.stringify(data));
+function setProtecao(key, data) {
+  localStorage.setItem(key, JSON.stringify(data));
 }
 
 function loadCadastros() {
@@ -274,17 +275,29 @@ export default function Usuario() {
   const [modalCadastro, setModalCadastro] = useState(false);
   const [toast, setToast]   = useState('');
   const [tempoRestante, setTempoRestante] = useState(0);
+  const [tempoRestanteRec, setTempoRestanteRec] = useState(0);
 
   useEffect(() => {
     if (tempoRestante <= 0) return;
     const timer = setInterval(() => {
-      const p = getProtecaoLogin();
+      const p = getProtecao(PROTECAO_LOGIN);
       const restante = p.bloqueadoAte ? Math.max(0, p.bloqueadoAte - Date.now()) : 0;
       setTempoRestante(restante);
       if (restante === 0) setErro('');
     }, 1000);
     return () => clearInterval(timer);
   }, [tempoRestante]);
+
+  useEffect(() => {
+    if (tempoRestanteRec <= 0) return;
+    const timer = setInterval(() => {
+      const p = getProtecao(PROTECAO_RECUPERAR);
+      const restante = p.bloqueadoAte ? Math.max(0, p.bloqueadoAte - Date.now()) : 0;
+      setTempoRestanteRec(restante);
+      if (restante === 0) setErro('');
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [tempoRestanteRec]);
 
   const [statusVersion, setStatusVersion] = useState(0);
 
@@ -313,7 +326,7 @@ export default function Usuario() {
   /* Login */
   const handleLogin = async (e) => {
     e.preventDefault();
-    const protecao = getProtecaoLogin();
+    const protecao = getProtecao(PROTECAO_LOGIN);
 
     if (protecao.bloqueadoAte && Date.now() < protecao.bloqueadoAte) {
       const seg = Math.ceil((protecao.bloqueadoAte - Date.now()) / 1000);
@@ -347,11 +360,11 @@ export default function Usuario() {
       const restantes = MAX_TENTATIVAS - novasTentativas;
       if (novasTentativas >= MAX_TENTATIVAS) {
         const bloqueadoAte = Date.now() + BLOQUEIO_MS;
-        setProtecaoLogin({ tentativas: novasTentativas, bloqueadoAte });
+        setProtecao(PROTECAO_LOGIN, { tentativas: novasTentativas, bloqueadoAte });
         setTempoRestante(BLOQUEIO_MS);
         setErro('Muitas tentativas incorretas. Acesso bloqueado por 5 minutos.');
       } else {
-        setProtecaoLogin({ tentativas: novasTentativas, bloqueadoAte: null });
+        setProtecao(PROTECAO_LOGIN, { tentativas: novasTentativas, bloqueadoAte: null });
         setErro(`E-mail ou senha incorretos. ${restantes} tentativa${restantes > 1 ? 's' : ''} restante${restantes > 1 ? 's' : ''}.`);
       }
       setSenha('');
@@ -361,7 +374,7 @@ export default function Usuario() {
     if (user.status === 'pendente') { setErro('Seu cadastro ainda está aguardando aprovação.'); return; }
     if (user.status === 'rejeitado') { setErro('Seu cadastro foi recusado. Fale com a secretaria.'); return; }
 
-    setProtecaoLogin({ tentativas: 0, bloqueadoAte: null });
+    setProtecao(PROTECAO_LOGIN, { tentativas: 0, bloqueadoAte: null });
     const sessionData = {
       id: user.id, nome: user.nome, email: user.email,
       celular: user.celular, celula: user.celula, bairro: user.bairro,
@@ -382,13 +395,13 @@ export default function Usuario() {
 
   const handleRecuperar = async (e) => {
     e.preventDefault();
-    const protecao = getProtecaoLogin();
+    const protecao = getProtecao(PROTECAO_RECUPERAR);
 
     if (protecao.bloqueadoAte && Date.now() < protecao.bloqueadoAte) {
       const seg = Math.ceil((protecao.bloqueadoAte - Date.now()) / 1000);
       const min = Math.ceil(seg / 60);
-      setErro(`Conta bloqueada. Tente novamente em ${min} minuto${min > 1 ? 's' : ''}.`);
-      setTempoRestante(protecao.bloqueadoAte - Date.now());
+      setErro(`Muitas tentativas. Tente novamente em ${min} minuto${min > 1 ? 's' : ''}.`);
+      setTempoRestanteRec(protecao.bloqueadoAte - Date.now());
       return;
     }
 
@@ -409,17 +422,17 @@ export default function Usuario() {
       const restantes = MAX_TENTATIVAS - novasTentativas;
       if (novasTentativas >= MAX_TENTATIVAS) {
         const bloqueadoAte = Date.now() + BLOQUEIO_MS;
-        setProtecaoLogin({ tentativas: novasTentativas, bloqueadoAte });
-        setTempoRestante(BLOQUEIO_MS);
-        setErro('Muitas tentativas incorretas. Acesso bloqueado por 5 minutos.');
+        setProtecao(PROTECAO_RECUPERAR, { tentativas: novasTentativas, bloqueadoAte });
+        setTempoRestanteRec(BLOQUEIO_MS);
+        setErro('Muitas tentativas incorretas. Tente novamente em 5 minutos.');
       } else {
-        setProtecaoLogin({ tentativas: novasTentativas, bloqueadoAte: null });
+        setProtecao(PROTECAO_RECUPERAR, { tentativas: novasTentativas, bloqueadoAte: null });
         setErro(`E-mail ou celular não conferem com nenhum cadastro aprovado. ${restantes} tentativa${restantes > 1 ? 's' : ''} restante${restantes > 1 ? 's' : ''}.`);
       }
       return;
     }
 
-    setProtecaoLogin({ tentativas: 0, bloqueadoAte: null });
+    setProtecao(PROTECAO_RECUPERAR, { tentativas: 0, bloqueadoAte: null });
     const { hash, salt } = await hashPassword(recNovaSenha);
     const atualizados = cadastros.map(c =>
       String(c.id) === String(user.id) ? { ...c, password: undefined, passwordHash: hash, passwordSalt: salt } : c
@@ -773,9 +786,9 @@ export default function Usuario() {
                 </div>
               )}
 
-              <button type="submit" className="primary-btn" disabled={tempoRestante > 0} style={{ width: '100%', justifyContent: 'center', padding: '14px', marginTop: 'var(--spacing-sm)', opacity: tempoRestante > 0 ? 0.5 : 1, cursor: tempoRestante > 0 ? 'not-allowed' : 'pointer' }}>
+              <button type="submit" className="primary-btn" disabled={tempoRestanteRec > 0} style={{ width: '100%', justifyContent: 'center', padding: '14px', marginTop: 'var(--spacing-sm)', opacity: tempoRestanteRec > 0 ? 0.5 : 1, cursor: tempoRestanteRec > 0 ? 'not-allowed' : 'pointer' }}>
                 <i className="ph ph-key"></i>
-                <span>{tempoRestante > 0 ? `Aguarde ${Math.ceil(tempoRestante / 1000)}s` : 'Redefinir senha'}</span>
+                <span>{tempoRestanteRec > 0 ? `Aguarde ${Math.ceil(tempoRestanteRec / 1000)}s` : 'Redefinir senha'}</span>
               </button>
             </form>
           </>
