@@ -115,6 +115,10 @@ button {
   .container {
     max-width: 900px;
   }
+
+  .quick-access-row {
+    justify-content: center;
+  }
 }
 
 .text-center    { text-align: center; }

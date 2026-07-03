@@ -457,8 +457,8 @@ export default function Home() {
           }
         `}</style>
 
-        {/* Acesso Rápido — scroll horizontal */}
-        <section style={{ display: 'flex', gap: '10px', marginBottom: 'var(--spacing-lg)', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
+        {/* Acesso Rápido — scroll horizontal no celular, distribuído em telas maiores */}
+        <section className="quick-access-row" style={{ display: 'flex', gap: '10px', marginBottom: 'var(--spacing-lg)', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
           {[
             { to: '/oracao',        icon: 'ph-hands-praying',  label: 'Oração',       delay: '0s',    color: '#c084fc', bg: 'rgba(192,132,252,0.15)' },
             { to: '/financeiro',    icon: 'ph-hand-heart',     label: 'Contribuir',   delay: '0.07s', color: '#facc15', bg: 'rgba(250,204,21,0.15)'  },
