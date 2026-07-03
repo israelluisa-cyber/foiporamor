@@ -374,6 +374,64 @@ export default function Usuario() {
     navigate('/');
   };
 
+  /* Recuperar senha (confere e-mail + celular do cadastro aprovado) */
+  const [recEmail, setRecEmail] = useState('');
+  const [recCelular, setRecCelular] = useState('');
+  const [recNovaSenha, setRecNovaSenha] = useState('');
+  const [recConfirmSenha, setRecConfirmSenha] = useState('');
+
+  const handleRecuperar = async (e) => {
+    e.preventDefault();
+    const protecao = getProtecaoLogin();
+
+    if (protecao.bloqueadoAte && Date.now() < protecao.bloqueadoAte) {
+      const seg = Math.ceil((protecao.bloqueadoAte - Date.now()) / 1000);
+      const min = Math.ceil(seg / 60);
+      setErro(`Conta bloqueada. Tente novamente em ${min} minuto${min > 1 ? 's' : ''}.`);
+      setTempoRestante(protecao.bloqueadoAte - Date.now());
+      return;
+    }
+
+    if (recNovaSenha.length < 4) { setErro('A nova senha deve ter pelo menos 4 caracteres.'); return; }
+    if (recNovaSenha !== recConfirmSenha) { setErro('As senhas não conferem.'); return; }
+
+    const celularNorm = recCelular.replace(/\D/g, '');
+    const emailNorm = recEmail.trim().toLowerCase();
+    const cadastros = loadCadastros();
+    const user = cadastros.find(c =>
+      c.email?.trim().toLowerCase() === emailNorm &&
+      c.celular?.replace(/\D/g, '') === celularNorm &&
+      c.status === 'aprovado'
+    );
+
+    if (!user) {
+      const novasTentativas = (protecao.tentativas || 0) + 1;
+      const restantes = MAX_TENTATIVAS - novasTentativas;
+      if (novasTentativas >= MAX_TENTATIVAS) {
+        const bloqueadoAte = Date.now() + BLOQUEIO_MS;
+        setProtecaoLogin({ tentativas: novasTentativas, bloqueadoAte });
+        setTempoRestante(BLOQUEIO_MS);
+        setErro('Muitas tentativas incorretas. Acesso bloqueado por 5 minutos.');
+      } else {
+        setProtecaoLogin({ tentativas: novasTentativas, bloqueadoAte: null });
+        setErro(`E-mail ou celular não conferem com nenhum cadastro aprovado. ${restantes} tentativa${restantes > 1 ? 's' : ''} restante${restantes > 1 ? 's' : ''}.`);
+      }
+      return;
+    }
+
+    setProtecaoLogin({ tentativas: 0, bloqueadoAte: null });
+    const { hash, salt } = await hashPassword(recNovaSenha);
+    const atualizados = cadastros.map(c =>
+      String(c.id) === String(user.id) ? { ...c, password: undefined, passwordHash: hash, passwordSalt: salt } : c
+    );
+    localStorage.setItem(CADASTROS_KEY, JSON.stringify(atualizados));
+    updateCadastroSenhaSupabase(user.id, hash, salt);
+
+    setRecEmail(''); setRecCelular(''); setRecNovaSenha(''); setRecConfirmSenha(''); setErro('');
+    setToast('Senha redefinida com sucesso! Você já pode entrar.');
+    setTela('login');
+  };
+
   /* Trocar foto de perfil */
   const handleTrocarFoto = (e) => {
     const file = e.target.files[0];
@@ -632,6 +690,15 @@ export default function Usuario() {
               </button>
             </form>
 
+            <p style={{ textAlign: 'center', marginTop: 'var(--spacing-md)' }}>
+              <button
+                onClick={() => { setTela('recuperar'); setErro(''); setEmail(''); setSenha(''); }}
+                style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.85rem', padding: 0, textDecoration: 'underline' }}
+              >
+                Esqueci minha senha
+              </button>
+            </p>
+
             <p style={{ textAlign: 'center', marginTop: 'var(--spacing-lg)', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
               Ainda não tem conta?{' '}
               <button
@@ -641,6 +708,76 @@ export default function Usuario() {
                 Cadastrar
               </button>
             </p>
+          </>
+        )}
+
+        {/* Tela de recuperação de senha */}
+        {tela === 'recuperar' && (
+          <>
+            <button
+              onClick={() => { setTela('login'); setErro(''); setRecEmail(''); setRecCelular(''); setRecNovaSenha(''); setRecConfirmSenha(''); }}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', marginBottom: 'var(--spacing-lg)', padding: 0, fontSize: '0.9rem' }}
+            >
+              <i className="ph ph-arrow-left"></i> Voltar
+            </button>
+
+            <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.5rem', marginBottom: '4px' }}>Recuperar Senha</h2>
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: 'var(--spacing-lg)' }}>
+              Confirme o e-mail e o celular do seu cadastro aprovado e defina uma nova senha.
+            </p>
+
+            <form onSubmit={handleRecuperar} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
+              <div>
+                <label style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.5px', display: 'block', marginBottom: '6px' }}>E-mail do cadastro</label>
+                <input
+                  type="email" value={recEmail}
+                  onChange={e => { setRecEmail(e.target.value); setErro(''); }}
+                  style={inputStyle} placeholder="seu@email.com"
+                  autoFocus required
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.5px', display: 'block', marginBottom: '6px' }}>Celular do cadastro</label>
+                <input
+                  type="tel" value={recCelular}
+                  onChange={e => { setRecCelular(e.target.value); setErro(''); }}
+                  style={inputStyle} placeholder="(00) 00000-0000"
+                  required
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.5px', display: 'block', marginBottom: '6px' }}>Nova senha</label>
+                <input
+                  type="password" value={recNovaSenha}
+                  onChange={e => { setRecNovaSenha(e.target.value); setErro(''); }}
+                  style={inputStyle} placeholder="••••••"
+                  required
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.5px', display: 'block', marginBottom: '6px' }}>Confirmar nova senha</label>
+                <input
+                  type="password" value={recConfirmSenha}
+                  onChange={e => { setRecConfirmSenha(e.target.value); setErro(''); }}
+                  style={inputStyle} placeholder="••••••"
+                  required
+                />
+              </div>
+
+              {erro && (
+                <div style={{ padding: '12px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 'var(--radius-md)', color: '#ef4444', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <i className="ph ph-warning-circle"></i> {erro}
+                </div>
+              )}
+
+              <button type="submit" className="primary-btn" disabled={tempoRestante > 0} style={{ width: '100%', justifyContent: 'center', padding: '14px', marginTop: 'var(--spacing-sm)', opacity: tempoRestante > 0 ? 0.5 : 1, cursor: tempoRestante > 0 ? 'not-allowed' : 'pointer' }}>
+                <i className="ph ph-key"></i>
+                <span>{tempoRestante > 0 ? `Aguarde ${Math.ceil(tempoRestante / 1000)}s` : 'Redefinir senha'}</span>
+              </button>
+            </form>
           </>
         )}
 
