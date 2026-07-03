@@ -1,10 +1,13 @@
+import { saveTeologiaToSupabase } from './supabase';
+
 export const TEOLOGIA_KEY = 'iteap_config';
 
 export const TEOLOGIA_DEFAULT = {
-  professor:       'Pr. Luís Carlos Pedreira Marques',
-  descricao:       'Instituto Teológico Amor e Palavra',
-  moduloAtualIdx:  0,
-  progressoAulas:  4,
+  professor:         'Pr. Luís Carlos Pedreira Marques',
+  descricao:         'Instituto Teológico Amor e Palavra',
+  moduloAtualIdx:    0,
+  progressoAulas:    4,
+  alunosMatriculados: 128,
   modulos: [
     { id: 1, nome: 'Pneumatologia', totalAulas: 12 },
     { id: 2, nome: 'Cristologia',   totalAulas: 10 },
@@ -24,5 +27,6 @@ export function loadTeologia() {
 
 export function saveTeologia(data) {
   localStorage.setItem(TEOLOGIA_KEY, JSON.stringify(data));
+  saveTeologiaToSupabase(data);
 }
 

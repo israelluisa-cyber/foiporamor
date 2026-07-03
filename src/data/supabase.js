@@ -41,9 +41,9 @@ export async function uploadFotoToStorage(base64DataUrl, pasta = 'geral') {
 // Cadastros: salva novo cadastro de membro no Supabase
 // -------------------------------------------------------
 export async function saveCadastroToSupabase(cadastro) {
-  if (!supabase) return;
+  if (!supabase) return false;
   try {
-    await supabase.from('cadastros').upsert({
+    const { error } = await supabase.from('cadastros').upsert({
       id:              String(cadastro.id),
       nome:            cadastro.nome            || null,
       email:           cadastro.email           || null,
@@ -57,8 +57,11 @@ export async function saveCadastroToSupabase(cadastro) {
       status:          cadastro.status          || 'pendente',
       data_cadastro:   cadastro.dataCadastro    || null,
     });
+    if (error) throw error;
+    return true;
   } catch (e) {
     console.warn('[Supabase] Erro ao salvar cadastro:', e.message);
+    return false;
   }
 }
 
@@ -89,6 +92,23 @@ export async function saveConfigToSupabase(config) {
 }
 
 // -------------------------------------------------------
+// Teologia (ITEAP): salva os dados do curso no Supabase
+// reaproveitando a tabela "app_config" com id próprio
+// -------------------------------------------------------
+export async function saveTeologiaToSupabase(data) {
+  if (!supabase) return;
+  try {
+    await supabase.from('app_config').upsert({
+      id: 'teologia',
+      data,
+      updated_at: new Date().toISOString(),
+    });
+  } catch (e) {
+    console.warn('[Supabase] Erro ao salvar teologia:', e.message);
+  }
+}
+
+// -------------------------------------------------------
 // Sync: puxa dados do Supabase e atualiza localStorage
 // Chamado uma vez na inicialização do app
 // -------------------------------------------------------
@@ -104,6 +124,7 @@ export async function syncFromSupabase() {
       { data: visitantes },
       { data: aconselhamento },
       { data: appConfig },
+      { data: teologiaConfig },
     ] = await Promise.all([
       supabase.from('membros').select('*').order('created_at'),
       supabase.from('contribuicoes').select('*').order('created_at', { ascending: false }),
@@ -113,6 +134,7 @@ export async function syncFromSupabase() {
       supabase.from('visitantes').select('*').order('created_at', { ascending: false }),
       supabase.from('pedidos_aconselhamento').select('*').order('created_at', { ascending: false }),
       supabase.from('app_config').select('data').eq('id', 'main').single(),
+      supabase.from('app_config').select('data').eq('id', 'teologia').single(),
     ]);
 
     if (membros?.length)        localStorage.setItem('membros_data',           JSON.stringify(mapMembros(membros)));
@@ -123,6 +145,7 @@ export async function syncFromSupabase() {
     if (visitantes?.length)     localStorage.setItem('visitantes',             JSON.stringify(visitantes));
     if (aconselhamento?.length) localStorage.setItem('pedidos_aconselhamento', JSON.stringify(aconselhamento));
     if (appConfig?.data)        localStorage.setItem('igreja_config',          JSON.stringify(appConfig.data));
+    if (teologiaConfig?.data)   localStorage.setItem('iteap_config',           JSON.stringify(teologiaConfig.data));
   } catch (e) {
     console.warn('[Supabase] Sync falhou, usando dados locais:', e.message);
   }

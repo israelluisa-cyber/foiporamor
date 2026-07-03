@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import Header from '../components/Header';
 import Toast from '../components/Toast';
 import { loadMembros, saveMembros } from '../data/membros';
-import { uploadFotoToStorage, saveConfigToSupabase, updateCadastroStatusSupabase } from '../data/supabase';
+import { uploadFotoToStorage, saveConfigToSupabase, updateCadastroStatusSupabase, syncFromSupabase } from '../data/supabase';
 import { loadConfig, saveConfig, DIAS_SEMANA, formatHora } from '../data/config';
 import { loadContribuicoes, clearContribuicoes, totalContribuicoes, totalPorObra } from '../data/contribuicoes';
 import { MINISTERIOS, loadVagas, saveVagas, VAGAS_KEY } from '../data/vagas';
@@ -38,6 +38,14 @@ function saveCadastros(cadastros) {
 function ModalGerenciarCadastros({ isOpen, onClose, cadastros, setCadastros, membros, setMembros }) {
   const pendentes = cadastros.filter(c => c.status === 'pendente');
   const [aprovadoNome, setAprovadoNome] = useState(null);
+  const [atualizando, setAtualizando] = useState(false);
+
+  const handleAtualizar = async () => {
+    setAtualizando(true);
+    await syncFromSupabase();
+    setCadastros(loadCadastros());
+    setAtualizando(false);
+  };
 
   useEffect(() => {
     if (!aprovadoNome) return;
@@ -100,8 +108,21 @@ function ModalGerenciarCadastros({ isOpen, onClose, cadastros, setCadastros, mem
         width: '100%', maxWidth: '600px', maxHeight: '90vh', overflow: 'auto',
         boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
       }}>
-        <div style={{ padding: 'var(--spacing-lg)', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ padding: 'var(--spacing-lg)', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
           <h3 style={{ margin: 0, fontFamily: 'var(--font-heading)' }}>Aprovar Cadastros ({pendentes.length})</h3>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <button
+            onClick={handleAtualizar}
+            disabled={atualizando}
+            title="Buscar novos cadastros"
+            style={{
+              background: 'none', border: 'none', color: 'var(--text-secondary)',
+              cursor: atualizando ? 'default' : 'pointer', fontSize: '1.1rem', padding: 0, width: '32px', height: '32px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+          >
+            <i className="ph ph-arrow-clockwise" style={atualizando ? { animation: 'spin 1s linear infinite', display: 'inline-block' } : undefined}></i>
+          </button>
           <button
             onClick={onClose}
             style={{
@@ -112,6 +133,7 @@ function ModalGerenciarCadastros({ isOpen, onClose, cadastros, setCadastros, mem
           >
             <i className="ph ph-x"></i>
           </button>
+          </div>
         </div>
 
         <div style={{ padding: 'var(--spacing-lg)' }}>
@@ -1549,6 +1571,10 @@ function ModalITEAP({ onClose, onSaved }) {
             <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Descrição</label>
             <input style={inputSt} value={data.descricao} onChange={set('descricao')} placeholder="Ex: Instituto Teológico Amor e Palavra" />
           </div>
+          <div>
+            <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Alunos Matriculados</label>
+            <input style={inputSt} type="number" min="0" value={data.alunosMatriculados} onChange={e => setData(d => ({ ...d, alunosMatriculados: parseInt(e.target.value) || 0 }))} placeholder="Ex: 128" />
+          </div>
 
           {/* Módulo atual e progresso */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
@@ -1968,6 +1994,7 @@ export default function Admin() {
     () => sessionStorage.getItem('adminAuth') === 'true'
   );
   const [membros, setMembros] = useState(loadMembros);
+  const [teologia, setTeologia] = useState(loadTeologia);
   const [cadastros, setCadastros] = useState(loadCadastros);
   const [contribs, setContribs] = useState(loadContribuicoes);
   const [modalMembros, setModalMembros] = useState(false);
@@ -1987,6 +2014,16 @@ const [modalMinisterios, setModalMinisterios]   = useState(false);
   const totalFmt = totalNum.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
   const pendentes = cadastros.filter(c => c.status === 'pendente').length;
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    syncFromSupabase().then(() => {
+      setMembros(loadMembros());
+      setCadastros(loadCadastros());
+      setContribs(loadContribuicoes());
+      setTeologia(loadTeologia());
+    });
+  }, [isAuthenticated]);
 
   if (!isAuthenticated) {
     return <PinGate onAuthenticated={() => setIsAuthenticated(true)} />;
@@ -2012,7 +2049,7 @@ const [modalMinisterios, setModalMinisterios]   = useState(false);
           </div>
           <div style={{ background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: 'var(--spacing-md)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <i className="ph ph-student" style={{ color: 'var(--text-secondary)', fontSize: '1.2rem' }}></i>
-            <span style={{ fontFamily: 'var(--font-heading)', fontSize: '1.8rem', fontWeight: 700, color: 'var(--accent-color)' }}>128</span>
+            <span style={{ fontFamily: 'var(--font-heading)', fontSize: '1.8rem', fontWeight: 700, color: 'var(--accent-color)' }}>{teologia.alunosMatriculados}</span>
             <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600 }}>Alunos (Teologia)</span>
           </div>
         </div>
@@ -2261,7 +2298,7 @@ const [modalMinisterios, setModalMinisterios]   = useState(false);
       {modalITEAP && (
         <ModalITEAP
           onClose={() => setModalITEAP(false)}
-          onSaved={() => setToast('ITEAP atualizado com sucesso!')}
+          onSaved={() => { setTeologia(loadTeologia()); setToast('ITEAP atualizado com sucesso!'); }}
         />
       )}
 

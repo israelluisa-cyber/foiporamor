@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import Toast from '../components/Toast';
-import { uploadFotoToStorage, saveCadastroToSupabase } from '../data/supabase';
+import { uploadFotoToStorage, saveCadastroToSupabase, syncFromSupabase } from '../data/supabase';
 
 const CADASTROS_KEY   = 'cadastros_pendentes';
 const USER_KEY        = 'user_cadastro';
@@ -70,7 +70,7 @@ function ModalCadastroMembro({ isOpen, onClose, onSuccess }) {
     reader.readAsDataURL(file);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.nome || !formData.email || !formData.celular || !formData.password) {
       setErro('Preencha todos os campos obrigatórios.'); return;
@@ -91,7 +91,7 @@ function ModalCadastroMembro({ isOpen, onClose, onSuccess }) {
     }
 
     const novoCadastro = {
-      id: Date.now(), ...formData,
+      id: String(Date.now()), ...formData,
       foto: previewFoto || null,
       status: 'pendente',
       dataCadastro: new Date().toLocaleDateString('pt-BR'),
@@ -100,10 +100,14 @@ function ModalCadastroMembro({ isOpen, onClose, onSuccess }) {
     cadastros.push(novoCadastro);
     localStorage.setItem(CADASTROS_KEY, JSON.stringify(cadastros));
     localStorage.setItem(USER_KEY, JSON.stringify(novoCadastro));
-    saveCadastroToSupabase(novoCadastro);
+    const enviado = await saveCadastroToSupabase(novoCadastro);
 
     setFormData({ nome: '', email: '', celular: '', dataNascimento: '', bairro: '', celula: 'Geração de Fogo (Jovens)', experiencia: '', password: '', confirmPassword: '' });
     setPreviewFoto(null);
+    if (!enviado) {
+      setErro('Não foi possível enviar seu cadastro ao administrador. Verifique sua internet e tente novamente.');
+      return;
+    }
     setErro('');
     onSuccess();
   };
@@ -276,6 +280,21 @@ export default function Usuario() {
     }, 1000);
     return () => clearInterval(timer);
   }, [tempoRestante]);
+
+  const [statusVersion, setStatusVersion] = useState(0);
+
+  useEffect(() => {
+    if (!userCadastro) return;
+    let cancelado = false;
+    const checarStatus = () => {
+      syncFromSupabase().then(() => {
+        if (!cancelado) setStatusVersion(v => v + 1);
+      });
+    };
+    checarStatus();
+    const intervalId = setInterval(checarStatus, 20000);
+    return () => { cancelado = true; clearInterval(intervalId); };
+  }, [userCadastro]);
 
   const [fotoAtual, setFotoAtual] = useState(() => {
     try {
