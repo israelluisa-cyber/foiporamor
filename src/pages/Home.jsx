@@ -268,7 +268,7 @@ export default function Home() {
         setBannerIdx(i => (i + 1) % eventosFiltrados.length);
         setBannerAnim('slideInRight');
       }, 300);
-    }, 3000);
+    }, 4000);
     return () => clearInterval(timer);
   }, [eventosFiltrados.length]);
 

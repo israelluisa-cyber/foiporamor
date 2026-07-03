@@ -110,6 +110,13 @@ button {
   padding: 0 var(--spacing-md);
 }
 
+/* Tablets usam mais largura em vez de ficar igual ao PC */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .container {
+    max-width: 900px;
+  }
+}
+
 .text-center    { text-align: center; }
 .text-secondary { color: var(--text-secondary); }
 .text-muted     { color: var(--text-muted); }
