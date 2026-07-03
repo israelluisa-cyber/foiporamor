@@ -301,7 +301,7 @@ export default function Usuario() {
       const sess = JSON.parse(sessionStorage.getItem(SESSION_KEY));
       if (!sess) return null;
       const cadastros = JSON.parse(localStorage.getItem(CADASTROS_KEY)) || [];
-      return cadastros.find(c => c.id === sess.id)?.foto || null;
+      return cadastros.find(c => String(c.id) === String(sess.id))?.foto || null;
     } catch { return null; }
   });
 
@@ -372,7 +372,7 @@ export default function Usuario() {
         setFotoAtual(novaFoto);
         const cadastros = loadCadastros();
         const atualizados = cadastros.map(c =>
-          c.id === session.id ? { ...c, foto: novaFoto } : c
+          String(c.id) === String(session.id) ? { ...c, foto: novaFoto } : c
         );
         localStorage.setItem(CADASTROS_KEY, JSON.stringify(atualizados));
         setToast('Foto atualizada com sucesso!');
@@ -459,7 +459,7 @@ export default function Usuario() {
   /* ── Vista: Cadastro Pendente ──────────────────────────── */
   if (userCadastro) {
     const cadastros = loadCadastros();
-    const cadastroAtualizado = cadastros.find(c => c.id === userCadastro.id);
+    const cadastroAtualizado = cadastros.find(c => String(c.id) === String(userCadastro.id));
     const foiAprovado = cadastroAtualizado?.status === 'aprovado';
     const foiRejeitado = cadastroAtualizado?.status === 'rejeitado';
 
