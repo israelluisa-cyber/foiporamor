@@ -426,6 +426,8 @@ export default function Home() {
             border-radius: var(--radius-md);
             transition: transform 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
             animation: popIn 0.4s ease both;
+            min-width: 72px;
+            flex: 0 0 auto;
           }
           .quick-btn:active {
             transform: scale(0.92);
@@ -442,10 +444,35 @@ export default function Home() {
             width: 40px; height: 40px;
             border-radius: var(--radius-sm);
             display: flex; align-items: center; justify-content: center;
-            transition: filter 0.18s ease;
+            transition: filter 0.18s ease, width 0.18s ease, height 0.18s ease;
+          }
+          .quick-icon-glyph {
+            font-size: 1.2rem;
+          }
+          .quick-label {
+            font-size: 0.68rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-align: center;
+            line-height: 1.2;
           }
           .quick-btn:hover .quick-icon {
             filter: brightness(1.25);
+          }
+          @media (min-width: 768px) and (max-width: 1024px) {
+            .quick-btn {
+              min-width: 88px;
+              padding: 16px 8px;
+            }
+            .quick-icon {
+              width: 52px; height: 52px;
+            }
+            .quick-icon-glyph {
+              font-size: 1.5rem;
+            }
+            .quick-label {
+              font-size: 0.78rem;
+            }
           }
           @keyframes slideInRight {
             from { opacity: 0; transform: translateX(40px); }
@@ -466,11 +493,11 @@ export default function Home() {
             { to: '/teologia',      icon: 'ph-graduation-cap', label: 'Teologia',     delay: '0.21s', color: '#94a3b8', bg: 'rgba(148,163,184,0.12)' },
             { to: '/ministerios',   icon: 'ph-users-three',    label: 'Ministérios',  delay: '0.28s', color: '#818cf8', bg: 'rgba(129,140,248,0.15)' },
           ].map(item => (
-            <Link key={item.to} to={item.to} className="quick-btn" style={{ animationDelay: item.delay, minWidth: '72px', flex: '0 0 auto' }}>
+            <Link key={item.to} to={item.to} className="quick-btn" style={{ animationDelay: item.delay }}>
               <div className="quick-icon" style={{ background: item.bg }}>
-                <i className={`ph ${item.icon}`} style={{ fontSize: '1.2rem', color: item.color }}></i>
+                <i className={`ph ${item.icon} quick-icon-glyph`} style={{ color: item.color }}></i>
               </div>
-              <span style={{ fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-secondary)', textAlign: 'center', lineHeight: 1.2 }}>{item.label}</span>
+              <span className="quick-label">{item.label}</span>
             </Link>
           ))}
         </section>
