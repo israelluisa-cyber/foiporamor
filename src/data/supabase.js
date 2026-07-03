@@ -53,7 +53,8 @@ export async function saveCadastroToSupabase(cadastro) {
       celula:          cadastro.celula          || null,
       experiencia:     cadastro.experiencia     || null,
       foto:            cadastro.foto            || null,
-      password:        cadastro.password        || null,
+      password_hash:   cadastro.passwordHash    || null,
+      password_salt:   cadastro.passwordSalt    || null,
       status:          cadastro.status          || 'pendente',
       data_cadastro:   cadastro.dataCadastro    || null,
     });
@@ -71,6 +72,17 @@ export async function updateCadastroStatusSupabase(id, status) {
     await supabase.from('cadastros').update({ status }).eq('id', String(id));
   } catch (e) {
     console.warn('[Supabase] Erro ao atualizar cadastro:', e.message);
+  }
+}
+
+export async function updateCadastroSenhaSupabase(id, passwordHash, passwordSalt) {
+  if (!supabase) return;
+  try {
+    await supabase.from('cadastros')
+      .update({ password_hash: passwordHash, password_salt: passwordSalt, password: null })
+      .eq('id', String(id));
+  } catch (e) {
+    console.warn('[Supabase] Erro ao migrar senha do cadastro:', e.message);
   }
 }
 
@@ -178,6 +190,8 @@ function mapCadastros(rows) {
     experiencia:     r.experiencia,
     foto:            r.foto,
     password:        r.password,
+    passwordHash:    r.password_hash,
+    passwordSalt:    r.password_salt,
     status:          r.status,
     dataCadastro:    r.data_cadastro,
   }));

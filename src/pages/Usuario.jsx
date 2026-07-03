@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import Toast from '../components/Toast';
-import { uploadFotoToStorage, saveCadastroToSupabase, syncFromSupabase } from '../data/supabase';
+import { uploadFotoToStorage, saveCadastroToSupabase, updateCadastroSenhaSupabase, syncFromSupabase } from '../data/supabase';
+import { hashPassword, verifyPassword } from '../data/crypto';
 
 const CADASTROS_KEY   = 'cadastros_pendentes';
 const USER_KEY        = 'user_cadastro';
@@ -90,8 +91,12 @@ function ModalCadastroMembro({ isOpen, onClose, onSuccess }) {
       setErro('Já existe um cadastro com este celular.'); return;
     }
 
+    const { hash: passwordHash, salt: passwordSalt } = await hashPassword(formData.password);
+
     const novoCadastro = {
       id: String(Date.now()), ...formData,
+      password: undefined, confirmPassword: undefined,
+      passwordHash, passwordSalt,
       foto: previewFoto || null,
       status: 'pendente',
       dataCadastro: new Date().toLocaleDateString('pt-BR'),
@@ -306,7 +311,7 @@ export default function Usuario() {
   });
 
   /* Login */
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     const protecao = getProtecaoLogin();
 
@@ -319,7 +324,23 @@ export default function Usuario() {
     }
 
     const cadastros = loadCadastros();
-    const user = cadastros.find(c => c.email === email && c.password === senha);
+    const candidato = cadastros.find(c => c.email === email);
+    let user = null;
+
+    if (candidato?.passwordHash) {
+      if (await verifyPassword(senha, candidato.passwordHash, candidato.passwordSalt)) user = candidato;
+    } else if (candidato?.password) {
+      // Conta antiga com senha em texto puro: valida e migra para hash na hora.
+      if (candidato.password === senha) {
+        user = candidato;
+        const { hash, salt } = await hashPassword(senha);
+        const migrados = cadastros.map(c =>
+          c.id === candidato.id ? { ...c, password: undefined, passwordHash: hash, passwordSalt: salt } : c
+        );
+        localStorage.setItem(CADASTROS_KEY, JSON.stringify(migrados));
+        updateCadastroSenhaSupabase(candidato.id, hash, salt);
+      }
+    }
 
     if (!user) {
       const novasTentativas = (protecao.tentativas || 0) + 1;
