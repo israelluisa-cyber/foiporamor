@@ -25,6 +25,14 @@ export function saveMembros(membros) {
   _syncMembrosToSupabase(membros);
 }
 
+export async function deleteMembroSupabase(id) {
+  try {
+    await supabase.from('membros').delete().eq('id', String(id));
+  } catch (e) {
+    console.warn('[Supabase] Erro ao excluir membro:', e.message);
+  }
+}
+
 async function _syncMembrosToSupabase(membros) {
   try {
     const rows = membros.map(m => ({

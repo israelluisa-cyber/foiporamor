@@ -1,8 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import Header from '../components/Header';
 import Toast from '../components/Toast';
-import { loadMembros, saveMembros } from '../data/membros';
-import { uploadFotoToStorage, saveConfigToSupabase, updateCadastroStatusSupabase, syncFromSupabase } from '../data/supabase';
+import { loadMembros, saveMembros, deleteMembroSupabase } from '../data/membros';
+import {
+  uploadFotoToStorage, saveConfigToSupabase, updateCadastroStatusSupabase, syncFromSupabase,
+  saveAvisoToSupabase, deleteAvisoFromSupabase,
+  deletePedidoOracaoFromSupabase, clearPedidosOracaoFromSupabase,
+  updateAconselhamentoStatusSupabase, deleteAconselhamentoFromSupabase,
+} from '../data/supabase';
 import { loadConfig, saveConfig, DIAS_SEMANA, formatHora } from '../data/config';
 import { loadContribuicoes, clearContribuicoes, totalContribuicoes, totalPorObra } from '../data/contribuicoes';
 import { MINISTERIOS, loadVagas, saveVagas, VAGAS_KEY } from '../data/vagas';
@@ -253,6 +258,7 @@ function ModalGerenciarMembros({ onClose, membros, setMembros }) {
     if (confirm('Tem certeza que deseja remover este membro?')) {
       setMembros(membros.filter(m => m.id !== id));
       saveMembros(membros.filter(m => m.id !== id));
+      deleteMembroSupabase(id);
     }
   };
 
@@ -636,6 +642,9 @@ function PinGate({ onAuthenticated }) {
     if (pin === ADMIN_PIN) {
       setProtecaoAdmin({ tentativas: 0, bloqueadoAte: null });
       sessionStorage.setItem('adminAuth', 'true');
+      if (!sessionStorage.getItem('user_session')) {
+        sessionStorage.setItem('user_session', JSON.stringify({ id: 'admin', nome: 'Administrador', viaAdmin: true }));
+      }
       onAuthenticated();
     } else {
       const novasTentativas = (protecao.tentativas || 0) + 1;
@@ -1267,6 +1276,7 @@ function ModalAconselhamento({ onClose }) {
     const novos = pedidos.map(p => p.id === id ? { ...p, atendido: !p.atendido } : p);
     setPedidos(novos);
     localStorage.setItem(ACONSELHAMENTO_KEY, JSON.stringify(novos));
+    updateAconselhamentoStatusSupabase(id, novos.find(p => p.id === id).atendido);
   };
 
   const remover = (id) => {
@@ -1274,6 +1284,7 @@ function ModalAconselhamento({ onClose }) {
     const novos = pedidos.filter(p => p.id !== id);
     setPedidos(novos);
     localStorage.setItem(ACONSELHAMENTO_KEY, JSON.stringify(novos));
+    deleteAconselhamentoFromSupabase(id);
   };
 
   const formatarWa = (tel) => {
@@ -1415,6 +1426,7 @@ function ModalComunicado({ onClose, onSent }) {
     const atualizados = [novoAviso, ...avisos];
     localStorage.setItem(ADMIN_AVISOS_KEY, JSON.stringify(atualizados));
     setAvisos(atualizados);
+    saveAvisoToSupabase(novoAviso);
     setForm({ titulo: '', texto: '', tipo: 'Informativo' });
     setAba('gerenciar');
     onSent();
@@ -1424,6 +1436,7 @@ function ModalComunicado({ onClose, onSent }) {
     const atualizados = avisos.filter(a => a.id !== id);
     localStorage.setItem(ADMIN_AVISOS_KEY, JSON.stringify(atualizados));
     setAvisos(atualizados);
+    deleteAvisoFromSupabase(id);
   };
 
   const TIPO_COR = {
@@ -1927,12 +1940,14 @@ function ModalPedidosOracao({ onClose }) {
     const atualizados = pedidos.filter(p => p.id !== id && p.id !== String(id));
     setPedidos(atualizados);
     localStorage.setItem('pedidos_oracao', JSON.stringify(atualizados));
+    deletePedidoOracaoFromSupabase(id);
   };
 
   const handleLimparTodos = () => {
     if (!confirm('Excluir todos os pedidos de oração?')) return;
     setPedidos([]);
     localStorage.setItem('pedidos_oracao', JSON.stringify([]));
+    clearPedidosOracaoFromSupabase();
   };
 
   return (
@@ -2031,6 +2046,10 @@ const [modalMinisterios, setModalMinisterios]   = useState(false);
 
   const handleLogout = () => {
     sessionStorage.removeItem('adminAuth');
+    try {
+      const sess = JSON.parse(sessionStorage.getItem('user_session'));
+      if (sess?.viaAdmin) sessionStorage.removeItem('user_session');
+    } catch {}
     setIsAuthenticated(false);
   };
 

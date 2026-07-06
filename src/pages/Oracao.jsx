@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Header from '../components/Header';
 import Toast from '../components/Toast';
 import { loadConfig } from '../data/config';
+import { savePedidoOracaoToSupabase, deletePedidoOracaoFromSupabase } from '../data/supabase';
 
 const STORAGE_KEY = 'pedidos_oracao';
 const AMENS_KEY   = 'oracao_amens';
@@ -62,6 +63,7 @@ export default function Oracao() {
     const atualizados = [novo, ...pedidos];
     setPedidos(atualizados);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(atualizados));
+    savePedidoOracaoToSupabase(novo);
     setTexto('');
     setPrivado(false);
     setToastMessage('Pedido de oração enviado! Estaremos orando por você.');
@@ -72,6 +74,7 @@ export default function Oracao() {
     const atualizados = pedidos.filter(p => p.id !== id);
     setPedidos(atualizados);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(atualizados));
+    deletePedidoOracaoFromSupabase(id);
   };
 
   const handleAmem = (id) => {

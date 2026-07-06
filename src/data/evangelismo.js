@@ -1,3 +1,5 @@
+import { saveEvangelismoToSupabase } from './supabase';
+
 export const EVANGELISMO_KEY = 'evangelismo_saidas';
 
 export const SAIDAS_DEFAULT = [
@@ -60,4 +62,5 @@ export function loadSaidas() {
 
 export function saveSaidas(saidas) {
   localStorage.setItem(EVANGELISMO_KEY, JSON.stringify(saidas));
+  saveEvangelismoToSupabase(saidas);
 }

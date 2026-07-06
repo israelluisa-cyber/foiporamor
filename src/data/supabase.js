@@ -121,6 +121,160 @@ export async function saveTeologiaToSupabase(data) {
 }
 
 // -------------------------------------------------------
+// Evangelismo: salva as saídas no Supabase
+// reaproveitando a tabela "app_config" com id próprio
+// -------------------------------------------------------
+export async function saveEvangelismoToSupabase(data) {
+  if (!supabase) return;
+  try {
+    await supabase.from('app_config').upsert({
+      id: 'evangelismo',
+      data,
+      updated_at: new Date().toISOString(),
+    });
+  } catch (e) {
+    console.warn('[Supabase] Erro ao salvar evangelismo:', e.message);
+  }
+}
+
+// -------------------------------------------------------
+// Ministérios: salva a lista de ministérios no Supabase
+// reaproveitando a tabela "app_config" com id próprio
+// -------------------------------------------------------
+export async function saveMinisteriosToSupabase(data) {
+  if (!supabase) return;
+  try {
+    await supabase.from('app_config').upsert({
+      id: 'ministerios',
+      data,
+      updated_at: new Date().toISOString(),
+    });
+  } catch (e) {
+    console.warn('[Supabase] Erro ao salvar ministérios:', e.message);
+  }
+}
+
+// -------------------------------------------------------
+// Vagas de voluntariado: salva no Supabase
+// reaproveitando a tabela "app_config" com id próprio
+// -------------------------------------------------------
+export async function saveVagasToSupabase(data) {
+  if (!supabase) return;
+  try {
+    await supabase.from('app_config').upsert({
+      id: 'vagas',
+      data,
+      updated_at: new Date().toISOString(),
+    });
+  } catch (e) {
+    console.warn('[Supabase] Erro ao salvar vagas:', e.message);
+  }
+}
+
+// -------------------------------------------------------
+// Avisos (Comunicados): cria/exclui no Supabase
+// -------------------------------------------------------
+export async function saveAvisoToSupabase(aviso) {
+  if (!supabase) return;
+  try {
+    await supabase.from('avisos').upsert({
+      id:     String(aviso.id),
+      tipo:   aviso.tipo   || null,
+      titulo: aviso.titulo || null,
+      texto:  aviso.texto,
+      data:   aviso.data   || null,
+      icone:  aviso.icone  || null,
+    });
+  } catch (e) {
+    console.warn('[Supabase] Erro ao salvar aviso:', e.message);
+  }
+}
+
+export async function deleteAvisoFromSupabase(id) {
+  if (!supabase) return;
+  try {
+    await supabase.from('avisos').delete().eq('id', String(id));
+  } catch (e) {
+    console.warn('[Supabase] Erro ao excluir aviso:', e.message);
+  }
+}
+
+// -------------------------------------------------------
+// Pedidos de Oração: cria/exclui no Supabase
+// -------------------------------------------------------
+export async function savePedidoOracaoToSupabase(pedido) {
+  if (!supabase) return;
+  try {
+    await supabase.from('pedidos_oracao').upsert({
+      id:      String(pedido.id),
+      texto:   pedido.texto,
+      privado: !!pedido.privado,
+      data:    pedido.data || null,
+    });
+  } catch (e) {
+    console.warn('[Supabase] Erro ao salvar pedido de oração:', e.message);
+  }
+}
+
+export async function deletePedidoOracaoFromSupabase(id) {
+  if (!supabase) return;
+  try {
+    await supabase.from('pedidos_oracao').delete().eq('id', String(id));
+  } catch (e) {
+    console.warn('[Supabase] Erro ao excluir pedido de oração:', e.message);
+  }
+}
+
+export async function clearPedidosOracaoFromSupabase() {
+  if (!supabase) return;
+  try {
+    await supabase.from('pedidos_oracao').delete().neq('id', '');
+  } catch (e) {
+    console.warn('[Supabase] Erro ao limpar pedidos de oração:', e.message);
+  }
+}
+
+// -------------------------------------------------------
+// Visitantes: cria no Supabase
+// -------------------------------------------------------
+export async function saveVisitanteToSupabase(visita) {
+  if (!supabase) return;
+  try {
+    await supabase.from('visitantes').upsert({
+      id:       String(visita.id),
+      nome:     visita.nome,
+      telefone: visita.telefone || null,
+      como:     visita.como     || null,
+      data:     visita.data     || null,
+    });
+  } catch (e) {
+    console.warn('[Supabase] Erro ao salvar visitante:', e.message);
+  }
+}
+
+// -------------------------------------------------------
+// Pedidos de Aconselhamento: atualiza/exclui no Supabase
+// (a criação já sincroniza em Aconselhamento.jsx)
+// -------------------------------------------------------
+export async function updateAconselhamentoStatusSupabase(id, atendido) {
+  if (!supabase) return;
+  try {
+    await supabase.from('pedidos_aconselhamento').update({ atendido }).eq('id', String(id));
+  } catch (e) {
+    console.warn('[Supabase] Erro ao atualizar aconselhamento:', e.message);
+  }
+}
+
+export async function deleteAconselhamentoFromSupabase(id) {
+  if (!supabase) return;
+  try {
+    await supabase.from('pedidos_aconselhamento').delete().eq('id', String(id));
+  } catch (e) {
+    console.warn('[Supabase] Erro ao excluir aconselhamento:', e.message);
+  }
+}
+
+// -------------------------------------------------------
 // Sync: puxa dados do Supabase e atualiza localStorage
 // Chamado uma vez na inicialização do app
 // -------------------------------------------------------
@@ -137,6 +291,9 @@ export async function syncFromSupabase() {
       { data: aconselhamento },
       { data: appConfig },
       { data: teologiaConfig },
+      { data: evangelismoConfig },
+      { data: ministeriosConfig },
+      { data: vagasConfig },
     ] = await Promise.all([
       supabase.from('membros').select('*').order('created_at'),
       supabase.from('contribuicoes').select('*').order('created_at', { ascending: false }),
@@ -147,6 +304,9 @@ export async function syncFromSupabase() {
       supabase.from('pedidos_aconselhamento').select('*').order('created_at', { ascending: false }),
       supabase.from('app_config').select('data').eq('id', 'main').single(),
       supabase.from('app_config').select('data').eq('id', 'teologia').single(),
+      supabase.from('app_config').select('data').eq('id', 'evangelismo').single(),
+      supabase.from('app_config').select('data').eq('id', 'ministerios').single(),
+      supabase.from('app_config').select('data').eq('id', 'vagas').single(),
     ]);
 
     if (membros?.length)        localStorage.setItem('membros_data',           JSON.stringify(mapMembros(membros)));
@@ -158,6 +318,9 @@ export async function syncFromSupabase() {
     if (aconselhamento?.length) localStorage.setItem('pedidos_aconselhamento', JSON.stringify(aconselhamento));
     if (appConfig?.data)        localStorage.setItem('igreja_config',          JSON.stringify(appConfig.data));
     if (teologiaConfig?.data)   localStorage.setItem('iteap_config',           JSON.stringify(teologiaConfig.data));
+    if (evangelismoConfig?.data) localStorage.setItem('evangelismo_saidas',   JSON.stringify(evangelismoConfig.data));
+    if (ministeriosConfig?.data) localStorage.setItem('ministerios_data',     JSON.stringify(ministeriosConfig.data));
+    if (vagasConfig?.data)       localStorage.setItem('voluntarios_vagas',    JSON.stringify(vagasConfig.data));
   } catch (e) {
     console.warn('[Supabase] Sync falhou, usando dados locais:', e.message);
   }

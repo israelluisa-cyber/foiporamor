@@ -1,3 +1,5 @@
+import { saveMinisteriosToSupabase } from './supabase';
+
 const KEY = 'ministerios_data';
 
 export const DEFAULT_MINISTERIOS = [
@@ -258,6 +260,7 @@ export function loadMinisterios() {
 
 export function saveMinisterios(data) {
   localStorage.setItem(KEY, JSON.stringify(data));
+  saveMinisteriosToSupabase(data);
 }
 
 export const ICON_OPTIONS = [

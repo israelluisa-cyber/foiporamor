@@ -1,3 +1,5 @@
+import { saveVagasToSupabase } from './supabase';
+
 export const VAGAS_KEY = 'voluntarios_vagas';
 
 export const MINISTERIOS = [
@@ -16,4 +18,5 @@ export function loadVagas() {
 
 export function saveVagas(vagas) {
   localStorage.setItem(VAGAS_KEY, JSON.stringify(vagas));
+  saveVagasToSupabase(vagas);
 }

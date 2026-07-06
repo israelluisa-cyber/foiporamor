@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Header from '../components/Header';
 import Toast from '../components/Toast';
 import { loadConfig } from '../data/config';
+import { saveVisitanteToSupabase } from '../data/supabase';
 
 function toEmbedUrl(url) {
   if (!url) return null;
@@ -86,6 +87,7 @@ function ModalVisitante({ onClose }) {
       const lista = JSON.parse(localStorage.getItem('visitantes') || '[]');
       localStorage.setItem('visitantes', JSON.stringify([...lista, visita]));
     } catch {}
+    saveVisitanteToSupabase(visita);
     setEnviado(true);
   };
 
