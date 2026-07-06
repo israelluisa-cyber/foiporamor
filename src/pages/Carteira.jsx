@@ -60,7 +60,7 @@ export default function Carteira() {
                   <p style={{ fontSize: '0.6rem', fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '2px' }}>Igreja Foi Por Amor</p>
                   <p style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.5px' }}>Carteira de Membro</p>
                 </div>
-                <img src="/logo.jpeg" alt="Logo" style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.2)' }} />
+                <img src="/logo-icon.png" alt="Logo" style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.2)' }} />
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px', position: 'relative' }}>

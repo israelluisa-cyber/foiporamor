@@ -84,7 +84,7 @@ export default function Header({ title, backButton = false, admin = false }) {
       <header className="app-header" style={{ background: 'rgba(0,0,0,0.8)' }}>
         <div className="header-content">
           <div className="user-greeting" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <img src="/logo.jpeg" alt="Logo Foi Por Amor" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
+            <img src="/logo-icon.png" alt="Logo Foi Por Amor" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
             <div>
               <p className="text-secondary" style={{ fontSize: '0.75rem', margin: 0 }}>Painel da Liderança</p>
               <h2 className="logo-text" style={{ fontSize: '1.1rem', margin: 0 }}>Pr. Presidente</h2>
@@ -104,7 +104,7 @@ export default function Header({ title, backButton = false, admin = false }) {
           </button>
         ) : (
           <div className="user-greeting" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <img src="/logo.jpeg" alt="Logo Foi Por Amor" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
+            <img src="/logo-icon.png" alt="Logo Foi Por Amor" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
             <div>
               {session ? (
                 <>
