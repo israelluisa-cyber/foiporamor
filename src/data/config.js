@@ -18,7 +18,7 @@ export const DEFAULT_CONFIG = {
   cultos: [
     { id: 1, diaSemana: 2, hora: 19, min: 30, horaFim: 21, minFim: 0, nome: 'Curso de Teologia',              ativo: true,  restrito: false, foto: null },
     { id: 2, diaSemana: 4, hora: 19, min: 30, horaFim: 21, minFim: 0, nome: 'Culto de Oração e Adoração',     ativo: true,  restrito: false, foto: null },
-    { id: 3, diaSemana: 5, hora: 19, min: 30, horaFim: 21, minFim: 0, nome: 'Ensaio do Ministério de Louvor', ativo: true,  restrito: true,  foto: null },
+    { id: 3, diaSemana: 5, hora: 19, min: 30, horaFim: 21, minFim: 0, nome: 'Ensaio do Ministério de Louvor', ativo: true,  restrito: false, foto: null },
     { id: 4, diaSemana: 0, hora: 10, min:  0, horaFim: 12, minFim: 0, nome: 'Culto de Celebração',            ativo: true,  restrito: false, foto: null },
   ],
   obras: [
