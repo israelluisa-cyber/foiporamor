@@ -357,6 +357,7 @@ function mapCadastros(rows) {
     passwordSalt:    r.password_salt,
     status:          r.status,
     dataCadastro:    r.data_cadastro,
+    isAdmin:         r.is_admin || false,
   }));
 }
 

@@ -384,6 +384,12 @@ export default function Usuario() {
     setFotoAtual(user.foto || null);
     setSession(sessionData);
     setEmail(''); setSenha(''); setErro('');
+
+    if (user.isAdmin) {
+      sessionStorage.setItem('adminAuth', 'true');
+      navigate('/admin');
+      return;
+    }
     navigate('/');
   };
 

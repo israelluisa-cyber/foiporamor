@@ -121,6 +121,15 @@ button {
   }
 }
 
+/* Telas maiores (tablet/PC): sem mouse/toque pra rolar, entao quebra em varias linhas */
+@media (min-width: 768px) {
+  .quick-access-row {
+    flex-wrap: wrap !important;
+    overflow-x: visible !important;
+    justify-content: flex-start !important;
+  }
+}
+
 .text-center    { text-align: center; }
 .text-secondary { color: var(--text-secondary); }
 .text-muted     { color: var(--text-muted); }

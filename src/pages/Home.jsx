@@ -257,6 +257,7 @@ export default function Home() {
   }));
 
   const logado          = !!sessionStorage.getItem('user_session');
+  const admin           = sessionStorage.getItem('adminAuth') === 'true';
   const ultimoCultoMs   = timestampUltimoCulto(cultos);
   const pedidosPreview  = loadPreviewPedidos();
   const versoDia        = getVersoDia();
@@ -482,12 +483,18 @@ export default function Home() {
         {/* Acesso Rápido — scroll horizontal no celular, distribuído em telas maiores */}
         <section className="quick-access-row" style={{ display: 'flex', gap: '10px', marginBottom: 'var(--spacing-lg)', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
           {[
-            { to: '/oracao',        icon: 'ph-hands-praying',  label: 'Oração',       delay: '0s',    color: '#c084fc', bg: 'rgba(192,132,252,0.15)' },
-            { to: '/financeiro',    icon: 'ph-hand-heart',     label: 'Contribuir',   delay: '0.07s', color: '#facc15', bg: 'rgba(250,204,21,0.15)'  },
-            { to: '/evangelismo',   icon: 'ph-megaphone',       label: 'Evangelismo',  delay: '0.14s', color: '#fb923c', bg: 'rgba(251,146,60,0.15)'  },
-            { to: '/teologia',      icon: 'ph-graduation-cap', label: 'Teologia',     delay: '0.21s', color: '#94a3b8', bg: 'rgba(148,163,184,0.12)' },
-            { to: '/ministerios',   icon: 'ph-users-three',    label: 'Ministérios',  delay: '0.28s', color: '#818cf8', bg: 'rgba(129,140,248,0.15)' },
-          ].map(item => (
+            { to: '/oracao',         icon: 'ph-hands-praying',   label: 'Oração',        delay: '0s',    color: '#c084fc', bg: 'rgba(192,132,252,0.15)' },
+            { to: '/financeiro',     icon: 'ph-hand-heart',      label: 'Contribuir',    delay: '0.07s', color: '#facc15', bg: 'rgba(250,204,21,0.15)'  },
+            { to: '/evangelismo',    icon: 'ph-megaphone',       label: 'Evangelismo',   delay: '0.14s', color: '#fb923c', bg: 'rgba(251,146,60,0.15)'  },
+            { to: '/teologia',       icon: 'ph-graduation-cap',  label: 'Teologia',      delay: '0.21s', color: '#94a3b8', bg: 'rgba(148,163,184,0.12)' },
+            { to: '/ministerios',    icon: 'ph-users-three',     label: 'Ministérios',   delay: '0.28s', color: '#818cf8', bg: 'rgba(129,140,248,0.15)' },
+            { to: '/devocional',     icon: 'ph-sun-horizon',     label: 'Devocional',    delay: '0.35s', color: '#f97316', bg: 'rgba(249,115,22,0.15)'  },
+            { to: '/biblia',         icon: 'ph-book-bookmark',   label: 'Bíblia',        delay: '0.42s', color: '#60a5fa', bg: 'rgba(96,165,250,0.15)'  },
+            { to: '/voluntarios',    icon: 'ph-heart',           label: 'Voluntários',   delay: '0.49s', color: '#f472b6', bg: 'rgba(244,114,182,0.15)' },
+            { to: '/aconselhamento', icon: 'ph-chat-circle-dots', label: 'Aconselhamento', delay: '0.56s', color: '#4ade80', bg: 'rgba(74,222,128,0.15)'  },
+            { to: '/carteira',       icon: 'ph-identification-card', label: 'Carteira',   delay: '0.63s', color: '#38bdf8', bg: 'rgba(56,189,248,0.15)', apenasLogado: true },
+            { to: '/admin',          icon: 'ph-shield-check',    label: 'Painel Admin',  delay: '0.70s', color: '#a3a3a3', bg: 'rgba(163,163,163,0.15)', apenasAdmin: true },
+          ].filter(item => (!item.apenasLogado || logado) && (!item.apenasAdmin || admin)).map(item => (
             <Link key={item.to} to={item.to} className="quick-btn" style={{ animationDelay: item.delay }}>
               <div className="quick-icon" style={{ background: item.bg }}>
                 <i className={`ph ${item.icon} quick-icon-glyph`} style={{ color: item.color }}></i>

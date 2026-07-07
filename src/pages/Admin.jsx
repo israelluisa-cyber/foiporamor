@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { Navigate } from 'react-router-dom';
 import Header from '../components/Header';
 import Toast from '../components/Toast';
 import { loadMembros, saveMembros, deleteMembroSupabase } from '../data/membros';
@@ -15,21 +16,8 @@ import { loadMinisterios, saveMinisterios, ICON_OPTIONS, COLOR_PRESETS } from '.
 import { EVANGELISMO_KEY, loadSaidas, saveSaidas, SAIDAS_DEFAULT } from '../data/evangelismo';
 import { loadTeologia, saveTeologia, TEOLOGIA_DEFAULT } from '../data/teologia';
 
-const ADMIN_PIN = '1234';
 const CADASTROS_KEY = 'cadastros_pendentes';
 const ADMIN_AVISOS_KEY = 'admin_avisos';
-
-const PROTECAO_ADMIN  = 'admin_protecao';
-const MAX_TENTATIVAS  = 3;
-const BLOQUEIO_MS     = 5 * 60 * 1000;
-
-function getProtecaoAdmin() {
-  try { return JSON.parse(localStorage.getItem(PROTECAO_ADMIN)) || { tentativas: 0, bloqueadoAte: null }; }
-  catch { return { tentativas: 0, bloqueadoAte: null }; }
-}
-function setProtecaoAdmin(data) {
-  localStorage.setItem(PROTECAO_ADMIN, JSON.stringify(data));
-}
 
 function loadCadastros() {
   try { return JSON.parse(localStorage.getItem(CADASTROS_KEY)) || []; }
@@ -609,106 +597,6 @@ function ModalContribuicoes({ onClose, contribs, onLimpar }) {
   );
 }
 
-function PinGate({ onAuthenticated }) {
-  const [pin, setPin] = useState('');
-  const [erro, setErro] = useState('');
-  const [tempoRestante, setTempoRestante] = useState(() => {
-    const p = getProtecaoAdmin();
-    return p.bloqueadoAte ? Math.max(0, p.bloqueadoAte - Date.now()) : 0;
-  });
-
-  useEffect(() => {
-    if (tempoRestante <= 0) return;
-    const timer = setInterval(() => {
-      const p = getProtecaoAdmin();
-      const restante = p.bloqueadoAte ? Math.max(0, p.bloqueadoAte - Date.now()) : 0;
-      setTempoRestante(restante);
-      if (restante === 0) setErro('');
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [tempoRestante]);
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const protecao = getProtecaoAdmin();
-
-    if (protecao.bloqueadoAte && Date.now() < protecao.bloqueadoAte) {
-      const min = Math.ceil((protecao.bloqueadoAte - Date.now()) / 60000);
-      setErro(`Bloqueado. Tente novamente em ${min} minuto${min > 1 ? 's' : ''}.`);
-      setTempoRestante(protecao.bloqueadoAte - Date.now());
-      return;
-    }
-
-    if (pin === ADMIN_PIN) {
-      setProtecaoAdmin({ tentativas: 0, bloqueadoAte: null });
-      sessionStorage.setItem('adminAuth', 'true');
-      if (!sessionStorage.getItem('user_session')) {
-        sessionStorage.setItem('user_session', JSON.stringify({ id: 'admin', nome: 'Administrador', viaAdmin: true }));
-      }
-      onAuthenticated();
-    } else {
-      const novasTentativas = (protecao.tentativas || 0) + 1;
-      const restantes = MAX_TENTATIVAS - novasTentativas;
-      if (novasTentativas >= MAX_TENTATIVAS) {
-        const bloqueadoAte = Date.now() + BLOQUEIO_MS;
-        setProtecaoAdmin({ tentativas: novasTentativas, bloqueadoAte });
-        setTempoRestante(BLOQUEIO_MS);
-        setErro('Muitas tentativas incorretas. Bloqueado por 5 minutos.');
-      } else {
-        setProtecaoAdmin({ tentativas: novasTentativas, bloqueadoAte: null });
-        setErro(`PIN incorreto. ${restantes} tentativa${restantes > 1 ? 's' : ''} restante${restantes > 1 ? 's' : ''}.`);
-      }
-      setPin('');
-    }
-  };
-
-  const bloqueado = tempoRestante > 0;
-
-  return (
-    <div className="container" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingBottom: '80px' }}>
-      <div className="glass-card" style={{ width: '100%', maxWidth: '360px', textAlign: 'center' }}>
-        <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: bloqueado ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto var(--spacing-md)' }}>
-          <i className={`ph ${bloqueado ? 'ph-lock-key' : 'ph-lock'}`} style={{ fontSize: '1.8rem', color: bloqueado ? '#ef4444' : 'var(--accent-color)' }}></i>
-        </div>
-        <h2 className="font-heading" style={{ marginBottom: '4px' }}>Área Restrita</h2>
-        <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: 'var(--spacing-lg)' }}>
-          {bloqueado ? 'Acesso temporariamente bloqueado.' : 'Insira o PIN de acesso da liderança.'}
-        </p>
-
-        <form onSubmit={handleSubmit}>
-          <input
-            type="password"
-            inputMode="numeric"
-            maxLength={6}
-            placeholder="••••"
-            value={pin}
-            onChange={e => { setPin(e.target.value); if (!bloqueado) setErro(''); }}
-            autoFocus
-            disabled={bloqueado}
-            style={{
-              width: '100%', background: 'var(--bg-surface-elevated)',
-              border: `1px solid ${erro ? '#ef4444' : 'var(--border-color)'}`,
-              color: 'var(--text-primary)', padding: '14px', borderRadius: 'var(--radius-md)',
-              fontFamily: 'var(--font-body)', fontSize: '1.5rem', fontWeight: '600',
-              letterSpacing: '8px', textAlign: 'center', outline: 'none',
-              marginBottom: 'var(--spacing-sm)',
-              opacity: bloqueado ? 0.4 : 1,
-            }}
-          />
-          {erro && (
-            <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 'var(--radius-md)', padding: '10px 12px', marginBottom: 'var(--spacing-sm)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <i className="ph ph-warning-circle" style={{ color: '#ef4444', flexShrink: 0 }}></i>
-              <p style={{ color: '#ef4444', fontSize: '0.82rem', margin: 0, textAlign: 'left' }}>{erro}</p>
-            </div>
-          )}
-          <button type="submit" className="primary-btn" disabled={bloqueado} style={{ width: '100%', marginTop: 'var(--spacing-sm)', justifyContent: 'center', opacity: bloqueado ? 0.5 : 1, cursor: bloqueado ? 'not-allowed' : 'pointer' }}>
-            {bloqueado ? `Aguarde ${Math.ceil(tempoRestante / 1000)}s` : 'Entrar'}
-          </button>
-        </form>
-      </div>
-    </div>
-  );
-}
 
 /* ── Modal Configurações da Igreja ─────────────────────────────── */
 function ModalConfiguracoes({ onClose, onSaved }) {
@@ -2041,15 +1929,12 @@ const [modalMinisterios, setModalMinisterios]   = useState(false);
   }, [isAuthenticated]);
 
   if (!isAuthenticated) {
-    return <PinGate onAuthenticated={() => setIsAuthenticated(true)} />;
+    return <Navigate to="/usuario" replace />;
   }
 
   const handleLogout = () => {
     sessionStorage.removeItem('adminAuth');
-    try {
-      const sess = JSON.parse(sessionStorage.getItem('user_session'));
-      if (sess?.viaAdmin) sessionStorage.removeItem('user_session');
-    } catch {}
+    sessionStorage.removeItem('user_session');
     setIsAuthenticated(false);
   };
 
