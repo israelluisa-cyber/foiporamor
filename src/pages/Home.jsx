@@ -7,6 +7,14 @@ import { loadSaidas } from '../data/evangelismo';
 
 // EVENTOS_SEMANA é derivado dinamicamente do config no componente
 
+// TODO: placeholders temporários — trocar por fotos reais de cada culto (ver /admin)
+const CULTO_FOTO_PLACEHOLDERS = [
+  '/culto-placeholder-1.jpg',
+  '/culto-placeholder-2.jpg',
+  '/culto-placeholder-3.jpg',
+  '/culto-placeholder-4.jpg',
+];
+
 const STORAGE_KEY_PEDIDOS = 'pedidos_oracao';
 
 // Pedidos mock (IDs string = antigos = sempre intercedidos)
@@ -236,6 +244,7 @@ export default function Home() {
   }
 
   const eventosSemana = cultos.map(c => ({
+    id:        c.id,
     dia:       DIAS_ABBR[c.diaSemana],
     icon:      cultoIcon(c.nome),
     nome:      c.nome,
@@ -257,20 +266,6 @@ export default function Home() {
     ...eventosSemana.filter(ev => !ev.restrito || logado),
     ...eventosSaidasProximas(),
   ];
-  const [bannerIdx, setBannerIdx] = useState(0);
-  const [bannerAnim, setBannerAnim] = useState('slideInRight');
-
-  useEffect(() => {
-    if (eventosFiltrados.length <= 1) return;
-    const timer = setInterval(() => {
-      setBannerAnim('slideOutLeft');
-      setTimeout(() => {
-        setBannerIdx(i => (i + 1) % eventosFiltrados.length);
-        setBannerAnim('slideInRight');
-      }, 300);
-    }, 4000);
-    return () => clearInterval(timer);
-  }, [eventosFiltrados.length]);
 
   const cultosVisiveis = cultos.filter(c => !c.restrito || logado);
 
@@ -502,57 +497,38 @@ export default function Home() {
           ))}
         </section>
 
-        {/* Programação da Semana — carrossel */}
+        {/* Programação da Semana — cards verticais */}
         <h3 className="section-title">Programação da Semana</h3>
         {eventosFiltrados.length > 0 && (
-          <div style={{ marginBottom: 'var(--spacing-lg)' }}>
-            <div style={{ overflow: 'hidden', borderRadius: 'var(--radius-md)' }}>
-              <div key={bannerIdx} style={{ animation: `${bannerAnim} 0.3s ease both` }}>
-                {(() => {
-                  const ev = eventosFiltrados[bannerIdx];
-                  const inner = (
-                    <div style={{ borderRadius: 'var(--radius-lg)', overflow: 'hidden', border: '1px solid var(--border-color)', boxShadow: '0 4px 20px rgba(0,0,0,0.3)' }}>
-                      {/* Banner */}
-                      <div style={{ position: 'relative', height: '150px', background: ev.gradiente, backgroundImage: ev.foto ? `url(${ev.foto})` : undefined, backgroundSize: 'cover', backgroundPosition: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {ev.foto && <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.38)' }} />}
-                        {!ev.foto && <>
-                          <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', pointerEvents: 'none' }} />
-                          <div style={{ position: 'absolute', bottom: '-15px', left: '10px', width: '70px', height: '70px', borderRadius: '50%', background: 'rgba(255,255,255,0.04)', pointerEvents: 'none' }} />
-                          <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(255,255,255,0.15)', border: '2px solid rgba(255,255,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}>
-                            <i className={`ph ${ev.icon}`} style={{ fontSize: '2rem', color: '#fff' }}></i>
-                          </div>
-                        </>}
-                        <span style={{ position: 'absolute', top: '10px', left: '14px', fontSize: '0.65rem', fontWeight: 700, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '1.5px', zIndex: 1 }}>{ev.dia}</span>
-                        {ev.isEvangelismo && (
-                          <span style={{ position: 'absolute', top: '10px', right: '14px', fontSize: '0.6rem', fontWeight: 700, color: '#fff', background: 'rgba(22,101,52,0.85)', padding: '2px 8px', borderRadius: 'var(--radius-full)', letterSpacing: '0.5px', zIndex: 1 }}>
-                            EVANGELISMO
-                          </span>
-                        )}
-                      </div>
-                      {/* Info */}
-                      <div style={{ background: 'var(--bg-surface)', padding: '14px 16px' }}>
-                        <p style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 4px' }}>{ev.nome}</p>
-                        <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px', margin: 0 }}>
-                          <i className="ph ph-clock"></i> {ev.periodo}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                  return ev.isEvangelismo
-                    ? <Link to="/evangelismo" style={{ textDecoration: 'none', display: 'block' }}>{inner}</Link>
-                    : inner;
-                })()}
-              </div>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', marginTop: '10px' }}>
-              {eventosFiltrados.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => { setBannerAnim('slideInRight'); setBannerIdx(i); }}
-                  style={{ width: bannerIdx === i ? '20px' : '6px', height: '6px', borderRadius: '3px', background: bannerIdx === i ? 'var(--accent-color)' : 'var(--border-color)', border: 'none', padding: 0, cursor: 'pointer', transition: 'all 0.3s ease' }}
-                />
-              ))}
-            </div>
+          <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingTop: 0, paddingRight: 'var(--spacing-md)', paddingBottom: '4px', paddingLeft: 'var(--spacing-md)', marginLeft: 'calc(-1 * var(--spacing-md))', marginRight: 'calc(-1 * var(--spacing-md))', marginBottom: 'var(--spacing-lg)', scrollbarWidth: 'none' }}>
+            {eventosFiltrados.map((ev, i) => {
+              const isLive = !ev.isEvangelismo && aoVivo?.id === ev.id;
+              const foto = ev.foto || CULTO_FOTO_PLACEHOLDERS[i % CULTO_FOTO_PLACEHOLDERS.length];
+              const card = (
+                <div style={{ width: '108px', aspectRatio: '9 / 16', borderRadius: 'var(--radius-lg)', overflow: 'hidden', position: 'relative', flexShrink: 0, backgroundImage: `url(${foto})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
+                  <div style={{ position: 'absolute', inset: 0, background: ev.gradiente, opacity: 0.5, mixBlendMode: 'multiply' }} />
+                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0) 35%, rgba(0,0,0,0.8) 100%)' }} />
+                  <div style={{ position: 'relative', zIndex: 1, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '10px' }}>
+                    {isLive && (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', alignSelf: 'flex-start', fontSize: '0.55rem', fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.5px', background: 'rgba(220,38,38,0.9)', padding: '2px 7px', borderRadius: 'var(--radius-full)', marginBottom: '6px' }}>
+                        <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#fff', animation: 'pulseAoVivo 1.2s ease-in-out infinite' }} />
+                        Ao vivo
+                      </span>
+                    )}
+                    {ev.isEvangelismo && (
+                      <span style={{ alignSelf: 'flex-start', fontSize: '0.55rem', fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.5px', background: 'rgba(22,101,52,0.85)', padding: '2px 7px', borderRadius: 'var(--radius-full)', marginBottom: '6px' }}>
+                        Evangelismo
+                      </span>
+                    )}
+                    <p style={{ fontSize: '0.58rem', fontWeight: 700, color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase', letterSpacing: '0.6px', margin: '0 0 2px' }}>{ev.diaNome || ev.dia}</p>
+                    <p style={{ fontSize: '0.86rem', fontWeight: 800, color: '#fff', textTransform: 'uppercase', lineHeight: 1.15, margin: 0 }}>{ev.nome}</p>
+                  </div>
+                </div>
+              );
+              return ev.isEvangelismo
+                ? <Link key={i} to="/evangelismo" style={{ textDecoration: 'none', flexShrink: 0 }}>{card}</Link>
+                : <div key={i}>{card}</div>;
+            })}
           </div>
         )}
 
