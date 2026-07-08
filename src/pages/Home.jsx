@@ -406,9 +406,11 @@ export default function Home() {
             50%       { transform: translateY(-4px); }
           }
           @keyframes popIn {
-            0%   { opacity: 0; transform: scale(0.7) translateY(10px); }
-            70%  { transform: scale(1.05) translateY(-2px); }
-            100% { opacity: 1; transform: scale(1) translateY(0); }
+            0%   { opacity: 0; transform: scale(0.3) translateY(46px); }
+            45%  { opacity: 1; transform: scale(1.12) translateY(-16px); }
+            65%  { transform: scale(0.94) translateY(5px); }
+            82%  { transform: scale(1.05) translateY(-4px); }
+            100% { transform: scale(1) translateY(0); }
           }
           .quick-btn {
             text-decoration: none;
@@ -421,7 +423,7 @@ export default function Home() {
             border: 1px solid var(--border-color);
             border-radius: var(--radius-md);
             transition: transform 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
-            animation: popIn 0.4s ease both;
+            animation: popIn 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) both;
             min-width: 72px;
             flex: 0 0 auto;
           }
@@ -470,6 +472,17 @@ export default function Home() {
               font-size: 0.78rem;
             }
           }
+          .evento-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+          }
+          .evento-card-next {
+            box-shadow: 0 0 0 2px #fbbf24, 0 6px 22px rgba(251,191,36,0.5);
+            animation: nextCultoGlow 2.2s ease-in-out infinite;
+          }
+          @keyframes nextCultoGlow {
+            0%, 100% { box-shadow: 0 0 0 2px #fbbf24, 0 6px 22px rgba(251,191,36,0.35); }
+            50%      { box-shadow: 0 0 0 2px #fde68a, 0 8px 28px rgba(251,191,36,0.7); }
+          }
           @keyframes slideInRight {
             from { opacity: 0; transform: translateX(40px); }
             to   { opacity: 1; transform: translateX(0); }
@@ -507,15 +520,22 @@ export default function Home() {
         {/* Programação da Semana — cards verticais */}
         <h3 className="section-title">Programação da Semana</h3>
         {eventosFiltrados.length > 0 && (
-          <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingTop: 0, paddingRight: 'var(--spacing-md)', paddingBottom: '4px', paddingLeft: 'var(--spacing-md)', marginLeft: 'calc(-1 * var(--spacing-md))', marginRight: 'calc(-1 * var(--spacing-md))', marginBottom: 'var(--spacing-lg)', scrollbarWidth: 'none' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '10px', overflowX: 'auto', paddingTop: '6px', paddingRight: 'var(--spacing-md)', paddingBottom: '4px', paddingLeft: 'var(--spacing-md)', marginLeft: 'calc(-1 * var(--spacing-md))', marginRight: 'calc(-1 * var(--spacing-md))', marginBottom: 'var(--spacing-lg)', scrollbarWidth: 'none' }}>
             {eventosFiltrados.map((ev, i) => {
               const isLive = !ev.isEvangelismo && aoVivo?.id === ev.id;
+              const isNext = !ev.isEvangelismo && !isLive && !!proximoInfo && ev.id === proximoInfo.id;
               const foto = ev.foto || CULTO_FOTO_PLACEHOLDERS[i % CULTO_FOTO_PLACEHOLDERS.length];
               const card = (
-                <div style={{ width: '108px', aspectRatio: '9 / 16', borderRadius: 'var(--radius-lg)', overflow: 'hidden', position: 'relative', flexShrink: 0, backgroundImage: `url(${foto})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
+                <div className={isNext ? 'evento-card evento-card-next' : 'evento-card'} style={{ width: isNext ? '128px' : '108px', aspectRatio: '9 / 16', borderRadius: 'var(--radius-lg)', overflow: 'hidden', position: 'relative', flexShrink: 0, backgroundImage: `url(${foto})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
                   <div style={{ position: 'absolute', inset: 0, background: ev.gradiente, opacity: 0.5, mixBlendMode: 'multiply' }} />
                   <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0) 35%, rgba(0,0,0,0.8) 100%)' }} />
                   <div style={{ position: 'relative', zIndex: 1, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '10px' }}>
+                    {isNext && (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', alignSelf: 'flex-start', fontSize: '0.55rem', fontWeight: 700, color: '#1f2937', textTransform: 'uppercase', letterSpacing: '0.5px', background: '#fbbf24', padding: '2px 7px', borderRadius: 'var(--radius-full)', marginBottom: '6px' }}>
+                        <i className="ph ph-sparkle" style={{ fontSize: '0.7rem' }}></i>
+                        Próximo
+                      </span>
+                    )}
                     {isLive && (
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', alignSelf: 'flex-start', fontSize: '0.55rem', fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.5px', background: 'rgba(220,38,38,0.9)', padding: '2px 7px', borderRadius: 'var(--radius-full)', marginBottom: '6px' }}>
                         <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#fff', animation: 'pulseAoVivo 1.2s ease-in-out infinite' }} />
@@ -527,8 +547,8 @@ export default function Home() {
                         Evangelismo
                       </span>
                     )}
-                    <p style={{ fontSize: '0.58rem', fontWeight: 700, color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase', letterSpacing: '0.6px', margin: '0 0 2px' }}>{ev.diaNome || ev.dia}</p>
-                    <p style={{ fontSize: '0.86rem', fontWeight: 800, color: '#fff', textTransform: 'uppercase', lineHeight: 1.15, margin: 0 }}>{ev.nome}</p>
+                    <p style={{ fontSize: isNext ? '0.62rem' : '0.58rem', fontWeight: 700, color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase', letterSpacing: '0.6px', margin: '0 0 2px' }}>{ev.diaNome || ev.dia}</p>
+                    <p style={{ fontSize: isNext ? '0.98rem' : '0.86rem', fontWeight: 800, color: '#fff', textTransform: 'uppercase', lineHeight: 1.15, margin: 0 }}>{ev.nome}</p>
                   </div>
                 </div>
               );
