@@ -2028,6 +2028,15 @@ function ModalPedidosOracao({ onClose }) {
                       </span>
                     )}
                   </div>
+                  {p.celular && (
+                    <a
+                      href={`https://wa.me/55${p.celular.replace(/\D/g, '')}`}
+                      target="_blank" rel="noreferrer"
+                      style={{ fontSize: '0.75rem', color: '#22c55e', display: 'inline-flex', alignItems: 'center', gap: '4px', marginBottom: '6px', textDecoration: 'none' }}
+                    >
+                      <i className="ph ph-whatsapp-logo"></i> {p.celular}
+                    </a>
+                  )}
                   <p style={{ fontSize: '0.88rem', color: 'var(--text-primary)', lineHeight: 1.5 }}>{p.texto}</p>
                 </div>
                 <button

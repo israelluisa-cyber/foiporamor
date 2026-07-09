@@ -209,6 +209,8 @@ export async function savePedidoOracaoToSupabase(pedido) {
       id:      String(pedido.id),
       texto:   pedido.texto,
       privado: !!pedido.privado,
+      nome:    pedido.nome    || null,
+      celular: pedido.celular || null,
       data:    pedido.data || null,
     });
   } catch (e) {

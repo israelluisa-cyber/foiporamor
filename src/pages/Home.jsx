@@ -52,7 +52,7 @@ function loadPreviewPedidos() {
     const user = JSON.parse(localStorage.getItem(STORAGE_KEY_PEDIDOS)) || [];
     const publicos = user.filter(p => !p.privado);
     const todos = [
-      ...publicos.map(p => ({ id: p.id, nome: 'Você', texto: p.texto })),
+      ...publicos.map(p => ({ id: p.id, nome: p.nome || 'Anônimo', texto: p.texto })),
       ...MOCK_PREVIEW,
     ];
     return todos.slice(0, 3);

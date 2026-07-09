@@ -4,8 +4,10 @@ import Toast from '../components/Toast';
 import { loadConfig } from '../data/config';
 import { savePedidoOracaoToSupabase, deletePedidoOracaoFromSupabase } from '../data/supabase';
 
-const STORAGE_KEY = 'pedidos_oracao';
-const AMENS_KEY   = 'oracao_amens';
+const STORAGE_KEY  = 'pedidos_oracao';
+const AMENS_KEY    = 'oracao_amens';
+const SESSION_KEY  = 'user_session';
+const MEUS_IDS_KEY = 'meus_pedidos_ids'; // IDs enviados a partir deste aparelho — nunca sincronizado, só local
 
 // Retorna o timestamp do fim do último culto de oração (quinta-feira)
 function ultimoCultoOracaoMs() {
@@ -49,6 +51,22 @@ function loadAmens() {
   catch { return []; }
 }
 
+function loadSession() {
+  try { return JSON.parse(sessionStorage.getItem(SESSION_KEY)); }
+  catch { return null; }
+}
+
+function loadMeusIds() {
+  try { return JSON.parse(localStorage.getItem(MEUS_IDS_KEY)) || []; }
+  catch { return []; }
+}
+
+const campoStyle = {
+  width: '100%', padding: '10px 12px', background: 'var(--bg-surface)',
+  border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)',
+  color: 'var(--text-primary)', fontSize: '0.88rem', boxSizing: 'border-box', outline: 'none',
+};
+
 export default function Oracao() {
   const [pedidos, setPedidos] = useState(loadPedidos);
   const [amens, setAmens] = useState(loadAmens);
@@ -56,16 +74,33 @@ export default function Oracao() {
   const [privado, setPrivado] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [aba, setAba] = useState('mural'); // 'mural' | 'meus'
+  const [session] = useState(loadSession);
+  const [nomeVisitante, setNomeVisitante] = useState('');
+  const [celularVisitante, setCelularVisitante] = useState('');
+  const [meusIds, setMeusIds] = useState(loadMeusIds);
 
   const handleSubmit = () => {
     if (!texto.trim()) return;
-    const novo = { id: Date.now(), texto: texto.trim(), privado, data: new Date().toLocaleDateString('pt-BR') };
+    const nome    = session ? session.nome    : nomeVisitante.trim();
+    const celular = session ? session.celular : celularVisitante.trim();
+    const novo = {
+      id: Date.now(), texto: texto.trim(), privado,
+      nome: nome || null, celular: celular || null,
+      data: new Date().toLocaleDateString('pt-BR'),
+    };
     const atualizados = [novo, ...pedidos];
     setPedidos(atualizados);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(atualizados));
     savePedidoOracaoToSupabase(novo);
+
+    const novosMeusIds = [String(novo.id), ...meusIds];
+    setMeusIds(novosMeusIds);
+    localStorage.setItem(MEUS_IDS_KEY, JSON.stringify(novosMeusIds));
+
     setTexto('');
     setPrivado(false);
+    setNomeVisitante('');
+    setCelularVisitante('');
     setToastMessage('Pedido de oração enviado! Estaremos orando por você.');
     setAba('meus');
   };
@@ -85,9 +120,12 @@ export default function Oracao() {
     setToastMessage('Você orou por este pedido. Amém!');
   };
 
-  // Mural público: mock + pedidos públicos do usuário
+  // Só os pedidos enviados a partir DESTE aparelho — não o pool inteiro sincronizado
+  const meusPedidos = pedidos.filter(p => meusIds.includes(String(p.id)));
+
+  // Mural público: mock + pedidos públicos de todos (com o nome real de quem enviou, ou Anônimo)
   const pedidosPublicos = pedidos.filter(p => !p.privado).map(p => ({
-    ...p, nome: 'Você', amens: 0, isUser: true,
+    ...p, nome: p.nome || 'Anônimo', amens: p.amens || 0,
   }));
   const mural = [...pedidosPublicos, ...MURAL_MOCK].sort((a, b) => {
     const aNum = typeof a.id === 'number';
@@ -149,6 +187,24 @@ export default function Oracao() {
             </div>
           </div>
 
+          {session ? (
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: 'var(--spacing-md)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <i className="ph ph-user-circle"></i>
+              Enviando como <strong style={{ color: 'var(--text-secondary)' }}>{session.nome}</strong>
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: 'var(--spacing-md)' }}>
+              <input
+                type="text" value={nomeVisitante} onChange={e => setNomeVisitante(e.target.value)}
+                placeholder="Seu nome (opcional)" style={campoStyle}
+              />
+              <input
+                type="tel" value={celularVisitante} onChange={e => setCelularVisitante(e.target.value)}
+                placeholder="Seu celular (opcional — ajuda a igreja a te responder)" style={campoStyle}
+              />
+            </div>
+          )}
+
           <button
             className="primary-btn"
             style={{ width: '100%', display: 'flex', justifyContent: 'center', opacity: texto.trim() ? 1 : 0.5 }}
@@ -162,7 +218,7 @@ export default function Oracao() {
 
         {/* Abas: Mural | Meus Pedidos */}
         <div style={{ display: 'flex', background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-full)', padding: '4px', marginBottom: 'var(--spacing-md)', gap: '4px' }}>
-          {[['mural', 'Mural da Igreja'], ['meus', `Meus Pedidos (${pedidos.length})`]].map(([val, label]) => (
+          {[['mural', 'Mural da Igreja'], ['meus', `Meus Pedidos (${meusPedidos.length})`]].map(([val, label]) => (
             <button
               key={val}
               onClick={() => setAba(val)}
@@ -223,10 +279,10 @@ export default function Oracao() {
 
         {/* Meus pedidos */}
         {aba === 'meus' && (
-          pedidos.length === 0 ? (
+          meusPedidos.length === 0 ? (
             <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 'var(--spacing-xl)' }}>Você ainda não enviou pedidos.</p>
           ) : (
-            pedidos.map(pedido => (
+            meusPedidos.map(pedido => (
               <div key={pedido.id} className="glass-card" style={{ marginBottom: '10px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
