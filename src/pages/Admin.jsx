@@ -8,7 +8,9 @@ import {
   saveAvisoToSupabase, deleteAvisoFromSupabase,
   deletePedidoOracaoFromSupabase, clearPedidosOracaoFromSupabase,
   updateAconselhamentoStatusSupabase, deleteAconselhamentoFromSupabase,
+  updateCadastroSenhaSupabase,
 } from '../data/supabase';
+import { hashPassword } from '../data/crypto';
 import { loadConfig, saveConfig, DIAS_SEMANA, formatHora } from '../data/config';
 import { loadContribuicoes, clearContribuicoes, totalContribuicoes, totalPorObra } from '../data/contribuicoes';
 import { MINISTERIOS, loadVagas, saveVagas, VAGAS_KEY } from '../data/vagas';
@@ -28,10 +30,23 @@ function saveCadastros(cadastros) {
   localStorage.setItem(CADASTROS_KEY, JSON.stringify(cadastros));
 }
 
+// Sem caracteres ambíguos (0/O, 1/I/l) pra facilitar ditar por telefone/WhatsApp
+function gerarSenhaTemporaria() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let senha = '';
+  for (let i = 0; i < 8; i++) senha += chars[Math.floor(Math.random() * chars.length)];
+  return senha;
+}
+
 function ModalGerenciarCadastros({ isOpen, onClose, cadastros, setCadastros, membros, setMembros }) {
   const pendentes = cadastros.filter(c => c.status === 'pendente');
+  const aprovados = cadastros.filter(c => c.status === 'aprovado');
   const [aprovadoNome, setAprovadoNome] = useState(null);
   const [atualizando, setAtualizando] = useState(false);
+  const [aba, setAba] = useState('pendentes'); // 'pendentes' | 'contas'
+  const [busca, setBusca] = useState('');
+  const [senhaGerada, setSenhaGerada] = useState(null); // { id, nome, senha }
+  const [copiado, setCopiado] = useState(false);
 
   const handleAtualizar = async () => {
     setAtualizando(true);
@@ -39,6 +54,37 @@ function ModalGerenciarCadastros({ isOpen, onClose, cadastros, setCadastros, mem
     setCadastros(loadCadastros());
     setAtualizando(false);
   };
+
+  const handleResetSenha = async (cadastro) => {
+    if (!confirm(`Gerar uma nova senha temporária para ${cadastro.nome}?\n\nA senha atual dele(a) deixará de funcionar.`)) return;
+
+    const novaSenha = gerarSenhaTemporaria();
+    const { hash, salt } = await hashPassword(novaSenha);
+
+    const novosCadastros = cadastros.map(c =>
+      c.id === cadastro.id ? { ...c, password: undefined, passwordHash: hash, passwordSalt: salt } : c
+    );
+    setCadastros(novosCadastros);
+    saveCadastros(novosCadastros);
+    updateCadastroSenhaSupabase(cadastro.id, hash, salt);
+
+    setSenhaGerada({ id: cadastro.id, nome: cadastro.nome, senha: novaSenha });
+    setCopiado(false);
+  };
+
+  const handleCopiarSenha = () => {
+    if (!senhaGerada) return;
+    navigator.clipboard?.writeText(senhaGerada.senha).then(() => {
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2000);
+    });
+  };
+
+  const aprovadosFiltrados = aprovados.filter(c => {
+    const q = busca.trim().toLowerCase();
+    if (!q) return true;
+    return c.nome?.toLowerCase().includes(q) || c.email?.toLowerCase().includes(q);
+  });
 
   useEffect(() => {
     if (!aprovadoNome) return;
@@ -102,7 +148,7 @@ function ModalGerenciarCadastros({ isOpen, onClose, cadastros, setCadastros, mem
         boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
       }}>
         <div style={{ padding: 'var(--spacing-lg)', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
-          <h3 style={{ margin: 0, fontFamily: 'var(--font-heading)' }}>Aprovar Cadastros ({pendentes.length})</h3>
+          <h3 style={{ margin: 0, fontFamily: 'var(--font-heading)' }}>Cadastros de Membros</h3>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <button
             onClick={handleAtualizar}
@@ -129,8 +175,33 @@ function ModalGerenciarCadastros({ isOpen, onClose, cadastros, setCadastros, mem
           </div>
         </div>
 
+        <div style={{ display: 'flex', gap: '8px', padding: 'var(--spacing-md) var(--spacing-lg) 0' }}>
+          <button
+            onClick={() => setAba('pendentes')}
+            style={{
+              flex: 1, padding: '9px', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600,
+              background: aba === 'pendentes' ? 'var(--accent-color)' : 'var(--bg-surface-elevated)',
+              color: aba === 'pendentes' ? 'var(--bg-color)' : 'var(--text-secondary)',
+              border: '1px solid ' + (aba === 'pendentes' ? 'var(--accent-color)' : 'var(--border-color)'),
+            }}
+          >
+            Pendentes {pendentes.length > 0 && `(${pendentes.length})`}
+          </button>
+          <button
+            onClick={() => setAba('contas')}
+            style={{
+              flex: 1, padding: '9px', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600,
+              background: aba === 'contas' ? 'var(--accent-color)' : 'var(--bg-surface-elevated)',
+              color: aba === 'contas' ? 'var(--bg-color)' : 'var(--text-secondary)',
+              border: '1px solid ' + (aba === 'contas' ? 'var(--accent-color)' : 'var(--border-color)'),
+            }}
+          >
+            Contas Aprovadas ({aprovados.length})
+          </button>
+        </div>
+
         <div style={{ padding: 'var(--spacing-lg)' }}>
-          {aprovadoNome ? (
+          {aba === 'pendentes' ? (aprovadoNome ? (
             <div style={{ textAlign: 'center', padding: '48px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
               <div style={{
                 width: '64px', height: '64px', borderRadius: '50%',
@@ -214,6 +285,88 @@ function ModalGerenciarCadastros({ isOpen, onClose, cadastros, setCadastros, mem
                   </div>
                 </div>
               ))}
+            </div>
+          )) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <input
+                type="text" value={busca} onChange={e => setBusca(e.target.value)}
+                placeholder="Buscar por nome ou e-mail..."
+                style={{
+                  width: '100%', padding: '10px 12px', background: 'var(--bg-surface)',
+                  border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)',
+                  color: 'var(--text-primary)', fontSize: '0.9rem', boxSizing: 'border-box', outline: 'none',
+                }}
+              />
+
+              {senhaGerada && (
+                <div style={{
+                  background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.4)',
+                  borderRadius: 'var(--radius-md)', padding: 'var(--spacing-md)',
+                }}>
+                  <p style={{ margin: 0, marginBottom: '8px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                    Senha temporária para <strong style={{ color: 'var(--text-primary)' }}>{senhaGerada.nome}</strong>:
+                  </p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                    <code style={{ fontSize: '1.15rem', fontWeight: 700, letterSpacing: '2px', color: '#22c55e', background: 'var(--bg-surface)', padding: '6px 12px', borderRadius: '4px' }}>
+                      {senhaGerada.senha}
+                    </code>
+                    <button
+                      onClick={handleCopiarSenha}
+                      style={{ background: 'none', border: '1px solid var(--border-color)', borderRadius: '4px', color: 'var(--text-primary)', cursor: 'pointer', padding: '6px 10px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                    >
+                      <i className={`ph ${copiado ? 'ph-check' : 'ph-copy'}`}></i> {copiado ? 'Copiado!' : 'Copiar'}
+                    </button>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    Envie essa senha ao membro por um canal seguro (WhatsApp, telefone). Ele já pode usá-la para entrar e pode trocá-la depois em "Esqueci minha senha".
+                  </p>
+                  <button
+                    onClick={() => setSenhaGerada(null)}
+                    style={{ marginTop: '8px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.78rem', padding: 0, textDecoration: 'underline' }}
+                  >
+                    Fechar
+                  </button>
+                </div>
+              )}
+
+              {aprovadosFiltrados.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-secondary)' }}>
+                  <i className="ph ph-magnifying-glass" style={{ fontSize: '2rem', marginBottom: '12px', display: 'block' }}></i>
+                  <p>Nenhuma conta encontrada</p>
+                </div>
+              ) : (
+                aprovadosFiltrados.map(cadastro => (
+                  <div key={cadastro.id} style={{
+                    background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-color)',
+                    borderRadius: 'var(--radius-md)', padding: 'var(--spacing-md)',
+                    display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)',
+                  }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <h4 style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--text-primary)', margin: 0, marginBottom: '4px' }}>
+                        {cadastro.nome}
+                      </h4>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0 }}>
+                        <i className="ph ph-envelope"></i> {cadastro.email}
+                      </p>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0 }}>
+                        <i className="ph ph-phone"></i> {cadastro.celular}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleResetSenha(cadastro)}
+                      title="Gerar senha temporária"
+                      style={{
+                        flexShrink: 0, padding: '8px 12px', background: 'rgba(250,204,21,0.15)',
+                        border: '1px solid rgba(250,204,21,0.4)', color: '#facc15',
+                        borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem',
+                        fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap',
+                      }}
+                    >
+                      <i className="ph ph-key"></i> Senha temporária
+                    </button>
+                  </div>
+                ))
+              )}
             </div>
           )}
         </div>
