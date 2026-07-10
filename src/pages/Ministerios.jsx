@@ -50,12 +50,13 @@ function ModalMinisterio({ ministerio, onClose }) {
           </div>
         </div>
 
-        {/* Botão fechar — irmão do header, acima do conteúdo scrollável */}
+        {/* Botão voltar — mesmo padrão do Header (caret-left), acima do conteúdo scrollável */}
         <button
           onClick={onClose}
-          style={{ position: 'absolute', top: '14px', right: '14px', zIndex: 100, background: 'rgba(0,0,0,0.40)', border: 'none', borderRadius: '50%', width: '34px', height: '34px', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          aria-label="Voltar"
+          style={{ position: 'absolute', top: '14px', left: '14px', zIndex: 100, background: 'rgba(0,0,0,0.40)', border: 'none', borderRadius: '50%', width: '34px', height: '34px', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
         >
-          <i className="ph ph-x" style={{ fontSize: '1rem' }}></i>
+          <i className="ph ph-caret-left" style={{ fontSize: '1rem' }}></i>
         </button>
 
         <div style={{ padding: '20px' }}>
@@ -149,7 +150,7 @@ export default function Ministerios() {
 
   return (
     <div className="container" style={{ paddingBottom: 'var(--spacing-xl)' }}>
-      <Header />
+      <Header title="Ministérios" backButton={true} />
       <main style={{ paddingTop: 'var(--spacing-md)' }}>
 
         {/* Hero */}

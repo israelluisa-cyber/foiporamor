@@ -384,8 +384,8 @@ export default function Home() {
                     })()}
                   </>
                 ) : (
-                  <h1 className="hero-title font-heading" style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '12px', lineHeight: 1.2 }}>
-                    IGREJA FOI POR AMOR
+                  <h1 className="hero-title font-heading" style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '12px', lineHeight: 1.2, textTransform: 'uppercase' }}>
+                    {config.nomeIgreja}
                   </h1>
                 )}
               </>
@@ -640,18 +640,24 @@ export default function Home() {
 
         {/* Localização */}
         <h3 className="section-title">Onde nos encontrar</h3>
-        <section className="glass-card" style={{ marginBottom: 'var(--spacing-lg)', display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)' }}>
-          <div style={{ width: '48px', height: '48px', borderRadius: 'var(--radius-md)', background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <i className="ph ph-map-pin" style={{ fontSize: '1.4rem', color: 'var(--accent-color)' }}></i>
+        <section className="glass-card" style={{ marginBottom: 'var(--spacing-lg)', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', border: config.enderecoFoto ? 'none' : undefined }}>
+          {config.enderecoFoto && (
+            <>
+              <img src={config.enderecoFoto} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0 }} />
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(170deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.7) 100%)', zIndex: 0 }} />
+            </>
+          )}
+          <div style={{ width: '48px', height: '48px', borderRadius: 'var(--radius-md)', background: config.enderecoFoto ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.06)', border: `1px solid ${config.enderecoFoto ? 'rgba(255,255,255,0.3)' : 'var(--border-color)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative', zIndex: 1 }}>
+            <i className="ph ph-map-pin" style={{ fontSize: '1.4rem', color: config.enderecoFoto ? '#fff' : 'var(--accent-color)' }}></i>
           </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>{config.nomeIgreja}</p>
-            <p style={{ fontSize: '0.9rem', color: 'var(--text-primary)', marginBottom: '2px' }}>{config.endereco}</p>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{config.cidade}</p>
+          <div style={{ flex: 1, minWidth: 0, position: 'relative', zIndex: 1 }}>
+            <p style={{ fontSize: '0.7rem', fontWeight: 700, color: config.enderecoFoto ? 'rgba(255,255,255,0.7)' : 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>{config.nomeIgreja}</p>
+            <p style={{ fontSize: '0.9rem', color: config.enderecoFoto ? '#fff' : 'var(--text-primary)', marginBottom: '2px' }}>{config.endereco}</p>
+            <p style={{ fontSize: '0.8rem', color: config.enderecoFoto ? 'rgba(255,255,255,0.7)' : 'var(--text-muted)' }}>{config.cidade}</p>
           </div>
           <button
             onClick={() => window.open(config.mapsLink || 'https://maps.google.com', '_blank')}
-            style={{ padding: '8px 14px', background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-full)', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '5px', whiteSpace: 'nowrap', flexShrink: 0 }}
+            style={{ padding: '8px 14px', background: config.enderecoFoto ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.06)', border: `1px solid ${config.enderecoFoto ? 'rgba(255,255,255,0.3)' : 'var(--border-color)'}`, borderRadius: 'var(--radius-full)', color: config.enderecoFoto ? '#fff' : 'var(--text-primary)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '5px', whiteSpace: 'nowrap', flexShrink: 0, position: 'relative', zIndex: 1 }}
           >
             <i className="ph ph-navigation-arrow"></i> Como chegar
           </button>
@@ -667,10 +673,10 @@ export default function Home() {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
             {[
-              { nome: 'YouTube',   icon: 'ph-youtube-logo',   gradient: 'linear-gradient(135deg,#c4302b,#ff6347)', url: 'https://www.youtube.com/@IgrejaFoiPorAmorOficial' },
-              { nome: 'Instagram', icon: 'ph-instagram-logo', gradient: 'linear-gradient(135deg,#833ab4,#fd1d1d,#f77737)', url: 'https://www.instagram.com/igrejafoiporamor/' },
-              { nome: 'Facebook',  icon: 'ph-facebook-logo',  gradient: 'linear-gradient(135deg,#1877f2,#0c5ebf)', url: 'https://www.facebook.com/igrejafpa' },
-            ].map(r => (
+              { nome: 'YouTube',   icon: 'ph-youtube-logo',   gradient: 'linear-gradient(135deg,#c4302b,#ff6347)', url: config.youtubeLink },
+              { nome: 'Instagram', icon: 'ph-instagram-logo', gradient: 'linear-gradient(135deg,#833ab4,#fd1d1d,#f77737)', url: config.instagramLink },
+              { nome: 'Facebook',  icon: 'ph-facebook-logo',  gradient: 'linear-gradient(135deg,#1877f2,#0c5ebf)', url: config.facebookLink },
+            ].filter(r => r.url).map(r => (
               <button
                 key={r.nome}
                 onClick={() => window.open(r.url, '_blank')}

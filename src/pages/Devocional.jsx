@@ -72,8 +72,8 @@ export default function Devocional() {
         {/* Título */}
         <section className="glass-card hero-card" style={{ marginBottom: 'var(--spacing-md)' }}>
           <span className="hero-tag">Devocional do Dia</span>
-          <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.7rem', color: 'var(--text-primary)', marginBottom: '8px', lineHeight: 1.2 }}>{dev.titulo}</h1>
-          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <h1 className="hero-title" style={{ fontFamily: 'var(--font-heading)', fontSize: '1.7rem', marginBottom: '8px', lineHeight: 1.2 }}>{dev.titulo}</h1>
+          <p className="hero-time" style={{ fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
             <i className="ph ph-book-bookmark"></i> {dev.escritura}
           </p>
         </section>

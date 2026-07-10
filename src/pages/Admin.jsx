@@ -11,10 +11,11 @@ import {
   updateCadastroSenhaSupabase,
 } from '../data/supabase';
 import { hashPassword } from '../data/crypto';
-import { loadConfig, saveConfig, DIAS_SEMANA, formatHora } from '../data/config';
+import { loadConfig, saveConfig, applyBranding, DIAS_SEMANA, formatHora } from '../data/config';
 import { loadContribuicoes, clearContribuicoes, totalContribuicoes, totalPorObra } from '../data/contribuicoes';
 import { MINISTERIOS, loadVagas, saveVagas, VAGAS_KEY } from '../data/vagas';
 import { loadMinisterios, saveMinisterios, ICON_OPTIONS, COLOR_PRESETS } from '../data/ministeriosData';
+import { loadGrupos, saveGrupos, GRUPO_COLOR_PRESETS } from '../data/gruposData';
 import { EVANGELISMO_KEY, loadSaidas, saveSaidas, SAIDAS_DEFAULT } from '../data/evangelismo';
 import { loadTeologia, saveTeologia, TEOLOGIA_DEFAULT } from '../data/teologia';
 
@@ -865,6 +866,50 @@ function ModalConfiguracoes({ onClose, onSaved }) {
     reader.readAsDataURL(file);
   };
 
+  const handleEnderecoFotoUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const img = new Image();
+      img.onload = async () => {
+        const MAX = 900;
+        const ratio = Math.min(MAX / img.width, MAX / img.height, 1);
+        const canvas = document.createElement('canvas');
+        canvas.width  = img.width  * ratio;
+        canvas.height = img.height * ratio;
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        const compressed = canvas.toDataURL('image/jpeg', 0.8);
+        const url = await uploadFotoToStorage(compressed, 'endereco');
+        setCfg(c => ({ ...c, enderecoFoto: url }));
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleLogoUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const img = new Image();
+      img.onload = async () => {
+        const MAX = 500;
+        const ratio = Math.min(MAX / img.width, MAX / img.height, 1);
+        const canvas = document.createElement('canvas');
+        canvas.width  = img.width  * ratio;
+        canvas.height = img.height * ratio;
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        const compressed = canvas.toDataURL('image/jpeg', 0.85);
+        const url = await uploadFotoToStorage(compressed, 'logo');
+        setCfg(c => ({ ...c, logoUrl: url }));
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
   const adicionarVaga = () => {
     if (!novaVaga.data.trim() || !novaVaga.horario.trim()) return;
     const nova = { ...novaVaga, id: Date.now(), aberta: true, confirmados: 0 };
@@ -880,6 +925,7 @@ function ModalConfiguracoes({ onClose, onSaved }) {
     saveConfig(cfg);
     saveVagas(vagas);
     saveConfigToSupabase(cfg);
+    applyBranding(cfg);
     onSaved();
     onClose();
   };
@@ -893,6 +939,7 @@ function ModalConfiguracoes({ onClose, onSaved }) {
 
   const secoes = [
     { key: 'identidade', label: 'Identidade', icon: 'ph-church' },
+    { key: 'visual',     label: 'Visual',     icon: 'ph-palette' },
     { key: 'hero',       label: 'Imagem',     icon: 'ph-image' },
     { key: 'aviso',      label: 'Aviso',      icon: 'ph-megaphone' },
     { key: 'whatsapp',   label: 'WhatsApp',   icon: 'ph-whatsapp-logo' },
@@ -936,6 +983,7 @@ function ModalConfiguracoes({ onClose, onSaved }) {
               <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0 }}>Informações básicas da Igreja visíveis no app.</p>
               {[
                 ['Nome da Igreja',   'nomeIgreja',   'text', 'Igreja Foi Por Amor'],
+                ['Nome curto / sigla', 'nomeCurto',  'text', 'Ex: IFPA'],
                 ['Endereço',         'endereco',     'text', 'Rua, número — Bairro'],
                 ['Cidade — UF',      'cidade',       'text', 'Cidade — SP'],
                 ['Link do Maps',     'mapsLink',     'url',  'https://maps.google.com/...'],
@@ -946,6 +994,72 @@ function ModalConfiguracoes({ onClose, onSaved }) {
                   <input type={type} value={cfg[campo] || ''} onChange={e => set(campo, e.target.value)} style={inputSt} placeholder={placeholder} />
                 </div>
               ))}
+
+              <div>
+                <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                  Foto do local <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>— aparece no card "Onde nos encontrar" (proporção recomendada 16:9, ex: 1200×675px)</span>
+                </label>
+                {cfg.enderecoFoto && (
+                  <div style={{ width: '100%', aspectRatio: '16 / 9', borderRadius: 'var(--radius-md)', overflow: 'hidden', marginBottom: '10px', border: '1px solid var(--border-color)' }}>
+                    <img src={cfg.enderecoFoto} alt="Foto do local" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </div>
+                )}
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <label style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '10px', background: 'var(--bg-surface)', border: '1px dashed var(--border-color)', borderRadius: 'var(--radius-md)', cursor: 'pointer', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.85rem' }}>
+                    <i className="ph ph-upload-simple"></i>
+                    {cfg.enderecoFoto ? 'Trocar foto' : 'Escolher foto'}
+                    <input type="file" accept="image/*" onChange={handleEnderecoFotoUpload} style={{ display: 'none' }} />
+                  </label>
+                  {cfg.enderecoFoto && (
+                    <button onClick={() => set('enderecoFoto', null)} style={{ padding: '10px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 'var(--radius-md)', color: '#ef4444', cursor: 'pointer' }}>
+                      <i className="ph ph-trash"></i>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* VISUAL */}
+          {secao === 'visual' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0 }}>Logo, cor de destaque e redes sociais exibidas no app.</p>
+
+              <div>
+                <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Logo do App</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <img src={cfg.logoUrl || '/logo-icon.png'} alt="Logo" style={{ width: '56px', height: '56px', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border-color)' }} />
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', background: 'var(--bg-surface)', border: '1px dashed var(--border-color)', borderRadius: 'var(--radius-md)', cursor: 'pointer', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.85rem', flex: 1, justifyContent: 'center' }}>
+                    <i className="ph ph-upload-simple"></i>
+                    Trocar logo
+                    <input type="file" accept="image/*" onChange={handleLogoUpload} style={{ display: 'none' }} />
+                  </label>
+                  {cfg.logoUrl && (
+                    <button onClick={() => set('logoUrl', null)} style={{ padding: '10px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 'var(--radius-md)', color: '#ef4444', cursor: 'pointer' }}>
+                      <i className="ph ph-trash"></i>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Cor de destaque</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <input type="color" value={cfg.corDestaque || '#ffffff'} onChange={e => set('corDestaque', e.target.value)} style={{ width: '48px', height: '40px', padding: 0, border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', background: 'none', cursor: 'pointer' }} />
+                  <input type="text" value={cfg.corDestaque || '#ffffff'} onChange={e => set('corDestaque', e.target.value)} style={{ ...inputSt, flex: 1 }} placeholder="#ffffff" />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Instagram</label>
+                <input type="url" value={cfg.instagramLink || ''} onChange={e => set('instagramLink', e.target.value)} style={inputSt} placeholder="https://www.instagram.com/suaigreja/" />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Facebook</label>
+                <input type="url" value={cfg.facebookLink || ''} onChange={e => set('facebookLink', e.target.value)} style={inputSt} placeholder="https://www.facebook.com/suaigreja" />
+              </div>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Deixe os links de rede social vazios para ocultar o ícone na Home.</p>
             </div>
           )}
 
@@ -1312,6 +1426,7 @@ function loadAconselhamentos() {
 function ModalAconselhamento({ onClose }) {
   const [pedidos, setPedidos] = useState(loadAconselhamentos);
   const [expandido, setExpandido] = useState(null);
+  const config = loadConfig();
 
   const toggleAtendido = (id) => {
     const novos = pedidos.map(p => p.id === id ? { ...p, atendido: !p.atendido } : p);
@@ -1403,7 +1518,7 @@ function ModalAconselhamento({ onClose }) {
                           <span style={{ fontSize: '0.95rem', color: 'var(--text-primary)', fontWeight: 700, letterSpacing: '0.5px', flex: 1 }}>{p.telefone}</span>
                           {p.contato === 'WhatsApp' && (
                             <a
-                              href={`https://wa.me/${formatarWa(p.telefone)}?text=${encodeURIComponent(`Olá ${p.nome || ''}! Sou pastor(a) da Igreja Foi Por Amor. Recebi seu pedido de aconselhamento sobre "${p.tipo}" e gostaria de conversar com você. Quando teria um bom momento?`)}`}
+                              href={`https://wa.me/${formatarWa(p.telefone)}?text=${encodeURIComponent(`Olá ${p.nome || ''}! Sou pastor(a) da ${config.nomeIgreja}. Recebi seu pedido de aconselhamento sobre "${p.tipo}" e gostaria de conversar com você. Quando teria um bom momento?`)}`}
                               target="_blank" rel="noopener noreferrer"
                               style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 12px', background: '#25D366', color: '#fff', borderRadius: 'var(--radius-md)', fontSize: '0.78rem', fontWeight: 700, textDecoration: 'none', flexShrink: 0 }}
                             >
@@ -1461,7 +1576,7 @@ function ModalComunicado({ onClose, onSent }) {
     e.preventDefault();
     if (!form.titulo.trim() || !form.texto.trim()) return;
     const novoAviso = {
-      id: Date.now(), tipo: form.tipo, titulo: form.titulo, texto: form.texto,
+      id: String(Date.now()), tipo: form.tipo, titulo: form.titulo, texto: form.texto,
       data: new Date().toLocaleDateString('pt-BR'), icone: 'ph-megaphone', admin: true,
     };
     const atualizados = [novoAviso, ...avisos];
@@ -1970,6 +2085,132 @@ function ModalMinisteriosAdmin({ onClose, onSaved, membros }) {
   );
 }
 
+/* ── Modal Grupos & Ministérios ────────────────────────────────── */
+function ModalGruposAdmin({ onClose, onSaved }) {
+  const [lista, setLista] = useState(loadGrupos);
+  const [tela, setTela] = useState('lista'); // lista | form
+  const [editando, setEditando] = useState(null);
+  const inputSt = { width: '100%', background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', padding: '10px 12px', fontSize: '0.9rem', boxSizing: 'border-box' };
+
+  const FORM_EMPTY = { id: '', nome: '', descricao: '', icone: 'ph-users-three', categoria: 'principal', ...GRUPO_COLOR_PRESETS[0] };
+  const [form, setForm] = useState(FORM_EMPTY);
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const abrirNovo = () => { setForm(FORM_EMPTY); setEditando(null); setTela('form'); };
+  const abrirEditar = (g) => { setForm({ ...g }); setEditando(g.id); setTela('form'); };
+
+  const salvarForm = () => {
+    if (!form.nome.trim()) return;
+    const item = { ...form, id: editando || form.nome.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') };
+    const novaLista = editando ? lista.map(g => g.id === editando ? item : g) : [...lista, item];
+    setLista(novaLista);
+    saveGrupos(novaLista);
+    onSaved();
+    setTela('lista');
+  };
+
+  const excluir = (id) => {
+    if (!confirm('Excluir este grupo?')) return;
+    const novaLista = lista.filter(g => g.id !== id);
+    setLista(novaLista);
+    saveGrupos(novaLista);
+    onSaved();
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+      <div style={{ background: 'var(--bg-color)', borderRadius: 'var(--radius-lg)', width: '100%', maxWidth: '520px', maxHeight: '90vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+        {/* Header */}
+        <div style={{ padding: '20px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {tela === 'form' && (
+            <button onClick={() => setTela('lista')} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}>
+              <i className="ph ph-arrow-left" style={{ fontSize: '1.2rem' }}></i>
+            </button>
+          )}
+          <h3 style={{ margin: 0, fontFamily: 'var(--font-heading)', flex: 1 }}>
+            {tela === 'lista' ? 'Gerenciar Grupos' : editando ? 'Editar Grupo' : 'Novo Grupo'}
+          </h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: 0, width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <i className="ph ph-x" style={{ fontSize: '1.2rem' }}></i>
+          </button>
+        </div>
+
+        <div style={{ padding: '20px' }}>
+          {tela === 'lista' ? (
+            <>
+              <button onClick={abrirNovo} style={{ width: '100%', padding: '12px', background: 'rgba(255,255,255,0.06)', border: '1px dashed var(--border-color)', borderRadius: 'var(--radius-md)', color: 'var(--accent-color)', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '16px' }}>
+                <i className="ph ph-plus-circle"></i> Adicionar Grupo
+              </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {lista.map(g => (
+                  <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: g.cor, border: `1px solid ${g.corBorda}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <i className={`ph ${g.icone}`} style={{ fontSize: '1.1rem', color: g.corTexto }}></i>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-primary)', margin: 0 }}>{g.nome}</p>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>{g.categoria === 'principal' ? 'Grupo da Igreja' : 'Ministério'}</p>
+                    </div>
+                    <button onClick={() => abrirEditar(g)} style={{ background: 'none', border: 'none', color: 'var(--accent-color)', cursor: 'pointer', padding: '6px', display: 'flex', alignItems: 'center' }}>
+                      <i className="ph ph-pencil" style={{ fontSize: '1rem' }}></i>
+                    </button>
+                    <button onClick={() => excluir(g.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '6px', display: 'flex', alignItems: 'center' }}>
+                      <i className="ph ph-trash" style={{ fontSize: '1rem' }}></i>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Nome do grupo *</label>
+                <input style={inputSt} value={form.nome} onChange={e => set('nome', e.target.value)} placeholder="Ex: Ministério de Intercessão" />
+              </div>
+              <div>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Descrição</label>
+                <input style={inputSt} value={form.descricao} onChange={e => set('descricao', e.target.value)} placeholder="Uma linha descrevendo o grupo" />
+              </div>
+              <div>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Seção</label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {[['principal', 'Grupos da Igreja'], ['aberto', 'Ministérios']].map(([val, label]) => (
+                    <button key={val} onClick={() => set('categoria', val)} style={{ flex: 1, padding: '10px', borderRadius: 'var(--radius-sm)', background: form.categoria === val ? 'var(--accent-color)' : 'var(--bg-surface-elevated)', color: form.categoria === val ? 'var(--bg-color)' : 'var(--text-secondary)', border: `1px solid ${form.categoria === val ? 'var(--accent-color)' : 'var(--border-color)'}`, cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>Ícone</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {ICON_OPTIONS.map(opt => (
+                    <button key={opt.value} onClick={() => set('icone', opt.value)} style={{ width: '44px', height: '44px', borderRadius: 'var(--radius-sm)', background: form.icone === opt.value ? 'var(--accent-color)' : 'var(--bg-surface-elevated)', border: `1px solid ${form.icone === opt.value ? 'var(--accent-color)' : 'var(--border-color)'}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: form.icone === opt.value ? 'var(--bg-color)' : 'var(--text-secondary)' }}>
+                      <i className={`ph ${opt.value}`} style={{ fontSize: '1.2rem' }}></i>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>Cor</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {GRUPO_COLOR_PRESETS.map((c, i) => (
+                    <button key={i} onClick={() => setForm(f => ({ ...f, cor: c.cor, corBorda: c.corBorda, corTexto: c.corTexto }))} style={{ width: '36px', height: '36px', borderRadius: '50%', background: c.corTexto, border: form.corTexto === c.corTexto ? '3px solid #fff' : '3px solid transparent', cursor: 'pointer', boxShadow: form.corTexto === c.corTexto ? '0 0 0 2px var(--accent-color)' : 'none', transition: 'all 0.15s' }} title={c.label} />
+                  ))}
+                </div>
+              </div>
+
+              <button onClick={salvarForm} style={{ width: '100%', padding: '12px', background: 'var(--accent-color)', border: 'none', borderRadius: 'var(--radius-md)', color: 'var(--bg-color)', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                <i className="ph ph-floppy-disk"></i> Salvar Grupo
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── Modal Pedidos de Oração ─────────────────────────────────────── */
 function ModalPedidosOracao({ onClose }) {
   const [pedidos, setPedidos] = useState(() => {
@@ -2071,6 +2312,7 @@ export default function Admin() {
   const [modalEvangelismo, setModalEvangelismo]   = useState(false);
   const [modalITEAP, setModalITEAP]               = useState(false);
 const [modalMinisterios, setModalMinisterios]   = useState(false);
+  const [modalGrupos, setModalGrupos]             = useState(false);
   const [modalOracao, setModalOracao]             = useState(false);
   const [aconselhamentos] = useState(loadAconselhamentos);
   const [toast, setToast] = useState('');
@@ -2274,18 +2516,31 @@ const [modalMinisterios, setModalMinisterios]   = useState(false);
             <i className="ph ph-caret-right"></i>
           </button>
 
+          <button
+            onClick={() => setModalGrupos(true)}
+            className="event-list-item"
+            style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: 'var(--spacing-md)', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', background: 'none', cursor: 'pointer', color: 'var(--text-primary)', width: '100%' }}
+          >
+            <i className="ph ph-user-circle-gear" style={{ fontSize: '1.5rem', color: 'var(--accent-color)' }}></i>
+            <div style={{ flex: 1 }}>
+              <h4 style={{ fontWeight: 500 }}>Grupos & Ministérios</h4>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Editar a lista da página Grupos</p>
+            </div>
+            <i className="ph ph-caret-right"></i>
+          </button>
+
           {/* QR Code do App */}
           <div style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: 'var(--spacing-md)', background: 'var(--bg-surface-elevated)', textAlign: 'center' }}>
             <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '12px' }}>
               <i className="ph ph-qr-code" style={{ marginRight: '6px' }}></i>QR Code do App
             </p>
             <img
-              src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&color=ffffff&bgcolor=0d0d0d&data=${encodeURIComponent('https://foiporamor.vercel.app/instalar')}`}
+              src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&color=ffffff&bgcolor=0d0d0d&data=${encodeURIComponent(`${window.location.origin}/instalar`)}`}
               alt="QR Code"
               width={160} height={160}
               style={{ borderRadius: '8px', display: 'block', margin: '0 auto 10px' }}
             />
-            <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: '10px' }}>foiporamor.vercel.app</p>
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: '10px' }}>{window.location.host}</p>
             <a
               href="/instalar"
               target="_blank"
@@ -2373,6 +2628,13 @@ const [modalMinisterios, setModalMinisterios]   = useState(false);
           onClose={() => setModalMinisterios(false)}
           onSaved={() => setToast('Ministérios salvos com sucesso!')}
           membros={membros}
+        />
+      )}
+
+      {modalGrupos && (
+        <ModalGruposAdmin
+          onClose={() => setModalGrupos(false)}
+          onSaved={() => setToast('Grupos salvos com sucesso!')}
         />
       )}
 

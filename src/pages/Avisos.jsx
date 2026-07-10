@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import Header from '../components/Header';
+import { loadConfig } from '../data/config';
 
 const READ_KEY = 'avisos_lidos';
 const ADMIN_AVISOS_KEY = 'admin_avisos';
@@ -37,10 +38,10 @@ function isAvisoValido(aviso) {
 
 export function getUnreadCount() {
   try {
-    const lidos = JSON.parse(localStorage.getItem(READ_KEY)) || [];
+    const lidos = (JSON.parse(localStorage.getItem(READ_KEY)) || []).map(String);
     const adminAvisos = loadAdminAvisos();
     const todos = [...adminAvisos, ...AVISOS].filter(isAvisoValido);
-    return todos.filter(a => !lidos.includes(a.id)).length;
+    return todos.filter(a => !lidos.includes(String(a.id))).length;
   } catch { return AVISOS.length; }
 }
 
@@ -48,11 +49,12 @@ export default function Avisos() {
   const [filtro, setFiltro] = useState('Todos');
   const [expandido, setExpandido] = useState(null);
   const [adminAvisos] = useState(loadAdminAvisos);
+  const config = loadConfig();
 
   const todosAvisos = [...adminAvisos, ...AVISOS].filter(isAvisoValido);
 
   useEffect(() => {
-    localStorage.setItem(READ_KEY, JSON.stringify(todosAvisos.map(a => a.id)));
+    localStorage.setItem(READ_KEY, JSON.stringify(todosAvisos.map(a => String(a.id))));
   }, []);
 
   const filtrados = (filtro === 'Todos' ? todosAvisos : todosAvisos.filter(a => a.tipo === filtro)).slice(0, 5);
@@ -126,26 +128,26 @@ export default function Avisos() {
             {[
               {
                 nome: 'YouTube',
-                handle: '@IgrejaFoiPorAmorOficial',
-                url: 'https://www.youtube.com/@IgrejaFoiPorAmorOficial',
+                handle: 'Ver canal',
+                url: config.youtubeLink,
                 gradient: 'linear-gradient(135deg, #c4302b, #ff6347)',
                 icon: 'ph-youtube-logo',
               },
               {
                 nome: 'Instagram',
-                handle: '@igrejafoiporamor',
-                url: 'https://www.instagram.com/igrejafoiporamor/',
+                handle: 'Seguir no Instagram',
+                url: config.instagramLink,
                 gradient: 'linear-gradient(135deg, #833ab4, #fd1d1d, #f77737)',
                 icon: 'ph-instagram-logo',
               },
               {
                 nome: 'Facebook',
-                handle: '/igrejafpa',
-                url: 'https://www.facebook.com/igrejafpa',
+                handle: 'Seguir no Facebook',
+                url: config.facebookLink,
                 gradient: 'linear-gradient(135deg, #1877f2, #0c5ebf)',
                 icon: 'ph-facebook-logo',
               },
-            ].map(rede => (
+            ].filter(rede => rede.url).map(rede => (
               <button
                 key={rede.nome}
                 onClick={() => window.open(rede.url, '_blank')}

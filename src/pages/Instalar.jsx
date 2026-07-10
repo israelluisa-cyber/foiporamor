@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import Header from '../components/Header';
+import { loadConfig } from '../data/config';
 
-const APP_URL = 'https://foiporamor.vercel.app';
+const APP_URL = window.location.origin;
 const QR_URL  = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&color=ffffff&bgcolor=0d0d0d&data=${encodeURIComponent(APP_URL + '/instalar')}`;
 
 function detectar() {
@@ -20,6 +21,7 @@ export default function Instalar() {
   const [podInstalar, setPodInstalar] = useState(false);
   const [instalado, setInstalado]   = useState(false);
   const { isIOS, isAndroid, isIOSChrome, isInstalled } = detectar();
+  const config = loadConfig();
 
   useEffect(() => {
     if (isInstalled) { setInstalado(true); return; }
@@ -77,7 +79,7 @@ export default function Instalar() {
             <i className="ph ph-check-circle" style={{ fontSize: '3rem', color: '#22c55e', display: 'block', marginBottom: '12px' }}></i>
             <h3 style={{ fontFamily: 'var(--font-heading)', marginBottom: '8px' }}>App instalado!</h3>
             <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-              O app já está salvo na sua tela inicial. Bem-vindo à Igreja Foi Por Amor!
+              O app já está salvo na sua tela inicial. Bem-vindo à {config.nomeIgreja}!
             </p>
           </section>
         )}
@@ -105,7 +107,7 @@ export default function Instalar() {
           <div style={{ display: 'inline-block', padding: '16px', background: '#0d0d0d', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)', marginBottom: '20px' }}>
             <img src={QR_URL} alt="QR Code do App" width={220} height={220} style={{ display: 'block', borderRadius: '8px' }} />
           </div>
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Igreja Foi Por Amor</p>
+          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>{config.nomeIgreja}</p>
           <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '20px' }}>{APP_URL}</p>
           <div style={{ display: 'flex', gap: '10px' }}>
             <button onClick={copiarLink} className="primary-btn" style={{ flex: 1, justifyContent: 'center', background: copiado ? 'rgba(34,197,94,0.15)' : 'var(--bg-surface-elevated)', color: copiado ? '#22c55e' : 'var(--text-primary)', border: `1px solid ${copiado ? 'rgba(34,197,94,0.3)' : 'var(--border-color)'}` }}>
@@ -178,7 +180,7 @@ export default function Instalar() {
         <section className="glass-card word-card" style={{ textAlign: 'center' }}>
           <i className="ph ph-church" style={{ fontSize: '1.8rem', color: 'var(--accent-color)', display: 'block', marginBottom: '8px' }}></i>
           <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-            Compartilhe com membros e visitantes da <strong>Igreja Foi Por Amor</strong>. Quanto mais pessoas conectadas, mais forte nossa comunidade!
+            Compartilhe com membros e visitantes da <strong>{config.nomeIgreja}</strong>. Quanto mais pessoas conectadas, mais forte nossa comunidade!
           </p>
         </section>
 

@@ -11,7 +11,7 @@ function getSession() {
 
 const STATUS_STYLE = {
   concluido:  { color: '#22c55e', bg: 'rgba(34,197,94,0.12)',  icon: 'ph-check-circle',  label: 'Concluído'    },
-  andamento:  { color: '#fff',    bg: 'rgba(255,255,255,0.1)', icon: 'ph-book-open',      label: 'Em andamento' },
+  andamento:  { color: '#3b82f6', bg: 'rgba(59,130,246,0.12)', icon: 'ph-book-open',      label: 'Em andamento' },
   bloqueado:  { color: '#6b7280', bg: 'rgba(107,114,128,0.1)', icon: 'ph-lock',           label: 'Em breve'     },
 };
 
@@ -31,7 +31,7 @@ export default function Teologia() {
           </div>
           <h2 className="font-heading" style={{ marginBottom: '8px' }}>Área Exclusiva para Membros</h2>
           <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 'var(--spacing-lg)', maxWidth: '320px' }}>
-            O Instituto Teológico ITEAP é acessível apenas para membros cadastrados e aprovados da Igreja Foi Por Amor.
+            O Instituto Teológico ITEAP é acessível apenas para membros cadastrados e aprovados da {config.nomeIgreja}.
           </p>
           <button onClick={() => navigate('/usuario')} className="primary-btn" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <i className="ph ph-sign-in"></i>

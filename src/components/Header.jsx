@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { loadConfig } from '../data/config';
 
 function getSaudacao() {
   const h = new Date().getHours();
@@ -31,8 +32,8 @@ function isAniversario(dataNascimento) {
 function loadNotificacoes() {
   try {
     const admin = JSON.parse(localStorage.getItem('admin_avisos') || '[]');
-    const lidos = JSON.parse(localStorage.getItem('avisos_lidos') || '[]');
-    return admin.slice(0, 5).map(a => ({ ...a, lida: lidos.includes(a.id) }));
+    const lidos = (JSON.parse(localStorage.getItem('avisos_lidos') || '[]')).map(String);
+    return admin.slice(0, 5).map(a => ({ ...a, lida: lidos.includes(String(a.id)) }));
   } catch { return []; }
 }
 
@@ -41,6 +42,7 @@ export default function Header({ title, backButton = false, admin = false }) {
   const location = useLocation();
   const { periodo, periodo2 } = getSaudacao();
   const session = getSession();
+  const config = loadConfig();
 
   const aniversario  = session ? isAniversario(session.dataNascimento) : false;
   const fotoMembro   = getFotoMembro(session);
@@ -73,8 +75,8 @@ export default function Header({ title, backButton = false, admin = false }) {
   const naoLidas = notificacoes.filter(n => !n.lida).length;
 
   const marcarTodasLidas = () => {
-    const lidos = JSON.parse(localStorage.getItem('avisos_lidos') || '[]');
-    const novosLidos = [...new Set([...lidos, ...notificacoes.map(n => n.id)])];
+    const lidos = (JSON.parse(localStorage.getItem('avisos_lidos') || '[]')).map(String);
+    const novosLidos = [...new Set([...lidos, ...notificacoes.map(n => String(n.id))])];
     localStorage.setItem('avisos_lidos', JSON.stringify(novosLidos));
     setNotificacoes(prev => prev.map(n => ({ ...n, lida: true })));
   };
@@ -84,7 +86,7 @@ export default function Header({ title, backButton = false, admin = false }) {
       <header className="app-header" style={{ background: 'rgba(0,0,0,0.8)' }}>
         <div className="header-content">
           <div className="user-greeting" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <img src="/logo-icon.png" alt="Logo Foi Por Amor" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
+            <img src={config.logoUrl || '/logo-icon.png'} alt={config.nomeIgreja} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
             <div>
               <p className="text-secondary" style={{ fontSize: '0.75rem', margin: 0 }}>Painel da Liderança</p>
               <h2 className="logo-text" style={{ fontSize: '1.1rem', margin: 0 }}>Pr. Presidente</h2>
@@ -104,7 +106,7 @@ export default function Header({ title, backButton = false, admin = false }) {
           </button>
         ) : (
           <div className="user-greeting" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <img src="/logo-icon.png" alt="Logo Foi Por Amor" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
+            <img src={config.logoUrl || '/logo-icon.png'} alt={config.nomeIgreja} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
             <div>
               {session ? (
                 <>

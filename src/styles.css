@@ -296,10 +296,10 @@ body.light .app-header {
   z-index: 1;
 }
 
-/* Hero sempre tem fundo escuro (imagem + overlay), texto deve ser sempre branco */
-.hero-card.image-bg .hero-title,
-.hero-card.image-bg .hero-tag,
-.hero-card.image-bg .hero-time {
+/* O hero-card (com ou sem imagem de fundo) é sempre escuro, em qualquer tema — texto sempre branco */
+.hero-card .hero-title,
+.hero-card .hero-tag,
+.hero-card .hero-time {
   color: #fff;
 }
 
@@ -630,8 +630,8 @@ body.light .bottom-nav {
 .toast {
   background: rgba(28, 28, 28, 0.98);
   backdrop-filter: blur(16px);
-  border: 1px solid var(--border-color);
-  color: var(--text-primary);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #ffffff;
   padding: 12px 20px;
   border-radius: var(--radius-full);
   display: flex;
@@ -649,9 +649,9 @@ body.light .bottom-nav {
   to   { transform: translateY(0);     opacity: 1; }
 }
 
-/* Ícone do toast — branco */
+/* Ícone do toast — sempre branco, o fundo do toast é sempre escuro */
 .toast.success i {
-  color: var(--accent-color);
+  color: #ffffff;
   font-size: 1.1rem;
 }
 

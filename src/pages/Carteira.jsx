@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import Header from '../components/Header';
+import { loadConfig } from '../data/config';
 
 function getSession() {
   try { return JSON.parse(sessionStorage.getItem('user_session')); } catch { return null; }
@@ -12,13 +13,14 @@ function getInitials(nome) {
 
 export default function Carteira() {
   const session = getSession();
+  const config = loadConfig();
   const [virado, setVirado] = useState(false);
 
-  const nome   = session?.nome  || 'Membro IFPA';
+  const nome   = session?.nome  || `Membro ${config.nomeCurto}`;
   const cargo  = session?.cargo || 'Membro';
   const celula = session?.celula || '—';
   const desde  = session?.id ? new Date(parseInt(session.id)).getFullYear() : new Date().getFullYear();
-  const codigo = session ? `IFPA-${String(session.id).slice(-6).toUpperCase()}` : 'IFPA-XXXXXX';
+  const codigo = session ? `${config.nomeCurto}-${String(session.id).slice(-6).toUpperCase()}` : `${config.nomeCurto}-XXXXXX`;
 
   if (!session) {
     return (
@@ -57,10 +59,10 @@ export default function Carteira() {
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', position: 'relative' }}>
                 <div>
-                  <p style={{ fontSize: '0.6rem', fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '2px' }}>Igreja Foi Por Amor</p>
+                  <p style={{ fontSize: '0.6rem', fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '2px' }}>{config.nomeIgreja}</p>
                   <p style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.5px' }}>Carteira de Membro</p>
                 </div>
-                <img src="/logo-icon.png" alt="Logo" style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.2)' }} />
+                <img src={config.logoUrl || '/logo-icon.png'} alt="Logo" style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.2)' }} />
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px', position: 'relative' }}>
@@ -117,7 +119,7 @@ export default function Carteira() {
         </section>
 
         <p style={{ textAlign: 'center', fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 'var(--spacing-md)' }}>
-          Apresente esta carteira na entrada dos eventos da IFPA
+          Apresente esta carteira na entrada dos eventos da {config.nomeCurto}
         </p>
       </main>
     </div>

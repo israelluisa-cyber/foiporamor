@@ -68,7 +68,7 @@ export default function Financeiro() {
           <div style={{ position: 'absolute', bottom: '-20px', left: '-20px', width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(255,255,255,0.04)', pointerEvents: 'none' }} />
 
           <div style={{ position: 'relative', zIndex: 1, animation: 'fadeInUp 0.6s ease both' }}>
-            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '2px' }}>Igreja Foi Por Amor</span>
+            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '2px' }}>{config.nomeIgreja}</span>
             <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.7rem', color: '#fff', margin: '6px 0 8px', lineHeight: 1.2 }}>
               Uma igreja transformando<br />vidas pelo amor de Jesus Cristo
             </h2>
@@ -172,7 +172,7 @@ export default function Financeiro() {
           <div style={{ marginTop: 'var(--spacing-md)', padding: '14px 16px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
             <i className="ph ph-shield-check" style={{ fontSize: '1.1rem', color: 'var(--text-muted)', flexShrink: 0, marginTop: '1px' }}></i>
             <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.6, margin: 0 }}>
-              Todas as contribuições são divididas entre as obras sociais e gerenciadas com total transparência pela liderança da Igreja Foi Por Amor. Prestações de contas são apresentadas periodicamente à congregação.
+              Todas as contribuições são divididas entre as obras sociais e gerenciadas com total transparência pela liderança da {config.nomeIgreja}. Prestações de contas são apresentadas periodicamente à congregação.
             </p>
           </div>
         </div>

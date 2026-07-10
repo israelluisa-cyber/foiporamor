@@ -2,14 +2,20 @@ export const CONFIG_KEY = 'igreja_config';
 
 export const DEFAULT_CONFIG = {
   nomeIgreja:  'Igreja Foi Por Amor',
+  nomeCurto:   'IFPA', // abreviação usada no splash e em textos curtos
   endereco:    'Rua da Igreja, 100 — Centro',
   cidade:      'Sua Cidade — SP',
   mapsLink:    'https://maps.google.com/?q=Igreja+Foi+Por+Amor',
+  enderecoFoto:   '/endereco-foto.jpg', // base64/URL ou null — foto exibida no card "Onde nos encontrar" (recomendado 16:9)
   heroBg:         null, // base64 ou null (usa /hero_bg.png)
   heroBgPosition: 'center',
   youtubeLink: 'https://www.youtube.com/@IgrejaFoiPorAmorOficial/live',
   avisoHome:   'Reunião de Líderes na próxima segunda-feira às 19h30.',
   pixKey:         'igrejafoiporamor@exemplo.com.br',
+  logoUrl:        null, // base64/URL ou null (usa /logo-icon.png)
+  corDestaque:    '#ffffff',
+  instagramLink:  'https://www.instagram.com/igrejafoiporamor/',
+  facebookLink:   'https://www.facebook.com/igrejafpa',
   whatsappPastor: '',
   whatsapp: {
     geracaoFogo: '5511999999001',
@@ -51,6 +57,45 @@ export function loadConfig() {
 
 export function saveConfig(config) {
   localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+}
+
+// Ajusta cor derivada (mais escura) para o efeito hover do accent-color
+function shadeColor(hex, percent) {
+  try {
+    const num = parseInt(hex.replace('#', ''), 16);
+    const r = Math.max(0, Math.min(255, (num >> 16) + percent));
+    const g = Math.max(0, Math.min(255, ((num >> 8) & 0x00ff) + percent));
+    const b = Math.max(0, Math.min(255, (num & 0x0000ff) + percent));
+    return `#${(0x1000000 + r * 0x10000 + g * 0x100 + b).toString(16).slice(1)}`;
+  } catch { return hex; }
+}
+
+// Aplica a identidade visual (nome, logo, cor, meta tags) em runtime —
+// usado tanto no boot do app quanto logo após o admin salvar as configurações.
+export function applyBranding(config) {
+  if (typeof document === 'undefined') return;
+
+  document.title = config.nomeIgreja || DEFAULT_CONFIG.nomeIgreja;
+
+  const metaDesc = document.querySelector('meta[name="description"]');
+  if (metaDesc) metaDesc.setAttribute('content', `App da ${config.nomeIgreja} — programação, oração, devocional e muito mais.`);
+
+  const metaAppleTitle = document.querySelector('meta[name="apple-mobile-web-app-title"]');
+  if (metaAppleTitle) metaAppleTitle.setAttribute('content', config.nomeCurto || DEFAULT_CONFIG.nomeCurto);
+
+  if (config.corDestaque) {
+    const root = document.documentElement.style;
+    root.setProperty('--accent-color', config.corDestaque);
+    root.setProperty('--accent-hover', shadeColor(config.corDestaque, -25));
+    root.setProperty('--accent-glow', `${config.corDestaque}26`); // ~15% de opacidade
+  }
+
+  const splashLogo  = document.getElementById('splash-logo');
+  const splashTitle = document.getElementById('splash-title');
+  const splashSub   = document.getElementById('splash-sub');
+  if (splashLogo)  splashLogo.src = config.logoUrl || '/logo.jpeg';
+  if (splashTitle) splashTitle.textContent = config.nomeIgreja || DEFAULT_CONFIG.nomeIgreja;
+  if (splashSub)   splashSub.textContent = config.nomeCurto || DEFAULT_CONFIG.nomeCurto;
 }
 
 export const DIAS_SEMANA = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];

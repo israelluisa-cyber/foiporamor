@@ -122,7 +122,7 @@ export default function Contribuir() {
         <div style={{ marginTop: 'var(--spacing-lg)', padding: 'var(--spacing-md)', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
           <i className="ph ph-shield-check" style={{ fontSize: '1.2rem', color: 'var(--text-muted)', flexShrink: 0, marginTop: '2px' }}></i>
           <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: 1.6, margin: 0 }}>
-            As contribuições são administradas com transparência pela liderança da Igreja Foi Por Amor. Relatórios financeiros são apresentados periodicamente à congregação.
+            As contribuições são administradas com transparência pela liderança da {config.nomeIgreja}. Relatórios financeiros são apresentados periodicamente à congregação.
           </p>
         </div>
 

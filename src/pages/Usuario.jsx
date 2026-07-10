@@ -4,6 +4,7 @@ import Header from '../components/Header';
 import Toast from '../components/Toast';
 import { uploadFotoToStorage, saveCadastroToSupabase, updateCadastroSenhaSupabase, syncFromSupabase } from '../data/supabase';
 import { hashPassword, verifyPassword } from '../data/crypto';
+import { loadConfig } from '../data/config';
 
 const CADASTROS_KEY      = 'cadastros_pendentes';
 const USER_KEY           = 'user_cadastro';
@@ -260,6 +261,7 @@ function ModalCadastroMembro({ isOpen, onClose, onSuccess }) {
 /* ── Componente principal ──────────────────────────────────────────── */
 export default function Usuario() {
   const navigate = useNavigate();
+  const config = loadConfig();
 
   const [session, setSession] = useState(() => {
     try { return JSON.parse(sessionStorage.getItem(SESSION_KEY)); } catch { return null; }
@@ -571,7 +573,7 @@ export default function Usuario() {
               <i className="ph ph-check-circle" style={{ fontSize: '2.5rem', color: '#22c55e', display: 'block', marginBottom: '10px' }}></i>
               <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.2rem', marginBottom: '6px', color: '#22c55e' }}>Cadastro Aprovado! 🎉</h2>
               <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: 'var(--spacing-md)' }}>
-                Bem-vindo(a) à família IFPA! Agora você pode entrar com seu e-mail e senha.
+                Bem-vindo(a) à família {config.nomeCurto}! Agora você pode entrar com seu e-mail e senha.
               </p>
               <button
                 onClick={() => { localStorage.removeItem(USER_KEY); setUserCadastro(null); setTela('login'); }}
@@ -633,7 +635,7 @@ export default function Usuario() {
             <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)', padding: '48px 20px', textAlign: 'center', marginBottom: 'var(--spacing-lg)' }}>
               <i className="ph ph-user-circle" style={{ fontSize: '4rem', color: 'var(--accent-color)', display: 'block', marginBottom: '16px' }}></i>
               <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.8rem', margin: 0, marginBottom: '8px' }}>Bem-vindo(a)!</h1>
-              <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', margin: 0 }}>Faça parte da comunidade IFPA</p>
+              <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', margin: 0 }}>Faça parte da comunidade {config.nomeCurto}</p>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>

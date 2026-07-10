@@ -100,7 +100,7 @@ export default function Aconselhamento() {
 
   if (enviado) {
     const msgWa = encodeURIComponent(
-      `Olá! Acabei de enviar um pedido de aconselhamento sobre "${form.tipo}" pelo app da Igreja Foi Por Amor. Podemos conversar?`
+      `Olá! Acabei de enviar um pedido de aconselhamento sobre "${form.tipo}" pelo app da ${cfg.nomeIgreja}. Podemos conversar?`
     );
     return (
       <div className="container" style={{ paddingBottom: 'var(--spacing-xl)' }}>
@@ -114,7 +114,7 @@ export default function Aconselhamento() {
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.6, marginBottom: 'var(--spacing-lg)' }}>
               {form.contato === 'Presencial na Igreja'
                 ? 'Passe na secretaria da igreja para agendar seu atendimento com um dos pastores. Você não está sozinho(a).'
-                : 'Um pastor da Igreja Foi Por Amor entrará em contato pelo meio escolhido em breve. Você não está sozinho(a).'}
+                : `Um pastor da ${cfg.nomeIgreja} entrará em contato pelo meio escolhido em breve. Você não está sozinho(a).`}
             </p>
 
             {/* Botão WhatsApp do pastor (se configurado) */}

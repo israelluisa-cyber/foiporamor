@@ -4,8 +4,10 @@ import App from './App.jsx'
 import './styles.css'
 import './App.css'
 import { syncFromSupabase } from './data/supabase'
+import { loadConfig, applyBranding } from './data/config'
 
-syncFromSupabase();
+applyBranding(loadConfig()); // pinta o splash com o cache local imediatamente
+syncFromSupabase().then(() => applyBranding(loadConfig()));
 
 // Captura o prompt de instalação nativo do Android/Chrome
 window.addEventListener('beforeinstallprompt', (e) => {
