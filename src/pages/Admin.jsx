@@ -16,6 +16,7 @@ import { loadContribuicoes, clearContribuicoes, totalContribuicoes, totalPorObra
 import { MINISTERIOS, loadVagas, saveVagas, VAGAS_KEY } from '../data/vagas';
 import { loadMinisterios, saveMinisterios, ICON_OPTIONS, COLOR_PRESETS } from '../data/ministeriosData';
 import { loadGrupos, saveGrupos, GRUPO_COLOR_PRESETS } from '../data/gruposData';
+import { loadMural, saveMural } from '../data/muralData';
 import { EVANGELISMO_KEY, loadSaidas, saveSaidas, SAIDAS_DEFAULT } from '../data/evangelismo';
 import { loadTeologia, saveTeologia, TEOLOGIA_DEFAULT } from '../data/teologia';
 
@@ -2211,6 +2212,141 @@ function ModalGruposAdmin({ onClose, onSaved }) {
   );
 }
 
+/* ── Modal Mural de Fotos ──────────────────────────────────────── */
+function ModalMuralAdmin({ onClose, onSaved }) {
+  const [lista, setLista] = useState(loadMural);
+  const [tela, setTela] = useState('lista'); // lista | form
+  const [editando, setEditando] = useState(null);
+  const inputSt = { width: '100%', background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', padding: '10px 12px', fontSize: '0.9rem', boxSizing: 'border-box' };
+
+  const FORM_EMPTY = { id: '', foto: null, legenda: '' };
+  const [form, setForm] = useState(FORM_EMPTY);
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const abrirNovo = () => { setForm(FORM_EMPTY); setEditando(null); setTela('form'); };
+  const abrirEditar = (m) => { setForm({ ...m }); setEditando(m.id); setTela('form'); };
+
+  const handleFotoUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const img = new Image();
+      img.onload = async () => {
+        const MAX = 1200;
+        const ratio = Math.min(MAX / img.width, MAX / img.height, 1);
+        const canvas = document.createElement('canvas');
+        canvas.width  = img.width  * ratio;
+        canvas.height = img.height * ratio;
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        const compressed = canvas.toDataURL('image/jpeg', 0.8);
+        const url = await uploadFotoToStorage(compressed, 'mural');
+        set('foto', url);
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const salvarForm = () => {
+    if (!form.foto) return;
+    const item = { ...form, id: editando || String(Date.now()) };
+    const novaLista = editando ? lista.map(m => m.id === editando ? item : m) : [...lista, item];
+    setLista(novaLista);
+    saveMural(novaLista);
+    onSaved();
+    setTela('lista');
+  };
+
+  const excluir = (id) => {
+    if (!confirm('Excluir esta foto do mural?')) return;
+    const novaLista = lista.filter(m => m.id !== id);
+    setLista(novaLista);
+    saveMural(novaLista);
+    onSaved();
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+      <div style={{ background: 'var(--bg-color)', borderRadius: 'var(--radius-lg)', width: '100%', maxWidth: '520px', maxHeight: '90vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+        {/* Header */}
+        <div style={{ padding: '20px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {tela === 'form' && (
+            <button onClick={() => setTela('lista')} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}>
+              <i className="ph ph-arrow-left" style={{ fontSize: '1.2rem' }}></i>
+            </button>
+          )}
+          <h3 style={{ margin: 0, fontFamily: 'var(--font-heading)', flex: 1 }}>
+            {tela === 'lista' ? 'Mural de Fotos' : editando ? 'Editar Foto' : 'Nova Foto'}
+          </h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: 0, width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <i className="ph ph-x" style={{ fontSize: '1.2rem' }}></i>
+          </button>
+        </div>
+
+        <div style={{ padding: '20px' }}>
+          {tela === 'lista' ? (
+            <>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '0 0 16px' }}>
+                Fotos de eventos do ministério (evangelismo, congressos, cultos especiais...) exibidas em carrossel na Home.
+              </p>
+              <button onClick={abrirNovo} style={{ width: '100%', padding: '12px', background: 'rgba(255,255,255,0.06)', border: '1px dashed var(--border-color)', borderRadius: 'var(--radius-md)', color: 'var(--accent-color)', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '16px' }}>
+                <i className="ph ph-plus-circle"></i> Adicionar Foto
+              </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {lista.map(m => (
+                  <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)' }}>
+                    <div style={{ width: '56px', height: '32px', borderRadius: 'var(--radius-sm)', overflow: 'hidden', flexShrink: 0, background: '#111' }}>
+                      <img src={m.foto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-primary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.legenda || '(sem legenda)'}</p>
+                    </div>
+                    <button onClick={() => abrirEditar(m)} style={{ background: 'none', border: 'none', color: 'var(--accent-color)', cursor: 'pointer', padding: '6px', display: 'flex', alignItems: 'center' }}>
+                      <i className="ph ph-pencil" style={{ fontSize: '1rem' }}></i>
+                    </button>
+                    <button onClick={() => excluir(m.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '6px', display: 'flex', alignItems: 'center' }}>
+                      <i className="ph ph-trash" style={{ fontSize: '1rem' }}></i>
+                    </button>
+                  </div>
+                ))}
+                {lista.length === 0 && (
+                  <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem', padding: '16px 0' }}>Nenhuma foto cadastrada ainda.</p>
+                )}
+              </div>
+            </>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>Foto (proporção 16:9 recomendada)</label>
+                {form.foto && (
+                  <div style={{ width: '100%', aspectRatio: '16 / 9', borderRadius: 'var(--radius-md)', overflow: 'hidden', marginBottom: '10px', border: '1px solid var(--border-color)' }}>
+                    <img src={form.foto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </div>
+                )}
+                <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px', background: 'var(--bg-surface)', border: '1px dashed var(--border-color)', borderRadius: 'var(--radius-md)', cursor: 'pointer', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.9rem' }}>
+                  <i className="ph ph-upload-simple" style={{ fontSize: '1.2rem' }}></i>
+                  {form.foto ? 'Trocar foto' : 'Escolher foto da galeria'}
+                  <input type="file" accept="image/*" onChange={handleFotoUpload} style={{ display: 'none' }} />
+                </label>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Legenda</label>
+                <input style={inputSt} value={form.legenda} onChange={e => set('legenda', e.target.value)} placeholder="Ex: Evangelismo no Centro de SP" />
+              </div>
+
+              <button onClick={salvarForm} disabled={!form.foto} style={{ width: '100%', padding: '12px', background: form.foto ? 'var(--accent-color)' : 'var(--bg-surface-elevated)', border: 'none', borderRadius: 'var(--radius-md)', color: form.foto ? 'var(--bg-color)' : 'var(--text-muted)', fontWeight: 700, fontSize: '0.9rem', cursor: form.foto ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                <i className="ph ph-floppy-disk"></i> Salvar Foto
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── Modal Pedidos de Oração ─────────────────────────────────────── */
 function ModalPedidosOracao({ onClose }) {
   const [pedidos, setPedidos] = useState(() => {
@@ -2313,6 +2449,7 @@ export default function Admin() {
   const [modalITEAP, setModalITEAP]               = useState(false);
 const [modalMinisterios, setModalMinisterios]   = useState(false);
   const [modalGrupos, setModalGrupos]             = useState(false);
+  const [modalMural, setModalMural]               = useState(false);
   const [modalOracao, setModalOracao]             = useState(false);
   const [aconselhamentos] = useState(loadAconselhamentos);
   const [toast, setToast] = useState('');
@@ -2529,6 +2666,19 @@ const [modalMinisterios, setModalMinisterios]   = useState(false);
             <i className="ph ph-caret-right"></i>
           </button>
 
+          <button
+            onClick={() => setModalMural(true)}
+            className="event-list-item"
+            style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: 'var(--spacing-md)', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', background: 'none', cursor: 'pointer', color: 'var(--text-primary)', width: '100%' }}
+          >
+            <i className="ph ph-images-square" style={{ fontSize: '1.5rem', color: 'var(--accent-color)' }}></i>
+            <div style={{ flex: 1 }}>
+              <h4 style={{ fontWeight: 500 }}>Mural de Fotos</h4>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Fotos do carrossel de eventos na Home</p>
+            </div>
+            <i className="ph ph-caret-right"></i>
+          </button>
+
           {/* QR Code do App */}
           <div style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: 'var(--spacing-md)', background: 'var(--bg-surface-elevated)', textAlign: 'center' }}>
             <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '12px' }}>
@@ -2635,6 +2785,13 @@ const [modalMinisterios, setModalMinisterios]   = useState(false);
         <ModalGruposAdmin
           onClose={() => setModalGrupos(false)}
           onSaved={() => setToast('Grupos salvos com sucesso!')}
+        />
+      )}
+
+      {modalMural && (
+        <ModalMuralAdmin
+          onClose={() => setModalMural(false)}
+          onSaved={() => setToast('Mural de fotos salvo com sucesso!')}
         />
       )}
 

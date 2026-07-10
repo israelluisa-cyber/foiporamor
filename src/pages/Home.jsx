@@ -4,6 +4,7 @@ import Header from '../components/Header';
 import { loadMembros } from '../data/membros';
 import { loadConfig, DIAS_ABBR, formatHora, cultoIcon } from '../data/config';
 import { loadSaidas } from '../data/evangelismo';
+import { loadMural } from '../data/muralData';
 
 // EVENTOS_SEMANA é derivado dinamicamente do config no componente
 
@@ -214,9 +215,9 @@ function tipoMsgCulto(culto) {
   return { titulo: 'ESTAMOS CULTUANDO', badge: 'EM CULTO', cor: '#1f2937', pulso: false, youtube: false };
 }
 
-
 export default function Home() {
   const config   = loadConfig();
+  const mural    = loadMural();
   const cultos   = config.cultos
     .filter(c => c.ativo !== false)
     .map(c => ({
@@ -293,6 +294,14 @@ export default function Home() {
     return () => clearInterval(timer);
   }, []);
 
+  // Mural de fotos do ministério — troca o fundo do hero a cada 5s, entrada da direita
+  const [muralIndex, setMuralIndex] = useState(0);
+  useEffect(() => {
+    if (mural.length < 2) return;
+    const timer = setInterval(() => setMuralIndex(i => (i + 1) % mural.length), 5000);
+    return () => clearInterval(timer);
+  }, [mural.length]);
+
   return (
     <div className="container" style={{ paddingBottom: 'var(--spacing-xl)' }}>
       <Header />
@@ -301,11 +310,18 @@ export default function Home() {
 
         {/* Hero */}
         {(() => {
+          const fotoMural = mural.length > 0 ? mural[muralIndex % mural.length] : null;
           const fotoCulto = !aoVivo && !(terminouHoje?.diaSemana === 0) && proximoInfo?.foto;
-          const heroBgAtual = fotoCulto ? proximoInfo.foto : heroBg;
+          const heroBgAtual = fotoMural ? fotoMural.foto : (fotoCulto ? proximoInfo.foto : heroBg);
           const overlayOpacity = 0.15;
           return (
-        <section className="glass-card hero-card image-bg" style={{ marginBottom: 'var(--spacing-lg)', backgroundImage: `url(${heroBgAtual})`, backgroundSize: 'cover', backgroundPosition: heroBgPosition, position: 'relative', overflow: 'hidden', borderRadius: 'var(--radius-lg)', minHeight: '260px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+        <section className="glass-card hero-card image-bg" style={{ marginBottom: 'var(--spacing-lg)', position: 'relative', overflow: 'hidden', borderRadius: 'var(--radius-lg)', minHeight: '260px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+          <img
+            key={heroBgAtual}
+            src={heroBgAtual}
+            alt=""
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: fotoMural ? 'center' : heroBgPosition, zIndex: 0, animation: fotoMural ? 'slideInRight 0.6s ease both' : 'none' }}
+          />
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: `rgba(0,0,0,${overlayOpacity})`, zIndex: 1 }} />
           <div style={{ position: 'relative', zIndex: 2 }}>
 

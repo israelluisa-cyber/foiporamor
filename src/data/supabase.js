@@ -172,6 +172,23 @@ export async function saveGruposToSupabase(data) {
 }
 
 // -------------------------------------------------------
+// Mural de fotos do ministério: salva no Supabase
+// reaproveitando a tabela "app_config" com id próprio
+// -------------------------------------------------------
+export async function saveMuralToSupabase(data) {
+  if (!supabase) return;
+  try {
+    await supabase.from('app_config').upsert({
+      id: 'mural',
+      data,
+      updated_at: new Date().toISOString(),
+    });
+  } catch (e) {
+    console.warn('[Supabase] Erro ao salvar mural:', e.message);
+  }
+}
+
+// -------------------------------------------------------
 // Vagas de voluntariado: salva no Supabase
 // reaproveitando a tabela "app_config" com id próprio
 // -------------------------------------------------------
@@ -314,6 +331,7 @@ export async function syncFromSupabase() {
       { data: ministeriosConfig },
       { data: vagasConfig },
       { data: gruposConfig },
+      { data: muralConfig },
     ] = await Promise.all([
       supabase.from('membros').select('*').order('created_at'),
       supabase.from('contribuicoes').select('*').order('created_at', { ascending: false }),
@@ -328,6 +346,7 @@ export async function syncFromSupabase() {
       supabase.from('app_config').select('data').eq('id', 'ministerios').single(),
       supabase.from('app_config').select('data').eq('id', 'vagas').single(),
       supabase.from('app_config').select('data').eq('id', 'grupos').single(),
+      supabase.from('app_config').select('data').eq('id', 'mural').single(),
     ]);
 
     if (membros?.length)        localStorage.setItem('membros_data',           JSON.stringify(mapMembros(membros)));
@@ -343,6 +362,7 @@ export async function syncFromSupabase() {
     if (ministeriosConfig?.data) localStorage.setItem('ministerios_data',     JSON.stringify(ministeriosConfig.data));
     if (vagasConfig?.data)       localStorage.setItem('voluntarios_vagas',    JSON.stringify(vagasConfig.data));
     if (gruposConfig?.data)      localStorage.setItem('grupos_data',          JSON.stringify(gruposConfig.data));
+    if (muralConfig?.data)       localStorage.setItem('mural_data',           JSON.stringify(muralConfig.data));
   } catch (e) {
     console.warn('[Supabase] Sync falhou, usando dados locais:', e.message);
   }
