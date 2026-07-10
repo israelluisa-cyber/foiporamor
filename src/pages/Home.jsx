@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import Header from '../components/Header';
 import { loadMembros } from '../data/membros';
@@ -16,6 +16,10 @@ const CULTO_FOTO_PLACEHOLDERS = [
 ];
 
 const STORAGE_KEY_PEDIDOS = 'pedidos_oracao';
+
+// true só na primeira vez que a Home monta nesta sessão do app — evita
+// que a animação de entrada repita toda vez que o usuário navega de volta pra Home
+let homeEntranceShown = false;
 
 // Pedidos mock (IDs string = antigos = sempre intercedidos)
 const MOCK_PREVIEW = [
@@ -270,6 +274,31 @@ export default function Home() {
 
   const cultosVisiveis = cultos.filter(c => !c.restrito || logado);
 
+  const [showEntrance] = useState(() => !homeEntranceShown);
+  useEffect(() => { homeEntranceShown = true; }, []);
+
+  // Indicador de "tem mais itens pro lado" no Acesso Rápido
+  const acessoRapidoRef = useRef(null);
+  const [scrollFade, setScrollFade] = useState({ left: false, right: false });
+
+  useEffect(() => {
+    const el = acessoRapidoRef.current;
+    if (!el) return;
+    const atualizarFade = () => {
+      setScrollFade({
+        left:  el.scrollLeft > 4,
+        right: el.scrollLeft + el.clientWidth < el.scrollWidth - 4,
+      });
+    };
+    atualizarFade();
+    el.addEventListener('scroll', atualizarFade, { passive: true });
+    window.addEventListener('resize', atualizarFade);
+    return () => {
+      el.removeEventListener('scroll', atualizarFade);
+      window.removeEventListener('resize', atualizarFade);
+    };
+  }, []);
+
   const [aoVivo, setAoVivo]                   = useState(() => cultoEmAndamento(cultosVisiveis));
   const [terminouHoje, setTerminouHoje]       = useState(() => cultoTerminouHoje(cultosVisiveis));
   const [proximoInfo, setProximoInfo]         = useState(() => proximoCulto(cultosVisiveis));
@@ -288,7 +317,7 @@ export default function Home() {
     <div className="container" style={{ paddingBottom: 'var(--spacing-xl)' }}>
       <Header />
 
-      <main style={{ paddingTop: 'var(--spacing-md)' }}>
+      <main className={showEntrance ? 'home-entrance' : ''} style={{ paddingTop: 'var(--spacing-md)' }}>
 
         {/* Hero */}
         {(() => {
@@ -412,6 +441,29 @@ export default function Home() {
             82%  { transform: scale(1.05) translateY(-4px); }
             100% { transform: scale(1) translateY(0); }
           }
+          @keyframes cascadeIn {
+            from { opacity: 0; transform: translateY(18px); }
+            to   { opacity: 1; transform: translateY(0); }
+          }
+          /* Entrada em cascata dos blocos da Home — só na primeira vez que o app abre.
+             O atraso de 3s embutido em cada regra casa com o tempo mínimo do splash
+             screen (main.jsx: hideSplash aguarda 3000ms), pra cascata só começar
+             quando o splash já sumiu. Se mudar o tempo do splash, ajuste aqui também. */
+          .home-entrance > * {
+            opacity: 0;
+            animation: cascadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+          }
+          .home-entrance > *:nth-child(1)  { animation-delay: 3.00s; }
+          .home-entrance > *:nth-child(2)  { animation-delay: 3.06s; }
+          .home-entrance > *:nth-child(3)  { animation-delay: 3.12s; }
+          .home-entrance > *:nth-child(4)  { animation-delay: 3.18s; }
+          .home-entrance > *:nth-child(5)  { animation-delay: 3.24s; }
+          .home-entrance > *:nth-child(6)  { animation-delay: 3.30s; }
+          .home-entrance > *:nth-child(7)  { animation-delay: 3.36s; }
+          .home-entrance > *:nth-child(8)  { animation-delay: 3.42s; }
+          .home-entrance > *:nth-child(9)  { animation-delay: 3.48s; }
+          .home-entrance > *:nth-child(10) { animation-delay: 3.54s; }
+          .home-entrance > *:nth-child(n+11) { animation-delay: 3.60s; }
           .quick-btn {
             text-decoration: none;
             display: flex;
@@ -457,6 +509,33 @@ export default function Home() {
           .quick-btn:hover .quick-icon {
             filter: brightness(1.25);
           }
+          .scroll-fade {
+            position: absolute;
+            top: 0; bottom: 4px;
+            width: 40px;
+            display: flex;
+            align-items: center;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+            z-index: 2;
+          }
+          .scroll-fade i {
+            font-size: 1rem;
+            color: var(--text-secondary);
+          }
+          .scroll-fade-left {
+            left: 0;
+            background: linear-gradient(90deg, var(--bg-color) 15%, transparent 100%);
+            justify-content: flex-start;
+          }
+          .scroll-fade-right {
+            right: 0;
+            background: linear-gradient(270deg, var(--bg-color) 15%, transparent 100%);
+            justify-content: flex-end;
+          }
+          @media (min-width: 768px) {
+            .scroll-fade { display: none; }
+          }
           @media (min-width: 768px) and (max-width: 1024px) {
             .quick-btn {
               min-width: 88px;
@@ -494,7 +573,8 @@ export default function Home() {
         `}</style>
 
         {/* Acesso Rápido — scroll horizontal no celular, distribuído em telas maiores */}
-        <section className="quick-access-row" style={{ display: 'flex', gap: '10px', marginBottom: 'var(--spacing-lg)', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
+        <div className="quick-access-wrap" style={{ position: 'relative', marginBottom: 'var(--spacing-lg)' }}>
+        <section ref={acessoRapidoRef} className="quick-access-row" style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
           {[
             { to: '/oracao',         icon: 'ph-hands-praying',   label: 'Oração',        delay: '0s',    color: '#c084fc', bg: 'rgba(192,132,252,0.15)' },
             { to: '/financeiro',     icon: 'ph-hand-heart',      label: 'Contribuir',    delay: '0.07s', color: '#facc15', bg: 'rgba(250,204,21,0.15)'  },
@@ -516,6 +596,15 @@ export default function Home() {
             </Link>
           ))}
         </section>
+
+        {/* Fade + seta indicando que dá pra rolar pros lados */}
+        <div className="scroll-fade scroll-fade-left" style={{ opacity: scrollFade.left ? 1 : 0 }}>
+          <i className="ph ph-caret-left"></i>
+        </div>
+        <div className="scroll-fade scroll-fade-right" style={{ opacity: scrollFade.right ? 1 : 0 }}>
+          <i className="ph ph-caret-right"></i>
+        </div>
+        </div>
 
         {/* Programação da Semana — cards verticais */}
         <h3 className="section-title">Programação da Semana</h3>
