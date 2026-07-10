@@ -145,7 +145,6 @@ function eventosSaidasProximas() {
       restrito:     false,
       periodo:      s.horario + (s.local ? ' · ' + s.local : ''),
       diaNome:      s.diaSemana,
-      gradiente:    'linear-gradient(135deg, #14532d 0%, #166534 100%)',
       foto:         null,
       isEvangelismo: true,
     }));
@@ -229,24 +228,6 @@ export default function Home() {
   const heroBg         = config.heroBg || '/hero_bg.png';
   const heroBgPosition = config.heroBgPosition || 'center';
 
-  const CULTO_TEMAS = {
-    'teologia': { gradiente: 'linear-gradient(135deg, #4c1d95 0%, #1e40af 100%)' },
-    'curso':    { gradiente: 'linear-gradient(135deg, #4c1d95 0%, #1e40af 100%)' },
-    'oração':   { gradiente: 'linear-gradient(135deg, #0c4a6e 0%, #0f766e 100%)' },
-    'adoração': { gradiente: 'linear-gradient(135deg, #0c4a6e 0%, #0f766e 100%)' },
-    'celebração': { gradiente: 'linear-gradient(135deg, #92400e 0%, #b45309 100%)' },
-    'ensaio':   { gradiente: 'linear-gradient(135deg, #1e3a5f 0%, #374151 100%)' },
-    'louvor':   { gradiente: 'linear-gradient(135deg, #1e3a5f 0%, #374151 100%)' },
-  };
-
-  function cultoGradiente(nome) {
-    const n = (nome || '').toLowerCase();
-    for (const [key, val] of Object.entries(CULTO_TEMAS)) {
-      if (n.includes(key)) return val.gradiente;
-    }
-    return 'linear-gradient(135deg, #1f2937 0%, #374151 100%)';
-  }
-
   const eventosSemana = cultos.map(c => ({
     id:        c.id,
     dia:       DIAS_ABBR[c.diaSemana],
@@ -256,7 +237,6 @@ export default function Home() {
     restrito:  c.restrito || false,
     periodo:   `${formatHora(c.hora, c.min)} às ${formatHora(c.horaFim, c.minFim)}`,
     diaNome:   DIAS_SEMANA_NOME[c.diaSemana],
-    gradiente: cultoGradiente(c.nome),
     foto:      c.foto || null,
   }));
 
@@ -616,7 +596,6 @@ export default function Home() {
               const foto = ev.foto || CULTO_FOTO_PLACEHOLDERS[i % CULTO_FOTO_PLACEHOLDERS.length];
               const card = (
                 <div className={isNext ? 'evento-card evento-card-next' : 'evento-card'} style={{ width: isNext ? '128px' : '108px', aspectRatio: '9 / 16', borderRadius: 'var(--radius-lg)', overflow: 'hidden', position: 'relative', flexShrink: 0, backgroundImage: `url(${foto})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
-                  <div style={{ position: 'absolute', inset: 0, background: ev.gradiente, opacity: 0.5, mixBlendMode: 'multiply' }} />
                   <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0) 35%, rgba(0,0,0,0.8) 100%)' }} />
                   <div style={{ position: 'relative', zIndex: 1, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '10px' }}>
                     {isNext && (
