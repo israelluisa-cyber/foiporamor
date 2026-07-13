@@ -581,8 +581,7 @@ export default function Home() {
             { to: '/biblia',         icon: 'ph-book-bookmark',   label: 'Bíblia',        delay: '0.42s', color: '#60a5fa', bg: 'rgba(96,165,250,0.15)'  },
             { to: '/voluntarios',    icon: 'ph-heart',           label: 'Voluntários',   delay: '0.49s', color: '#f472b6', bg: 'rgba(244,114,182,0.15)' },
             { to: '/aconselhamento', icon: 'ph-chat-circle-dots', label: 'Aconselhamento', delay: '0.56s', color: '#4ade80', bg: 'rgba(74,222,128,0.15)'  },
-            { to: '/carteira',       icon: 'ph-identification-card', label: 'Carteira',   delay: '0.63s', color: '#38bdf8', bg: 'rgba(56,189,248,0.15)', apenasLogado: true },
-            { to: '/admin',          icon: 'ph-shield-check',    label: 'Painel Admin',  delay: '0.70s', color: '#a3a3a3', bg: 'rgba(163,163,163,0.15)', apenasAdmin: true },
+            { to: '/admin',          icon: 'ph-shield-check',    label: 'Painel Admin',  delay: '0.63s', color: '#a3a3a3', bg: 'rgba(163,163,163,0.15)', apenasAdmin: true },
           ].filter(item => (!item.apenasLogado || logado) && (!item.apenasAdmin || admin)).map(item => (
             <Link key={item.to} to={item.to} className="quick-btn" style={{ animationDelay: item.delay }}>
               <div className="quick-icon" style={{ background: item.bg }}>
