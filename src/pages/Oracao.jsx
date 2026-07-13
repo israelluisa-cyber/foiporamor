@@ -24,26 +24,25 @@ function ultimoCultoOracaoMs() {
   return candidate.getTime();
 }
 
-const MURAL_MOCK = [
-  { id: 'm1', nome: 'Maria L.',     texto: 'Peço oração pela saúde da minha mãe que está internada. Deus é o médico dos médicos.', data: '19/06/2025', amens: 18 },
-  { id: 'm2', nome: 'Roberto S.',   texto: 'Oração pela minha família, estamos passando por um momento difícil financeiramente. Cremos na provisão de Deus.', data: '17/06/2025', amens: 11 },
-  { id: 'm3', nome: 'Patrícia M.',  texto: 'Meu filho está longe de Deus. Não desisto de orar por ele. Por favor intercedam comigo.', data: '15/06/2025', amens: 29 },
-  { id: 'm4', nome: 'Anônimo',      texto: 'Estou passando por uma depressão. Peço oração e que Deus me dê forças para continuar.', data: '12/06/2025', amens: 34 },
-  { id: 'm5', nome: 'Cláudio F.',   texto: 'Graças a Deus e às orações desta comunidade, consegui o emprego! Continuem orando por mim.', data: '10/06/2025', amens: 22 },
-];
+// Converte "dd/mm/aaaa" para timestamp; retorna null se não der pra interpretar
+function parseDataBR(str) {
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(str || '');
+  if (!m) return null;
+  const [, dia, mes, ano] = m;
+  return new Date(Number(ano), Number(mes) - 1, Number(dia)).getTime();
+}
+
+// Já foi intercedido no último Culto de Oração (quinta) → sai do mural público.
+// Sem data legível, mantém visível (não esconde por engano).
+function jaFoiIntercedido(pedido, corte) {
+  if (!corte) return false;
+  const ts = parseDataBR(pedido.data);
+  return ts !== null && ts < corte;
+}
 
 function loadPedidos() {
-  try {
-    const todos  = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-    const corte  = ultimoCultoOracaoMs();
-    // Mantém apenas pedidos enviados APÓS o último culto de quinta (já foram orados → excluir)
-    const validos = corte
-      ? todos.filter(p => typeof p.id === 'string' || p.id >= corte)
-      : todos;
-    if (validos.length !== todos.length)
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(validos));
-    return validos;
-  } catch { return []; }
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+  catch { return []; }
 }
 
 function loadAmens() {
@@ -123,18 +122,14 @@ export default function Oracao() {
   // Só os pedidos enviados a partir DESTE aparelho — não o pool inteiro sincronizado
   const meusPedidos = pedidos.filter(p => meusIds.includes(String(p.id)));
 
-  // Mural público: mock + pedidos públicos de todos (com o nome real de quem enviou, ou Anônimo)
-  const pedidosPublicos = pedidos.filter(p => !p.privado).map(p => ({
-    ...p, nome: p.nome || 'Anônimo', amens: p.amens || 0,
-  }));
-  const mural = [...pedidosPublicos, ...MURAL_MOCK].sort((a, b) => {
-    const aNum = typeof a.id === 'number';
-    const bNum = typeof b.id === 'number';
-    if (aNum && bNum) return b.id - a.id;
-    if (aNum) return -1;
-    if (bNum) return 1;
-    return String(b.id).localeCompare(String(a.id));
-  });
+  // Mural público: pedidos de todos (com o nome real de quem enviou, ou Anônimo),
+  // exceto os já intercedidos no último Culto de Oração — esses saem do mural
+  // automaticamente, mas continuam salvos (o admin ainda os vê/gerencia).
+  const corteMural = ultimoCultoOracaoMs();
+  const pedidosPublicos = pedidos
+    .filter(p => !p.privado && !jaFoiIntercedido(p, corteMural))
+    .map(p => ({ ...p, nome: p.nome || 'Anônimo', amens: p.amens || 0 }));
+  const mural = [...pedidosPublicos].sort((a, b) => Number(b.id) - Number(a.id));
 
   return (
     <div className="container" style={{ paddingBottom: 'var(--spacing-xl)' }}>

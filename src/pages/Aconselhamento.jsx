@@ -6,6 +6,7 @@ import { supabase } from '../data/supabase';
 
 const KEY = 'pedidos_aconselhamento';
 const TIPOS = ['Casamento / Família', 'Saúde / Luto', 'Ansiedade / Depressão', 'Finanças', 'Vocação / Propósito', 'Outro'];
+const CONTATOS = ['WhatsApp', 'Ligação telefônica', 'Presencial na Igreja'];
 
 function getSession() {
   try { return JSON.parse(sessionStorage.getItem('user_session')); } catch { return null; }
@@ -33,16 +34,19 @@ export default function Aconselhamento() {
   const [form, setForm] = useState({
     nome: getNome(),
     tipo: TIPOS[0],
+    contato: CONTATOS[0],
+    telefone: '',
     mensagem: '',
   });
 
-  const podeSalvar = !!form.mensagem.trim();
+  const podeSalvar = !!form.mensagem.trim() && (form.contato === 'Presencial na Igreja' || !!form.telefone.trim());
 
   const buildMsgPastor = (f) => [
     '📋 *Pedido de Aconselhamento*',
     '',
     `👤 *Nome:* ${f.nome || 'Não informado'}`,
     `📌 *Área:* ${f.tipo}`,
+    `📞 *Contato preferido:* ${f.contato}${f.telefone ? ` — ${f.telefone}` : ''}`,
     '',
     '💬 *Mensagem:*',
     f.mensagem,
@@ -64,6 +68,8 @@ export default function Aconselhamento() {
           id: String(novo.id),
           nome: novo.nome,
           tipo: novo.tipo,
+          contato: novo.contato,
+          telefone: novo.telefone || null,
           mensagem: novo.mensagem,
           membro: novo.membro,
           data: novo.data,
@@ -189,6 +195,33 @@ export default function Aconselhamento() {
               {TIPOS.map(t => <option key={t}>{t}</option>)}
             </select>
           </div>
+
+          {/* Forma de contato preferida */}
+          <div style={{ marginBottom: 'var(--spacing-md)' }}>
+            <Label txt="Como prefere ser contatado?" />
+            <select
+              value={form.contato}
+              onChange={e => setForm(f => ({ ...f, contato: e.target.value }))}
+              style={{ ...inputStyle, appearance: 'none' }}
+            >
+              {CONTATOS.map(c => <option key={c}>{c}</option>)}
+            </select>
+          </div>
+
+          {form.contato !== 'Presencial na Igreja' && (
+            <div style={{ marginBottom: 'var(--spacing-md)' }}>
+              <Label txt="Seu telefone" />
+              <input
+                type="tel"
+                value={form.telefone}
+                onChange={e => setForm(f => ({ ...f, telefone: e.target.value }))}
+                style={inputStyle}
+                onFocus={focusStyle}
+                onBlur={blurStyle}
+                placeholder="(11) 99999-9999"
+              />
+            </div>
+          )}
 
           {/* Mensagem */}
           <div style={{ marginBottom: 'var(--spacing-lg)' }}>
