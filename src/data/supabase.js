@@ -66,6 +66,22 @@ export async function saveCadastroToSupabase(cadastro) {
   }
 }
 
+// -------------------------------------------------------
+// Login: verifica e-mail/senha dentro do banco (função
+// verificar_login). O navegador nunca recebe o hash da senha.
+// -------------------------------------------------------
+export async function verificarLoginSupabase(email, senha) {
+  if (!supabase) return null;
+  try {
+    const { data, error } = await supabase.rpc('verificar_login', { p_email: email, p_senha: senha });
+    if (error) throw error;
+    return data?.[0] || null;
+  } catch (e) {
+    console.warn('[Supabase] Erro ao verificar login:', e.message);
+    return null;
+  }
+}
+
 export async function updateCadastroStatusSupabase(id, status) {
   if (!supabase) return;
   try {
@@ -335,7 +351,7 @@ export async function syncFromSupabase() {
     ] = await Promise.all([
       supabase.from('membros').select('*').order('created_at'),
       supabase.from('contribuicoes').select('*').order('created_at', { ascending: false }),
-      supabase.from('cadastros').select('*').order('created_at', { ascending: false }),
+      supabase.from('cadastros').select('id, nome, email, celular, data_nascimento, bairro, celula, experiencia, foto, status, data_cadastro, is_admin, created_at').order('created_at', { ascending: false }),
       supabase.from('avisos').select('*').order('created_at', { ascending: false }),
       supabase.from('pedidos_oracao').select('*').order('created_at', { ascending: false }),
       supabase.from('visitantes').select('*').order('created_at', { ascending: false }),

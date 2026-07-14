@@ -280,6 +280,10 @@ export default function Home() {
     };
   }, []);
 
+  const scrollAcessoRapido = (direcao) => {
+    acessoRapidoRef.current?.scrollBy({ left: direcao * 220, behavior: 'smooth' });
+  };
+
   const [aoVivo, setAoVivo]                   = useState(() => cultoEmAndamento(cultosVisiveis));
   const [terminouHoje, setTerminouHoje]       = useState(() => cultoTerminouHoje(cultosVisiveis));
   const [proximoInfo, setProximoInfo]         = useState(() => proximoCulto(cultosVisiveis));
@@ -529,9 +533,6 @@ export default function Home() {
             background: linear-gradient(270deg, var(--bg-color) 15%, transparent 100%);
             justify-content: flex-end;
           }
-          @media (min-width: 768px) {
-            .scroll-fade { display: none; }
-          }
           @media (min-width: 768px) and (max-width: 1024px) {
             .quick-btn {
               min-width: 88px;
@@ -592,11 +593,19 @@ export default function Home() {
           ))}
         </section>
 
-        {/* Fade + seta indicando que dá pra rolar pros lados */}
-        <div className="scroll-fade scroll-fade-left" style={{ opacity: scrollFade.left ? 1 : 0 }}>
+        {/* Fade + seta indicando (e permitindo, no clique) rolar pros lados */}
+        <div
+          className="scroll-fade scroll-fade-left"
+          onClick={() => scrollAcessoRapido(-1)}
+          style={{ opacity: scrollFade.left ? 1 : 0, pointerEvents: scrollFade.left ? 'auto' : 'none', cursor: 'pointer' }}
+        >
           <i className="ph ph-caret-left"></i>
         </div>
-        <div className="scroll-fade scroll-fade-right" style={{ opacity: scrollFade.right ? 1 : 0 }}>
+        <div
+          className="scroll-fade scroll-fade-right"
+          onClick={() => scrollAcessoRapido(1)}
+          style={{ opacity: scrollFade.right ? 1 : 0, pointerEvents: scrollFade.right ? 'auto' : 'none', cursor: 'pointer' }}
+        >
           <i className="ph ph-caret-right"></i>
         </div>
         </div>

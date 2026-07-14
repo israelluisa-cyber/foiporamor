@@ -382,9 +382,10 @@ function ModalGerenciarMembros({ onClose, membros, setMembros }) {
   const [membroSelecionado, setMembroSelecionado] = useState(null);
   const [formData, setFormData] = useState({});
   const [previewFoto, setPreviewFoto] = useState(null);
+  const grupos = loadGrupos();
 
   const handleAddMembro = () => {
-    setFormData({ nome: '', cargo: 'Membro', celula: 'Lar de Paz', bairro: '', foto: null });
+    setFormData({ nome: '', cargo: 'Membro', celula: grupos[0]?.nome || '', bairro: '', foto: null });
     setPreviewFoto(null);
     setMembroSelecionado(null);
     setModo('adicionar');
@@ -592,19 +593,19 @@ function ModalGerenciarMembros({ onClose, membros, setMembros }) {
                     }}
                   >
                     <option>Membro</option>
+                    <option>Pastor</option>
                     <option>Diácono</option>
-                    <option>Diaconisa</option>
                     <option>Presbítero</option>
-                    <option>Líder de Célula</option>
+                    <option>Líder de Grupo</option>
                     <option>Músico</option>
                     <option>Voluntária</option>
                   </select>
                 </div>
 
                 <div>
-                  <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Célula</label>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Grupo</label>
                   <select
-                    value={formData.celula || 'Lar de Paz'}
+                    value={formData.celula || grupos[0]?.nome || ''}
                     onChange={e => setFormData({ ...formData, celula: e.target.value })}
                     style={{
                       width: '100%', padding: '10px', background: 'var(--bg-surface)',
@@ -613,8 +614,7 @@ function ModalGerenciarMembros({ onClose, membros, setMembros }) {
                       boxSizing: 'border-box', outline: 'none',
                     }}
                   >
-                    <option>Lar de Paz</option>
-                    <option>Geração de Fogo</option>
+                    {grupos.map(g => <option key={g.id} value={g.nome}>{g.nome}</option>)}
                   </select>
                 </div>
 
@@ -752,6 +752,26 @@ function ModalContribuicoes({ onClose, contribs, onLimpar }) {
   );
 }
 
+
+/* ── Seletor de horário (Hora/Minuto) — evita o formato AM/PM do <input type="time"> */
+function SeletorHorario({ value, onChange, small }) {
+  const [hStr, mStr] = (value || '00:00').split(':');
+  const selectSt = {
+    flex: 1, background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-color)',
+    color: 'var(--text-primary)', borderRadius: 'var(--radius-md)', fontFamily: 'var(--font-body)',
+    outline: 'none', padding: small ? '8px' : '11px 14px', fontSize: small ? '0.85rem' : '0.9rem',
+  };
+  return (
+    <div style={{ display: 'flex', gap: '6px' }}>
+      <select value={hStr} onChange={e => onChange(`${e.target.value}:${mStr}`)} style={selectSt}>
+        {Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0')).map(h => <option key={h} value={h}>{h}h</option>)}
+      </select>
+      <select value={mStr} onChange={e => onChange(`${hStr}:${e.target.value}`)} style={selectSt}>
+        {Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0')).map(m => <option key={m} value={m}>{m}min</option>)}
+      </select>
+    </div>
+  );
+}
 
 /* ── Modal Configurações da Igreja ─────────────────────────────── */
 function ModalConfiguracoes({ onClose, onSaved }) {
@@ -1251,11 +1271,11 @@ function ModalConfiguracoes({ onClose, onSaved }) {
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                         <div>
                           <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Início</label>
-                          <input type="time" value={`${String(cu.hora).padStart(2,'0')}:${String(cu.min).padStart(2,'0')}`} onChange={e => { const [h, m] = e.target.value.split(':').map(Number); setCulto(cu.id, 'hora', h); setCulto(cu.id, 'min', m); }} style={{ ...inputSt, padding: '8px', fontSize: '0.85rem' }} />
+                          <SeletorHorario value={`${String(cu.hora).padStart(2,'0')}:${String(cu.min).padStart(2,'0')}`} onChange={v => { const [h, m] = v.split(':').map(Number); setCulto(cu.id, 'hora', h); setCulto(cu.id, 'min', m); }} small />
                         </div>
                         <div>
                           <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Fim</label>
-                          <input type="time" value={`${String(cu.horaFim).padStart(2,'0')}:${String(cu.minFim).padStart(2,'0')}`} onChange={e => { const [h, m] = e.target.value.split(':').map(Number); setCulto(cu.id, 'horaFim', h); setCulto(cu.id, 'minFim', m); }} style={{ ...inputSt, padding: '8px', fontSize: '0.85rem' }} />
+                          <SeletorHorario value={`${String(cu.horaFim).padStart(2,'0')}:${String(cu.minFim).padStart(2,'0')}`} onChange={v => { const [h, m] = v.split(':').map(Number); setCulto(cu.id, 'horaFim', h); setCulto(cu.id, 'minFim', m); }} small />
                         </div>
                       </div>
 
@@ -1424,8 +1444,7 @@ function loadAconselhamentos() {
   catch { return []; }
 }
 
-function ModalAconselhamento({ onClose }) {
-  const [pedidos, setPedidos] = useState(loadAconselhamentos);
+function ModalAconselhamento({ onClose, pedidos, setPedidos }) {
   const [expandido, setExpandido] = useState(null);
   const config = loadConfig();
 
@@ -1566,8 +1585,17 @@ function ModalAconselhamento({ onClose }) {
   );
 }
 
+function hojeISO() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function isoParaBR(iso) {
+  const [ano, mes, dia] = iso.split('-');
+  return `${dia}/${mes}/${ano}`;
+}
+
 function ModalComunicado({ onClose, onSent }) {
-  const [form, setForm] = useState({ titulo: '', texto: '', tipo: 'Informativo' });
+  const [form, setForm] = useState({ titulo: '', texto: '', tipo: 'Informativo', data: hojeISO() });
   const [avisos, setAvisos] = useState(() => JSON.parse(localStorage.getItem(ADMIN_AVISOS_KEY) || '[]'));
   const [aba, setAba] = useState('novo');
   const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }));
@@ -1575,16 +1603,16 @@ function ModalComunicado({ onClose, onSent }) {
 
   const handleEnviar = (e) => {
     e.preventDefault();
-    if (!form.titulo.trim() || !form.texto.trim()) return;
+    if (!form.titulo.trim() || !form.texto.trim() || !form.data) return;
     const novoAviso = {
       id: String(Date.now()), tipo: form.tipo, titulo: form.titulo, texto: form.texto,
-      data: new Date().toLocaleDateString('pt-BR'), icone: 'ph-megaphone', admin: true,
+      data: isoParaBR(form.data), icone: 'ph-megaphone', admin: true,
     };
     const atualizados = [novoAviso, ...avisos];
     localStorage.setItem(ADMIN_AVISOS_KEY, JSON.stringify(atualizados));
     setAvisos(atualizados);
     saveAvisoToSupabase(novoAviso);
-    setForm({ titulo: '', texto: '', tipo: 'Informativo' });
+    setForm({ titulo: '', texto: '', tipo: 'Informativo', data: hojeISO() });
     setAba('gerenciar');
     onSent();
   };
@@ -1641,6 +1669,53 @@ function ModalComunicado({ onClose, onSent }) {
               <div>
                 <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Mensagem *</label>
                 <textarea value={form.texto} onChange={set('texto')} style={{ ...inputSt, resize: 'none', minHeight: '100px' }} placeholder="Escreva o comunicado aqui..." required />
+              </div>
+              <div>
+                <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Válido até *</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '70px 1fr 90px', gap: '8px' }}>
+                  <select
+                    value={form.data ? (form.data.split('-')[2] || '') : ''}
+                    onChange={e => setForm(f => {
+                      const p = (f.data || '--').split('-');
+                      return { ...f, data: `${p[0] || ''}-${p[1] || ''}-${e.target.value}` };
+                    })}
+                    style={inputSt}
+                  >
+                    <option value="">Dia</option>
+                    {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
+                      <option key={d} value={String(d).padStart(2, '0')}>{String(d).padStart(2, '0')}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={form.data ? (form.data.split('-')[1] || '') : ''}
+                    onChange={e => setForm(f => {
+                      const p = (f.data || '--').split('-');
+                      return { ...f, data: `${p[0] || ''}-${e.target.value}-${p[2] || ''}` };
+                    })}
+                    style={inputSt}
+                  >
+                    <option value="">Mês</option>
+                    {['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'].map((m, i) => (
+                      <option key={i} value={String(i + 1).padStart(2, '0')}>{m}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={form.data ? (form.data.split('-')[0] || '') : ''}
+                    onChange={e => setForm(f => {
+                      const p = (f.data || '--').split('-');
+                      return { ...f, data: `${e.target.value}-${p[1] || ''}-${p[2] || ''}` };
+                    })}
+                    style={inputSt}
+                  >
+                    <option value="">Ano</option>
+                    {Array.from({ length: 3 }, (_, i) => new Date().getFullYear() + i).map(y => (
+                      <option key={y} value={String(y)}>{y}</option>
+                    ))}
+                  </select>
+                </div>
+                <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                  O comunicado some sozinho no dia seguinte a essa data.
+                </p>
               </div>
               <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
                 <button type="button" onClick={onClose} style={{ flex: 1, padding: '11px', background: 'transparent', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 600 }}>Cancelar</button>
@@ -1811,10 +1886,27 @@ function ModalITEAP({ onClose, onSaved }) {
 const DIAS_SEMANA_NOME = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
 
 function ModalEvangelismo({ onClose, onSaved }) {
+  const [saidasOriginais] = useState(() => loadSaidas());
   const [saidas, setSaidas] = useState(() => loadSaidas());
-  const [form, setForm] = useState({ titulo: '', data: '', horario: '', pontoEncontro: '', local: '', lider: '', descricao: '', vagas: 20 });
+  const [form, setForm] = useState({ titulo: '', data: '', horario: '', pontoEncontro: '', local: '', lider: '', descricao: '', vagas: 20, avisar: true });
 
   const set = (campo, valor) => setForm(f => ({ ...f, [campo]: valor }));
+
+  const criarAvisoSaida = (saida) => {
+    const novoAviso = {
+      id: String(Date.now() + Math.floor(Math.random() * 1000)),
+      tipo: 'Evento',
+      titulo: `Saída de Evangelismo: ${saida.titulo}`,
+      texto: `${saida.diaSemana}, ${saida.data} às ${saida.horario}${saida.local ? ` — ${saida.local}` : ''}.${saida.descricao ? ` ${saida.descricao}` : ''}`,
+      data: saida.data, // já em DD/MM/AAAA — o aviso some sozinho no dia seguinte à saída
+      icone: 'ph-megaphone',
+      admin: true,
+    };
+    const atuais = JSON.parse(localStorage.getItem(ADMIN_AVISOS_KEY) || '[]');
+    const atualizados = [novoAviso, ...atuais];
+    localStorage.setItem(ADMIN_AVISOS_KEY, JSON.stringify(atualizados));
+    saveAvisoToSupabase(novoAviso);
+  };
 
   const inputSt = {
     width: '100%', background: 'var(--bg-surface-elevated)',
@@ -1827,6 +1919,11 @@ function ModalEvangelismo({ onClose, onSaved }) {
     if (!form.titulo.trim() || !form.data || !form.horario) return;
     const [ano, mes, dia] = form.data.split('-');
     const dataObj = new Date(Number(ano), Number(mes) - 1, Number(dia));
+    const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+    if (isNaN(dataObj.getTime()) || dataObj < hoje) {
+      alert('A data da saída parece inválida ou está no passado. Confira o dia digitado.');
+      return;
+    }
     const nova = {
       ...form,
       id: Date.now(),
@@ -1835,10 +1932,13 @@ function ModalEvangelismo({ onClose, onSaved }) {
       vagas: Number(form.vagas),
     };
     setSaidas(s => [...s, nova]);
-    setForm({ titulo: '', data: '', horario: '', pontoEncontro: '', local: '', lider: '', descricao: '', vagas: 20 });
+    setForm({ titulo: '', data: '', horario: '', pontoEncontro: '', local: '', lider: '', descricao: '', vagas: 20, avisar: true });
   };
 
   const handleSalvar = () => {
+    const idsOriginais = new Set(saidasOriginais.map(s => s.id));
+    const novasSaidas = saidas.filter(s => !idsOriginais.has(s.id));
+    novasSaidas.filter(s => s.avisar).forEach(criarAvisoSaida);
     saveSaidas(saidas);
     onSaved();
     onClose();
@@ -1858,15 +1958,59 @@ function ModalEvangelismo({ onClose, onSaved }) {
           <p style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '12px' }}>Nova Saída</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <input style={inputSt} placeholder="Título *" value={form.titulo} onChange={e => set('titulo', e.target.value)} />
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-              <input type="date" style={inputSt} value={form.data} onChange={e => set('data', e.target.value)} />
-              <input type="time" style={inputSt} value={form.horario} onChange={e => set('horario', e.target.value)} />
+
+            {/* Data — 3 selects em vez de <input type="date"> (difícil de digitar no PC) */}
+            <div style={{ display: 'grid', gridTemplateColumns: '70px 1fr 90px', gap: '8px' }}>
+              <select
+                value={form.data ? (form.data.split('-')[2] || '') : ''}
+                onChange={e => setForm(f => {
+                  const p = (f.data || '--').split('-');
+                  return { ...f, data: `${p[0] || ''}-${p[1] || ''}-${e.target.value}` };
+                })}
+                style={inputSt}
+              >
+                <option value="">Dia</option>
+                {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
+                  <option key={d} value={String(d).padStart(2, '0')}>{String(d).padStart(2, '0')}</option>
+                ))}
+              </select>
+              <select
+                value={form.data ? (form.data.split('-')[1] || '') : ''}
+                onChange={e => setForm(f => {
+                  const p = (f.data || '--').split('-');
+                  return { ...f, data: `${p[0] || ''}-${e.target.value}-${p[2] || ''}` };
+                })}
+                style={inputSt}
+              >
+                <option value="">Mês</option>
+                {['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'].map((m, i) => (
+                  <option key={i} value={String(i + 1).padStart(2, '0')}>{m}</option>
+                ))}
+              </select>
+              <select
+                value={form.data ? (form.data.split('-')[0] || '') : ''}
+                onChange={e => setForm(f => {
+                  const p = (f.data || '--').split('-');
+                  return { ...f, data: `${e.target.value}-${p[1] || ''}-${p[2] || ''}` };
+                })}
+                style={inputSt}
+              >
+                <option value="">Ano</option>
+                {Array.from({ length: 3 }, (_, i) => new Date().getFullYear() + i).map(y => (
+                  <option key={y} value={String(y)}>{y}</option>
+                ))}
+              </select>
             </div>
+            <SeletorHorario value={form.horario} onChange={v => set('horario', v)} />
             <input style={inputSt} placeholder="Local" value={form.local} onChange={e => set('local', e.target.value)} />
             <input style={inputSt} placeholder="Ponto de encontro" value={form.pontoEncontro} onChange={e => set('pontoEncontro', e.target.value)} />
             <input style={inputSt} placeholder="Líder responsável" value={form.lider} onChange={e => set('lider', e.target.value)} />
             <textarea style={{ ...inputSt, minHeight: '72px', resize: 'vertical' }} placeholder="Descrição" value={form.descricao} onChange={e => set('descricao', e.target.value)} />
             <input type="number" style={inputSt} placeholder="Vagas" min={1} value={form.vagas} onChange={e => set('vagas', e.target.value)} />
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+              <input type="checkbox" checked={form.avisar} onChange={e => set('avisar', e.target.checked)} />
+              Avisar todos os membros (cria um comunicado sobre essa saída)
+            </label>
           </div>
           <button
             onClick={handleAdicionar}
@@ -2451,7 +2595,7 @@ const [modalMinisterios, setModalMinisterios]   = useState(false);
   const [modalGrupos, setModalGrupos]             = useState(false);
   const [modalMural, setModalMural]               = useState(false);
   const [modalOracao, setModalOracao]             = useState(false);
-  const [aconselhamentos] = useState(loadAconselhamentos);
+  const [aconselhamentos, setAconselhamentos] = useState(loadAconselhamentos);
   const [toast, setToast] = useState('');
 
   const totalNum = totalContribuicoes(contribs);
@@ -2461,12 +2605,24 @@ const [modalMinisterios, setModalMinisterios]   = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) return;
-    syncFromSupabase().then(() => {
-      setMembros(loadMembros());
-      setCadastros(loadCadastros());
-      setContribs(loadContribuicoes());
-      setTeologia(loadTeologia());
-    });
+    let emAndamento = false;
+    const atualizar = () => {
+      if (emAndamento) return; // evita empilhar sincronizações se a anterior ainda não terminou
+      emAndamento = true;
+      let liberado = false;
+      const liberar = () => { if (!liberado) { liberado = true; emAndamento = false; } };
+      const travaDeSeguranca = setTimeout(liberar, 15000); // nunca trava pra sempre, mesmo se a rede cair no meio
+      syncFromSupabase().then(() => {
+        setMembros(loadMembros());
+        setCadastros(loadCadastros());
+        setContribs(loadContribuicoes());
+        setTeologia(loadTeologia());
+        setAconselhamentos(loadAconselhamentos());
+      }).finally(() => { clearTimeout(travaDeSeguranca); liberar(); });
+    };
+    atualizar();
+    const intervalId = setInterval(atualizar, 4000);
+    return () => clearInterval(intervalId);
   }, [isAuthenticated]);
 
   if (!isAuthenticated) {
@@ -2756,7 +2912,7 @@ const [modalMinisterios, setModalMinisterios]   = useState(false);
       )}
 
       {modalAconselhamento && (
-        <ModalAconselhamento onClose={() => setModalAconselhamento(false)} />
+        <ModalAconselhamento onClose={() => setModalAconselhamento(false)} pedidos={aconselhamentos} setPedidos={setAconselhamentos} />
       )}
 
       {modalEvangelismo && (

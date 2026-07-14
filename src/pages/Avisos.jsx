@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Header from '../components/Header';
 import { loadConfig } from '../data/config';
+import { deleteAvisoFromSupabase } from '../data/supabase';
 
 const READ_KEY = 'avisos_lidos';
 const ADMIN_AVISOS_KEY = 'admin_avisos';
@@ -27,13 +28,24 @@ const TIPO_CORES = {
   Informativo: { bg: 'rgba(255,255,255,0.04)', border: 'var(--border-color)',   text: 'var(--text-secondary)' },
 };
 
-const DUAS_SEMANAS_MS = 14 * 24 * 60 * 60 * 1000;
-
-function isAvisoValido(aviso) {
+// Válido só no próprio dia — some assim que a data passa (vira o dia seguinte).
+export function isAvisoValido(aviso) {
   try {
     const [dia, mes, ano] = aviso.data.split('/').map(Number);
-    return (Date.now() - new Date(ano, mes - 1, dia).getTime()) <= DUAS_SEMANAS_MS;
+    const fimDoDia = new Date(ano, mes - 1, dia, 23, 59, 59, 999).getTime();
+    return Date.now() <= fimDoDia;
   } catch { return true; }
+}
+
+// Apaga (localStorage + Supabase) os comunicados do admin com mais de
+// duas semanas — chamado uma vez a cada carregamento do app.
+export function limparAvisosExpirados() {
+  const admin = loadAdminAvisos();
+  const expirados = admin.filter(a => !isAvisoValido(a));
+  if (expirados.length === 0) return;
+  const validos = admin.filter(isAvisoValido);
+  localStorage.setItem(ADMIN_AVISOS_KEY, JSON.stringify(validos));
+  expirados.forEach(a => deleteAvisoFromSupabase(a.id));
 }
 
 export function getUnreadCount() {

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import Toast from '../components/Toast';
-import { uploadFotoToStorage, saveCadastroToSupabase, updateCadastroSenhaSupabase, syncFromSupabase } from '../data/supabase';
+import { uploadFotoToStorage, saveCadastroToSupabase, updateCadastroSenhaSupabase, syncFromSupabase, verificarLoginSupabase, supabase } from '../data/supabase';
 import { hashPassword, verifyPassword } from '../data/crypto';
 import { loadConfig } from '../data/config';
 
@@ -338,22 +338,34 @@ export default function Usuario() {
       return;
     }
 
-    const cadastros = loadCadastros();
-    const candidato = cadastros.find(c => c.email === email);
     let user = null;
 
-    if (candidato?.passwordHash) {
-      if (await verifyPassword(senha, candidato.passwordHash, candidato.passwordSalt)) user = candidato;
-    } else if (candidato?.password) {
-      // Conta antiga com senha em texto puro: valida e migra para hash na hora.
-      if (candidato.password === senha) {
-        user = candidato;
-        const { hash, salt } = await hashPassword(senha);
-        const migrados = cadastros.map(c =>
-          c.id === candidato.id ? { ...c, password: undefined, passwordHash: hash, passwordSalt: salt } : c
-        );
-        localStorage.setItem(CADASTROS_KEY, JSON.stringify(migrados));
-        updateCadastroSenhaSupabase(candidato.id, hash, salt);
+    if (supabase) {
+      // Senha verificada dentro do banco — o navegador nunca recebe o hash.
+      const resultado = await verificarLoginSupabase(email, senha);
+      if (resultado) {
+        user = {
+          id: resultado.id, nome: resultado.nome, email: resultado.email,
+          celular: resultado.celular, celula: resultado.celula, bairro: resultado.bairro,
+          dataNascimento: resultado.data_nascimento, status: resultado.status,
+          foto: resultado.foto, isAdmin: resultado.is_admin,
+        };
+      }
+    } else {
+      // Sem Supabase configurado (modo local): comparação client-side, dados não saem do dispositivo.
+      const cadastros = loadCadastros();
+      const candidato = cadastros.find(c => c.email === email);
+      if (candidato?.passwordHash) {
+        if (await verifyPassword(senha, candidato.passwordHash, candidato.passwordSalt)) user = candidato;
+      } else if (candidato?.password) {
+        if (candidato.password === senha) {
+          user = candidato;
+          const { hash, salt } = await hashPassword(senha);
+          const migrados = cadastros.map(c =>
+            c.id === candidato.id ? { ...c, password: undefined, passwordHash: hash, passwordSalt: salt } : c
+          );
+          localStorage.setItem(CADASTROS_KEY, JSON.stringify(migrados));
+        }
       }
     }
 
@@ -532,7 +544,7 @@ export default function Usuario() {
               ['E-mail',  'ph-envelope',  session.email],
               ['Celular', 'ph-phone',     session.celular],
               ['Bairro',  'ph-map-pin',   session.bairro],
-              ['Célula',  'ph-users',     session.celula],
+              ['Grupo',   'ph-users',     session.celula],
             ].filter(([,, val]) => val).map(([label, icon, val]) => (
               <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 0', borderBottom: '1px solid var(--border-color)' }}>
                 <i className={`ph ${icon}`} style={{ fontSize: '1.1rem', color: 'var(--text-muted)', width: '20px', flexShrink: 0 }}></i>

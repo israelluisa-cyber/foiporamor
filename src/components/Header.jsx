@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { loadConfig } from '../data/config';
+import { isAvisoValido } from '../pages/Avisos';
 
 function getSaudacao() {
   const h = new Date().getHours();
@@ -33,7 +34,7 @@ function loadNotificacoes() {
   try {
     const admin = JSON.parse(localStorage.getItem('admin_avisos') || '[]');
     const lidos = (JSON.parse(localStorage.getItem('avisos_lidos') || '[]')).map(String);
-    return admin.slice(0, 5).map(a => ({ ...a, lida: lidos.includes(String(a.id)) }));
+    return admin.filter(isAvisoValido).slice(0, 5).map(a => ({ ...a, lida: lidos.includes(String(a.id)) }));
   } catch { return []; }
 }
 
@@ -101,7 +102,14 @@ export default function Header({ title, backButton = false, admin = false }) {
     <header className={`app-header ${location.pathname === '/culto' ? 'no-border' : ''}`} style={location.pathname === '/culto' ? { borderBottom: 'none', paddingBottom: 0 } : {}}>
       <div className="header-content">
         {backButton ? (
-          <button className="icon-btn" aria-label="Voltar" onClick={() => navigate(-1)}>
+          <button
+            className="icon-btn"
+            aria-label="Voltar"
+            onClick={() => {
+              if (window.history.state?.idx > 0) navigate(-1);
+              else navigate('/');
+            }}
+          >
             <i className="ph ph-caret-left"></i>
           </button>
         ) : (

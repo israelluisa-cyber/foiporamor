@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import Header from '../components/Header';
 import { loadConfig } from '../data/config';
 
-const APP_URL = window.location.origin;
+const APP_URL = 'https://foi-por-amor.vercel.app';
 const QR_URL  = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&color=ffffff&bgcolor=0d0d0d&data=${encodeURIComponent(APP_URL + '/instalar')}`;
 
 function detectar() {

@@ -33,6 +33,8 @@ VITE_SUPABASE_ANON_KEY=<anon key do novo projeto>
   - `<meta name="apple-mobile-web-app-title">` (linha 14)
 - `public/manifest.json` — `name`, `short_name`, `description`, `background_color`,
   `theme_color`, `icons` (troque os dois `src` para o novo `logo.jpeg`/PNG).
+- `src/pages/Instalar.jsx` — constante `APP_URL` (linha 5): troque para a URL de produção
+  do novo deploy. É o link/QR Code fixo mostrado na tela "Instalar App".
 
 ## 4. Depois do deploy — configurar pelo Admin
 

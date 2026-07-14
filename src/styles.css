@@ -115,20 +115,10 @@ button {
   .container {
     max-width: 900px;
   }
-
-  .quick-access-row {
-    justify-content: space-evenly;
-  }
 }
 
-/* Telas maiores (tablet/PC): sem mouse/toque pra rolar, entao quebra em varias linhas */
-@media (min-width: 768px) {
-  .quick-access-row {
-    flex-wrap: wrap !important;
-    overflow-x: visible !important;
-    justify-content: flex-start !important;
-  }
-}
+/* Acesso Rápido: sempre em uma linha só rolável (igual ao celular),
+   inclusive no PC — com setas clicáveis pra quem não tem toque. */
 
 .text-center    { text-align: center; }
 .text-secondary { color: var(--text-secondary); }
@@ -397,16 +387,37 @@ body.light .app-header {
   position: fixed;
   bottom: 0;
   left: 0;
+  right: 0;
   width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
   background: rgba(13, 13, 13, 0.95);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-top: 1px solid var(--border-color);
+  border-left: 1px solid var(--border-color);
+  border-right: 1px solid var(--border-color);
   display: flex;
   justify-content: space-around;
   padding: var(--spacing-sm) 0;
   padding-bottom: calc(var(--spacing-sm) + env(safe-area-inset-bottom));
   z-index: 100;
+}
+
+/* Tablets usam a mesma largura maior do .container */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .bottom-nav {
+    max-width: 900px;
+  }
+}
+
+/* Em telas estreitas (mobile), a barra volta a ocupar a tela toda,
+   sem bordas laterais soltas no meio da tela */
+@media (max-width: 600px) {
+  .bottom-nav {
+    border-left: none;
+    border-right: none;
+  }
 }
 
 body.light .bottom-nav {

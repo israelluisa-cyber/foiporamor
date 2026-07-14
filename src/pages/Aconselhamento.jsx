@@ -6,7 +6,7 @@ import { supabase } from '../data/supabase';
 
 const KEY = 'pedidos_aconselhamento';
 const TIPOS = ['Casamento / Família', 'Saúde / Luto', 'Ansiedade / Depressão', 'Finanças', 'Vocação / Propósito', 'Outro'];
-const CONTATOS = ['WhatsApp', 'Ligação telefônica', 'Presencial na Igreja'];
+const CONTATOS = ['WhatsApp', 'Ligação telefônica'];
 
 function getSession() {
   try { return JSON.parse(sessionStorage.getItem('user_session')); } catch { return null; }
@@ -39,7 +39,7 @@ export default function Aconselhamento() {
     mensagem: '',
   });
 
-  const podeSalvar = !!form.mensagem.trim() && (form.contato === 'Presencial na Igreja' || !!form.telefone.trim());
+  const podeSalvar = !!form.mensagem.trim() && !!form.telefone.trim();
 
   const buildMsgPastor = (f) => [
     '📋 *Pedido de Aconselhamento*',
@@ -118,9 +118,7 @@ export default function Aconselhamento() {
             </div>
             <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.2rem', marginBottom: '8px' }}>Pedido Enviado</h3>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.6, marginBottom: 'var(--spacing-lg)' }}>
-              {form.contato === 'Presencial na Igreja'
-                ? 'Passe na secretaria da igreja para agendar seu atendimento com um dos pastores. Você não está sozinho(a).'
-                : `Um pastor da ${cfg.nomeIgreja} entrará em contato pelo meio escolhido em breve. Você não está sozinho(a).`}
+              Um pastor da {cfg.nomeIgreja} entrará em contato pelo meio escolhido em breve. Você não está sozinho(a).
             </p>
 
             {/* Botão WhatsApp do pastor (se configurado) */}
@@ -208,20 +206,18 @@ export default function Aconselhamento() {
             </select>
           </div>
 
-          {form.contato !== 'Presencial na Igreja' && (
-            <div style={{ marginBottom: 'var(--spacing-md)' }}>
-              <Label txt="Seu telefone" />
-              <input
-                type="tel"
-                value={form.telefone}
-                onChange={e => setForm(f => ({ ...f, telefone: e.target.value }))}
-                style={inputStyle}
-                onFocus={focusStyle}
-                onBlur={blurStyle}
-                placeholder="(11) 99999-9999"
-              />
-            </div>
-          )}
+          <div style={{ marginBottom: 'var(--spacing-md)' }}>
+            <Label txt="Seu telefone" />
+            <input
+              type="tel"
+              value={form.telefone}
+              onChange={e => setForm(f => ({ ...f, telefone: e.target.value }))}
+              style={inputStyle}
+              onFocus={focusStyle}
+              onBlur={blurStyle}
+              placeholder="(11) 99999-9999"
+            />
+          </div>
 
           {/* Mensagem */}
           <div style={{ marginBottom: 'var(--spacing-lg)' }}>
