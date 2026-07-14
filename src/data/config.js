@@ -12,15 +12,16 @@ export const DEFAULT_CONFIG = {
   youtubeLink: 'https://www.youtube.com/@IgrejaFoiPorAmorOficial/live',
   avisoHome:   'Reunião de Líderes na próxima segunda-feira às 19h30.',
   pixKey:         'igrejafoiporamor@exemplo.com.br',
+  pixNome:        '', // razão social/nome do favorecido da chave PIX geral — exibido para conferência
+  pixCnpj:        '', // CNPJ do favorecido da chave PIX geral — exibido para conferência
+  pixKeyTeologia: '', // chave PIX exclusiva do curso de teologia — se vazio, usa pixKey
+  pixNomeTeologia: '', // razão social/nome do favorecido da chave PIX do curso de teologia
+  pixCnpjTeologia: '', // CNPJ do favorecido da chave PIX do curso de teologia
   logoUrl:        null, // base64/URL ou null (usa /logo-icon.png)
   corDestaque:    '#ffffff',
   instagramLink:  'https://www.instagram.com/igrejafoiporamor/',
   facebookLink:   'https://www.facebook.com/igrejafpa',
   whatsappPastor: '',
-  whatsapp: {
-    geracaoFogo: '5511999999001',
-    larDePaz:    '5511999999002',
-  },
   cultos: [
     { id: 1, diaSemana: 2, hora: 19, min: 30, horaFim: 21, minFim: 0, nome: 'Curso de Teologia',              ativo: true,  restrito: false, foto: null },
     { id: 2, diaSemana: 4, hora: 19, min: 30, horaFim: 21, minFim: 0, nome: 'Culto de Oração e Adoração',     ativo: true,  restrito: false, foto: null },

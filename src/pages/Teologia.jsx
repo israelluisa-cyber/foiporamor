@@ -157,7 +157,12 @@ export default function Teologia() {
           <p className="text-secondary" style={{ fontSize: '0.85rem', marginBottom: 'var(--spacing-md)' }}>
             Realize o pagamento da mensalidade do ITEAP via PIX.
           </p>
-          <PixPanel toastText="Chave PIX copiada! Aguarde a confirmação da secretaria." />
+          <PixPanel
+            pixKey={config.pixKeyTeologia || undefined}
+            pixNome={(config.pixKeyTeologia ? config.pixNomeTeologia : config.pixNome) || undefined}
+            pixCnpj={(config.pixKeyTeologia ? (config.pixCnpjTeologia || config.pixCnpj) : config.pixCnpj) || undefined}
+            toastText="Chave PIX copiada! Aguarde a confirmação da secretaria."
+          />
         </section>
 
       </main>

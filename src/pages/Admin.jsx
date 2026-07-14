@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import Header from '../components/Header';
 import Toast from '../components/Toast';
@@ -561,6 +561,7 @@ function ModalGerenciarMembros({ onClose, membros, setMembros }) {
                   />
                 </div>
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '8px' }}>Clique para ajustar foto</p>
+                <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '4px' }}>Foto quadrada, ex: 500×500px</p>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
@@ -776,38 +777,11 @@ function SeletorHorario({ value, onChange, small }) {
 /* ── Modal Configurações da Igreja ─────────────────────────────── */
 function ModalConfiguracoes({ onClose, onSaved }) {
   const [cfg, setCfg] = useState(loadConfig);
-  const [heroBgPreview, setHeroBgPreview] = useState(loadConfig().heroBg);
-  const [heroBgPosition, setHeroBgPosition] = useState(loadConfig().heroBgPosition || '50% 50%');
-  const [isDraggingHero, setIsDraggingHero] = useState(false);
-  const heroBgRef = useRef(null);
-
-  function parseHeroPos(pos) {
-    const KW = { left: 0, center: 50, right: 100, top: 0, bottom: 100 };
-    const parts = (pos || '50% 50%').trim().split(/\s+/);
-    if (parts.length === 1) return [50, 50];
-    const x = parts[0].endsWith('%') ? parseFloat(parts[0]) : (KW[parts[0]] ?? 50);
-    const y = parts[1].endsWith('%') ? parseFloat(parts[1]) : (KW[parts[1]] ?? 50);
-    return [x, y];
-  }
-
-  function updateHeroPos(e) {
-    const el = heroBgRef.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    const x = Math.min(100, Math.max(0, Math.round(((clientX - rect.left) / rect.width) * 100)));
-    const y = Math.min(100, Math.max(0, Math.round(((clientY - rect.top) / rect.height) * 100)));
-    const pos = `${x}% ${y}%`;
-    setHeroBgPosition(pos);
-    setCfg(c => ({ ...c, heroBgPosition: pos }));
-  }
   const [secao, setSecao] = useState('identidade');
   const [vagas, setVagas] = useState(loadVagas);
-  const [novaVaga, setNovaVaga] = useState({ ministerio: MINISTERIOS[0].nome, data: '', horario: '', vagas: 4 });
+  const [novaVaga, setNovaVaga] = useState({ ministerio: MINISTERIOS[0].nome, vagas: 4, avisar: true });
 
   const set = (campo, valor) => setCfg(c => ({ ...c, [campo]: valor }));
-  const setWa = (campo, valor) => setCfg(c => ({ ...c, whatsapp: { ...c.whatsapp, [campo]: valor } }));
 
   const setCulto = (id, campo, valor) =>
     setCfg(c => ({ ...c, cultos: c.cultos.map(cu => cu.id === id ? { ...cu, [campo]: valor } : cu) }));
@@ -838,6 +812,20 @@ function ModalConfiguracoes({ onClose, onSaved }) {
     setCfg(c => ({ ...c, obras: c.obras.map(o => o.id === id ? { ...o, foto: null } : o) }));
   };
 
+  const setObra = (id, campo, valor) =>
+    setCfg(c => ({ ...c, obras: c.obras.map(o => o.id === id ? { ...o, [campo]: valor } : o) }));
+
+  const addObra = () => {
+    const preset = COLOR_PRESETS[(cfg.obras || []).length % COLOR_PRESETS.length];
+    const nova = { id: `obra_${Date.now()}`, nome: 'Nova Obra Social', descricao: '', icone: 'ph-heart', gradiente: preset.gradient, foto: null };
+    setCfg(c => ({ ...c, obras: [...(c.obras || []), nova] }));
+  };
+
+  const removeObra = (id) => {
+    if (!confirm('Excluir esta obra social?')) return;
+    setCfg(c => ({ ...c, obras: c.obras.filter(o => o.id !== id) }));
+  };
+
   const handleCultoFotoUpload = (id, e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -862,29 +850,6 @@ function ModalConfiguracoes({ onClose, onSaved }) {
 
   const removeCultoFoto = (id) => {
     setCfg(c => ({ ...c, cultos: c.cultos.map(cu => cu.id === id ? { ...cu, foto: null } : cu) }));
-  };
-
-  const handleHeroUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => {
-      const img = new Image();
-      img.onload = async () => {
-        const MAX = 1200;
-        const ratio = Math.min(MAX / img.width, MAX / img.height, 1);
-        const canvas = document.createElement('canvas');
-        canvas.width  = img.width  * ratio;
-        canvas.height = img.height * ratio;
-        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-        const compressed = canvas.toDataURL('image/jpeg', 0.8);
-        const url = await uploadFotoToStorage(compressed, 'hero');
-        setHeroBgPreview(url);
-        setCfg(c => ({ ...c, heroBg: url }));
-      };
-      img.src = ev.target.result;
-    };
-    reader.readAsDataURL(file);
   };
 
   const handleEnderecoFotoUpload = (e) => {
@@ -931,16 +896,54 @@ function ModalConfiguracoes({ onClose, onSaved }) {
     reader.readAsDataURL(file);
   };
 
-  const adicionarVaga = () => {
-    if (!novaVaga.data.trim() || !novaVaga.horario.trim()) return;
-    const nova = { ...novaVaga, id: Date.now(), aberta: true, confirmados: 0 };
-    setVagas(v => [...v, nova]);
-    setNovaVaga(nv => ({ ...nv, data: '', horario: '' }));
+  const dataMaisDias = (dias) => {
+    const d = new Date();
+    d.setDate(d.getDate() + dias);
+    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
   };
 
-  const toggleVaga = (id) => setVagas(v => v.map(vg => vg.id === id ? { ...vg, aberta: !vg.aberta } : vg));
+  const criarAvisoVaga = (vaga) => {
+    const novoAviso = {
+      id: String(Date.now() + Math.floor(Math.random() * 1000)),
+      tipo: 'Informativo',
+      titulo: `Vaga de Voluntariado: ${vaga.ministerio}`,
+      texto: `O setor de ${vaga.ministerio} está com ${vaga.vagas} vaga${vaga.vagas > 1 ? 's' : ''} aberta${vaga.vagas > 1 ? 's' : ''} para voluntariado. Vá até a igreja e procure a equipe para se inscrever!`,
+      data: dataMaisDias(30), // some sozinho em 1 mês (regra padrão de expiração dos avisos)
+      icone: 'ph-hand-heart',
+      admin: true,
+    };
+    const atuais = JSON.parse(localStorage.getItem(ADMIN_AVISOS_KEY) || '[]');
+    localStorage.setItem(ADMIN_AVISOS_KEY, JSON.stringify([novoAviso, ...atuais]));
+    saveAvisoToSupabase(novoAviso);
+    return novoAviso.id;
+  };
 
-  const removerVaga = (id) => setVagas(v => v.filter(vg => vg.id !== id));
+  const removerAvisoVaga = (avisoId) => {
+    if (!avisoId) return;
+    const atuais = JSON.parse(localStorage.getItem(ADMIN_AVISOS_KEY) || '[]');
+    localStorage.setItem(ADMIN_AVISOS_KEY, JSON.stringify(atuais.filter(a => a.id !== avisoId)));
+    deleteAvisoFromSupabase(avisoId);
+  };
+
+  const adicionarVaga = () => {
+    const avisoId = novaVaga.avisar ? criarAvisoVaga(novaVaga) : null;
+    const nova = { ministerio: novaVaga.ministerio, vagas: novaVaga.vagas, id: Date.now(), aberta: true, confirmados: 0, avisoId };
+    setVagas(v => [...v, nova]);
+    setNovaVaga({ ministerio: MINISTERIOS[0].nome, vagas: 4, avisar: true });
+  };
+
+  const toggleVaga = (id) => setVagas(v => v.map(vg => {
+    if (vg.id !== id) return vg;
+    const novaAberta = !vg.aberta;
+    if (!novaAberta && vg.avisoId) removerAvisoVaga(vg.avisoId);
+    return { ...vg, aberta: novaAberta, avisoId: novaAberta ? vg.avisoId : null };
+  }));
+
+  const removerVaga = (id) => {
+    const vaga = vagas.find(vg => vg.id === id);
+    if (vaga?.avisoId) removerAvisoVaga(vaga.avisoId);
+    setVagas(v => v.filter(vg => vg.id !== id));
+  };
 
   const handleSalvar = async () => {
     saveConfig(cfg);
@@ -961,7 +964,6 @@ function ModalConfiguracoes({ onClose, onSaved }) {
   const secoes = [
     { key: 'identidade', label: 'Identidade', icon: 'ph-church' },
     { key: 'visual',     label: 'Visual',     icon: 'ph-palette' },
-    { key: 'hero',       label: 'Imagem',     icon: 'ph-image' },
     { key: 'aviso',      label: 'Aviso',      icon: 'ph-megaphone' },
     { key: 'whatsapp',   label: 'WhatsApp',   icon: 'ph-whatsapp-logo' },
     { key: 'cultos',     label: 'Cultos',     icon: 'ph-calendar' },
@@ -1047,7 +1049,9 @@ function ModalConfiguracoes({ onClose, onSaved }) {
               <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0 }}>Logo, cor de destaque e redes sociais exibidas no app.</p>
 
               <div>
-                <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Logo do App</label>
+                <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                  Logo do App <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>— foto quadrada, ex: 500×500px</span>
+                </label>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <img src={cfg.logoUrl || '/logo-icon.png'} alt="Logo" style={{ width: '56px', height: '56px', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border-color)' }} />
                   <label style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', background: 'var(--bg-surface)', border: '1px dashed var(--border-color)', borderRadius: 'var(--radius-md)', cursor: 'pointer', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.85rem', flex: 1, justifyContent: 'center' }}>
@@ -1081,62 +1085,6 @@ function ModalConfiguracoes({ onClose, onSaved }) {
                 <input type="url" value={cfg.facebookLink || ''} onChange={e => set('facebookLink', e.target.value)} style={inputSt} placeholder="https://www.facebook.com/suaigreja" />
               </div>
               <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Deixe os links de rede social vazios para ocultar o ícone na Home.</p>
-            </div>
-          )}
-
-          {/* HERO */}
-          {secao === 'hero' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0 }}>Imagem de fundo do card principal da Home.</p>
-
-              {/* Preview interativo — arraste para posicionar */}
-              <div>
-                <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
-                  Posição da imagem <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>— clique ou arraste para ajustar</span>
-                </label>
-                <div
-                  ref={heroBgRef}
-                  onMouseDown={e => { setIsDraggingHero(true); updateHeroPos(e); }}
-                  onMouseMove={e => { if (isDraggingHero) updateHeroPos(e); }}
-                  onMouseUp={() => setIsDraggingHero(false)}
-                  onMouseLeave={() => setIsDraggingHero(false)}
-                  onTouchStart={e => { setIsDraggingHero(true); updateHeroPos(e); }}
-                  onTouchMove={e => { e.preventDefault(); updateHeroPos(e); }}
-                  onTouchEnd={() => setIsDraggingHero(false)}
-                  style={{ width: '100%', height: '180px', borderRadius: 'var(--radius-md)', overflow: 'hidden', border: `2px solid ${isDraggingHero ? 'var(--accent-color)' : 'var(--border-color)'}`, position: 'relative', background: '#111', cursor: 'crosshair', userSelect: 'none', transition: 'border-color 0.2s' }}
-                >
-                  <div style={{ position: 'absolute', inset: 0, backgroundImage: `url(${heroBgPreview || '/hero_bg.png'})`, backgroundSize: 'cover', backgroundPosition: heroBgPosition }} />
-
-                  {/* Marcador do ponto focal */}
-                  {(() => {
-                    const [px, py] = parseHeroPos(heroBgPosition);
-                    return (
-                      <div style={{ position: 'absolute', left: `${px}%`, top: `${py}%`, transform: 'translate(-50%, -50%)', pointerEvents: 'none', zIndex: 2 }}>
-                        <div style={{ width: '22px', height: '22px', borderRadius: '50%', border: '2.5px solid #fff', boxShadow: '0 0 0 1.5px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.4)', background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(2px)' }} />
-                      </div>
-                    );
-                  })()}
-
-                  {/* Dica */}
-                  {!isDraggingHero && (
-                    <div style={{ position: 'absolute', bottom: '8px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)', padding: '4px 10px', borderRadius: 'var(--radius-full)', pointerEvents: 'none' }}>
-                      <span style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.8)', whiteSpace: 'nowrap' }}>Arraste para reposicionar</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px', background: 'var(--bg-surface)', border: '1px dashed var(--border-color)', borderRadius: 'var(--radius-md)', cursor: 'pointer', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.9rem' }}>
-                <i className="ph ph-upload-simple" style={{ fontSize: '1.2rem' }}></i>
-                Escolher imagem da galeria
-                <input type="file" accept="image/*" onChange={handleHeroUpload} style={{ display: 'none' }} />
-              </label>
-
-              {heroBgPreview && heroBgPreview !== '/hero_bg.png' && (
-                <button onClick={() => { setHeroBgPreview(null); setCfg(c => ({ ...c, heroBg: null })); }} style={{ padding: '9px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 'var(--radius-md)', color: '#ef4444', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>
-                  Remover imagem personalizada
-                </button>
-              )}
             </div>
           )}
 
@@ -1174,25 +1122,19 @@ function ModalConfiguracoes({ onClose, onSaved }) {
                   Exibido como botão de contato direto na página de aconselhamento.
                 </p>
               </div>
-
-              <div style={{ height: '1px', background: 'var(--border-color)' }} />
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0, fontWeight: 600 }}>Grupos de Célula</p>
-              {[
-                ['Geração de Fogo (Jovens)', 'geracaoFogo'],
-                ['Lar de Paz (Famílias)',    'larDePaz'],
-              ].map(([label, campo]) => (
-                <div key={campo}>
-                  <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>{label}</label>
-                  <input type="tel" value={cfg.whatsapp?.[campo] || ''} onChange={e => setWa(campo, e.target.value)} style={inputSt} placeholder="5511999999999" />
-                </div>
-              ))}
             </div>
           )}
 
           {/* OBRAS SOCIAIS */}
           {secao === 'obras' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0 }}>Atualize as fotos de cada obra social exibida na página de Contribuições.</p>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0 }}>
+                Crie, edite ou remova as obras sociais exibidas na página de Contribuições. Foto paisagem, ex: 1200×675px (16:9).
+              </p>
+
+              <button onClick={addObra} style={{ width: '100%', padding: '11px', background: 'rgba(255,255,255,0.06)', border: '1px dashed var(--border-color)', borderRadius: 'var(--radius-md)', color: 'var(--accent-color)', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                <i className="ph ph-plus-circle"></i> Adicionar Obra Social
+              </button>
 
               {(cfg.obras || []).map(obra => (
                 <div key={obra.id} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
@@ -1208,10 +1150,38 @@ function ModalConfiguracoes({ onClose, onSaved }) {
                     )}
                   </div>
 
-                  {/* Info + botões */}
-                  <div style={{ padding: '12px 14px' }}>
-                    <p style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)', margin: '0 0 10px 0' }}>{obra.nome}</p>
-                    <div style={{ display: 'flex', gap: '8px' }}>
+                  {/* Info + edição */}
+                  <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div>
+                      <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Nome</label>
+                      <input type="text" value={obra.nome} onChange={e => setObra(obra.id, 'nome', e.target.value)} style={{ ...inputSt, padding: '8px', fontSize: '0.85rem' }} placeholder="Ex: Casa de Apoio" />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Descrição</label>
+                      <textarea value={obra.descricao} onChange={e => setObra(obra.id, 'descricao', e.target.value)} style={{ ...inputSt, padding: '8px', fontSize: '0.85rem', minHeight: '60px', resize: 'vertical' }} placeholder="Uma ou duas frases sobre essa obra social" />
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>Ícone</label>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                        {ICON_OPTIONS.map(opt => (
+                          <button key={opt.value} onClick={() => setObra(obra.id, 'icone', opt.value)} style={{ width: '36px', height: '36px', borderRadius: 'var(--radius-sm)', background: obra.icone === opt.value ? 'var(--accent-color)' : 'var(--bg-surface-elevated)', border: `1px solid ${obra.icone === opt.value ? 'var(--accent-color)' : 'var(--border-color)'}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: obra.icone === opt.value ? 'var(--bg-color)' : 'var(--text-secondary)' }}>
+                            <i className={`ph ${opt.value}`} style={{ fontSize: '1rem' }}></i>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>Cor</label>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                        {COLOR_PRESETS.map((c, i) => (
+                          <button key={i} onClick={() => setObra(obra.id, 'gradiente', c.gradient)} title={c.label} style={{ width: '30px', height: '30px', borderRadius: '50%', background: c.gradient, border: obra.gradiente === c.gradient ? '2px solid #fff' : '2px solid transparent', boxShadow: obra.gradiente === c.gradient ? '0 0 0 2px var(--accent-color)' : 'none', cursor: 'pointer', transition: 'all 0.15s' }} />
+                        ))}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
                       <label style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '8px', background: 'var(--accent-color)', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, color: 'var(--bg-color)' }}>
                         <i className="ph ph-upload-simple"></i>
                         {obra.foto ? 'Trocar Foto' : 'Adicionar Foto'}
@@ -1219,10 +1189,13 @@ function ModalConfiguracoes({ onClose, onSaved }) {
                       </label>
                       {obra.foto && (
                         <button onClick={() => removeObraFoto(obra.id)} style={{ padding: '8px 14px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 'var(--radius-md)', color: '#ef4444', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600 }}>
-                          Remover
+                          Remover foto
                         </button>
                       )}
                     </div>
+                    <button onClick={() => removeObra(obra.id)} style={{ width: '100%', padding: '8px', background: 'none', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 'var(--radius-md)', color: '#ef4444', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                      <i className="ph ph-trash"></i> Excluir esta obra social
+                    </button>
                   </div>
                 </div>
               ))}
@@ -1287,7 +1260,9 @@ function ModalConfiguracoes({ onClose, onSaved }) {
 
                       {/* Foto */}
                       <div>
-                        <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '8px' }}>Foto da Programação</label>
+                        <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '8px' }}>
+                          Foto da Programação <span style={{ fontWeight: 400 }}>— foto vertical, ex: 1000×1400px (aparece em card vertical na Home e pode virar capa do topo)</span>
+                        </label>
                         {cu.foto && (
                           <div style={{ width: '100%', height: '110px', borderRadius: 'var(--radius-md)', overflow: 'hidden', marginBottom: '8px', border: '1px solid var(--border-color)' }}>
                             <img src={cu.foto} alt={cu.nome} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
@@ -1333,6 +1308,35 @@ function ModalConfiguracoes({ onClose, onSaved }) {
                 />
               </div>
 
+              <div>
+                <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                  Nome do favorecido (razão social)
+                </label>
+                <input
+                  type="text"
+                  value={cfg.pixNome || ''}
+                  onChange={e => set('pixNome', e.target.value)}
+                  style={inputSt}
+                  placeholder="Ex: Igreja Evangélica Foi Por Amor"
+                />
+                <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                  Mostrado junto com a chave, pra pessoa conferir que é o favorecido certo antes de pagar.
+                </p>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                  CNPJ
+                </label>
+                <input
+                  type="text"
+                  value={cfg.pixCnpj || ''}
+                  onChange={e => set('pixCnpj', e.target.value)}
+                  style={inputSt}
+                  placeholder="Ex: 40.058.046/0001-86"
+                />
+              </div>
+
               {cfg.pixKey && (
                 <div style={{ padding: '14px 16px', background: 'rgba(109,40,217,0.1)', border: '1px solid rgba(109,40,217,0.3)', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <i className="ph ph-check-circle" style={{ fontSize: '1.2rem', color: '#6d28d9', flexShrink: 0 }}></i>
@@ -1346,6 +1350,54 @@ function ModalConfiguracoes({ onClose, onSaved }) {
               <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.6 }}>
                 Esta chave será exibida para os contribuintes copiarem diretamente no app do banco.
               </p>
+
+              <div style={{ height: '1px', background: 'var(--border-color)' }} />
+
+              <div>
+                <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                  Chave PIX do Curso de Teologia (opcional)
+                </label>
+                <input
+                  type="text"
+                  value={cfg.pixKeyTeologia || ''}
+                  onChange={e => set('pixKeyTeologia', e.target.value)}
+                  style={inputSt}
+                  placeholder="Deixe vazio para usar a chave PIX acima"
+                />
+              </div>
+
+              {cfg.pixKeyTeologia && (
+                <>
+                  <div>
+                    <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                      Nome do favorecido (chave da Teologia)
+                    </label>
+                    <input
+                      type="text"
+                      value={cfg.pixNomeTeologia || ''}
+                      onChange={e => set('pixNomeTeologia', e.target.value)}
+                      style={inputSt}
+                      placeholder="Ex: Instituto Teológico Amor e Palavra"
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                      CNPJ (chave da Teologia)
+                    </label>
+                    <input
+                      type="text"
+                      value={cfg.pixCnpjTeologia || ''}
+                      onChange={e => set('pixCnpjTeologia', e.target.value)}
+                      style={inputSt}
+                      placeholder="Deixe vazio para usar o mesmo CNPJ acima"
+                    />
+                  </div>
+                </>
+              )}
+
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.6 }}>
+                Se preenchida, essa chave substitui a chave PIX geral apenas na tela do Curso de Teologia (ITEAP).
+              </p>
             </div>
           )}
 
@@ -1353,7 +1405,7 @@ function ModalConfiguracoes({ onClose, onSaved }) {
           {secao === 'servir' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
               <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0 }}>
-                Crie e gerencie as vagas de voluntariado para cada ministério.
+                Crie e gerencie as vagas de voluntariado para cada ministério. A pessoa interessada deve ir até a igreja e procurar a equipe do setor.
               </p>
 
               {/* Formulário nova vaga */}
@@ -1367,26 +1419,19 @@ function ModalConfiguracoes({ onClose, onSaved }) {
                   </select>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                  <div>
-                    <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Data</label>
-                    <input type="text" placeholder="Ex: Dom, 22 Jun" value={novaVaga.data} onChange={e => setNovaVaga(nv => ({ ...nv, data: e.target.value }))} style={{ ...inputSt, padding: '8px', fontSize: '0.85rem' }} />
-                  </div>
-                  <div>
-                    <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Horário</label>
-                    <input type="text" placeholder="Ex: 09:00 - 12:00" value={novaVaga.horario} onChange={e => setNovaVaga(nv => ({ ...nv, horario: e.target.value }))} style={{ ...inputSt, padding: '8px', fontSize: '0.85rem' }} />
-                  </div>
-                </div>
-
                 <div>
                   <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Número de vagas</label>
                   <input type="number" min="1" max="50" value={novaVaga.vagas} onChange={e => setNovaVaga(nv => ({ ...nv, vagas: Number(e.target.value) }))} style={{ ...inputSt, padding: '8px', fontSize: '0.85rem' }} />
                 </div>
 
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                  <input type="checkbox" checked={novaVaga.avisar} onChange={e => setNovaVaga(nv => ({ ...nv, avisar: e.target.checked }))} />
+                  Avisar todos os membros (fica em Avisos por 1 mês, ou até fechar/excluir a vaga)
+                </label>
+
                 <button
                   onClick={adicionarVaga}
-                  disabled={!novaVaga.data.trim() || !novaVaga.horario.trim()}
-                  style={{ padding: '10px', background: '#6d28d9', border: 'none', borderRadius: 'var(--radius-md)', color: '#fff', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', opacity: (!novaVaga.data.trim() || !novaVaga.horario.trim()) ? 0.5 : 1 }}
+                  style={{ padding: '10px', background: '#6d28d9', border: 'none', borderRadius: 'var(--radius-md)', color: '#fff', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
                 >
                   <i className="ph ph-plus"></i> Adicionar Vaga
                 </button>
@@ -1402,7 +1447,7 @@ function ModalConfiguracoes({ onClose, onSaved }) {
                     <div key={vg.id} style={{ background: 'var(--bg-surface)', border: `1px solid ${vg.aberta ? 'rgba(109,40,217,0.4)' : 'var(--border-color)'}`, borderRadius: 'var(--radius-md)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <p style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{vg.ministerio}</p>
-                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>{vg.data} · {vg.horario} · {vg.vagas} vagas</p>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>{vg.vagas} vaga{vg.vagas > 1 ? 's' : ''}{vg.avisoId ? ' · avisado' : ''}</p>
                       </div>
                       <button
                         onClick={() => toggleVaga(vg.id)}
@@ -2462,7 +2507,7 @@ function ModalMuralAdmin({ onClose, onSaved }) {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
-                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>Foto (proporção 16:9 recomendada)</label>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>Foto (proporção 16:9 recomendada, ex: 1200×675px)</label>
                 {form.foto && (
                   <div style={{ width: '100%', aspectRatio: '16 / 9', borderRadius: 'var(--radius-md)', overflow: 'hidden', marginBottom: '10px', border: '1px solid var(--border-color)' }}>
                     <img src={form.foto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />

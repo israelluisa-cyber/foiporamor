@@ -167,6 +167,7 @@ function ModalCadastroMembro({ isOpen, onClose, onSuccess }) {
             <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0 }}>
               {previewFoto ? 'Toque para trocar a foto' : 'Adicionar foto de perfil (opcional)'}
             </p>
+            <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', margin: 0 }}>Foto quadrada, ex: 500×500px</p>
             {previewFoto && (
               <button type="button" onClick={() => setPreviewFoto(null)} style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '0.78rem', cursor: 'pointer', padding: 0 }}>
                 Remover foto
@@ -537,6 +538,7 @@ export default function Usuario() {
               Membro
             </span>
             <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '6px' }}>Toque na foto para alterar</p>
+            <p style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '2px' }}>Foto quadrada, ex: 500×500px</p>
           </div>
 
           <section className="glass-card" style={{ marginBottom: 'var(--spacing-md)' }}>

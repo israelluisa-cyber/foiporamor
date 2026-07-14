@@ -27,10 +27,10 @@ export default function Voluntarios() {
     const novas = { ...inscricoes };
     if (novas[vagaId]) {
       delete novas[vagaId];
-      setToast('Inscrição cancelada.');
+      setToast('Interesse cancelado.');
     } else {
       novas[vagaId] = true;
-      setToast('Você está escalado(a)! Obrigado pelo serviço.');
+      setToast('Interesse registrado! Vá até a igreja e procure a equipe. Obrigado pelo coração de servir.');
     }
     setInscricoes(novas);
     localStorage.setItem(INSCRICOES_KEY, JSON.stringify(novas));
@@ -81,12 +81,10 @@ export default function Voluntarios() {
                   return (
                     <div key={vaga.id} style={{ background: 'var(--bg-surface-elevated)', borderRadius: 'var(--radius-md)', padding: 'var(--spacing-md)', marginBottom: idx < vagasMin.length - 1 ? '8px' : 0 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
-                        <div>
-                          <p style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.9rem' }}>{vaga.data}</p>
-                          <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
-                            <i className="ph ph-clock"></i> {vaga.horario}
-                          </p>
-                        </div>
+                        <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', lineHeight: 1.4 }}>
+                          <i className="ph ph-map-pin" style={{ flexShrink: 0 }}></i>
+                          Vá até a igreja e procure a equipe para se inscrever
+                        </p>
                         <span style={{
                           fontSize: '0.72rem', fontWeight: 700, padding: '4px 10px',
                           borderRadius: 'var(--radius-full)',
@@ -121,9 +119,9 @@ export default function Voluntarios() {
                         }}
                       >
                         {inscrito ? (
-                          <><i className="ph ph-check"></i> Confirmado — Cancelar</>
+                          <><i className="ph ph-check"></i> Interesse registrado — Cancelar</>
                         ) : vagasLivres > 0 ? (
-                          <><i className="ph ph-plus"></i> Quero Servir</>
+                          <><i className="ph ph-plus"></i> Tenho Interesse</>
                         ) : 'Lotado'}
                       </button>
                     </div>
