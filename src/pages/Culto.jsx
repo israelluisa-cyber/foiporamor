@@ -86,7 +86,9 @@ function ModalVisitante({ onClose }) {
     try {
       const lista = JSON.parse(localStorage.getItem('visitantes') || '[]');
       localStorage.setItem('visitantes', JSON.stringify([...lista, visita]));
-    } catch {}
+    } catch {
+      // localStorage indisponível/cheio — segue o fluxo, o registro ainda vai pro Supabase abaixo.
+    }
     saveVisitanteToSupabase(visita);
     setEnviado(true);
   };

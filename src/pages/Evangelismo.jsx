@@ -30,7 +30,7 @@ function diasAte(saida) {
 }
 
 export default function Evangelismo() {
-  const [saidas, setSaidas] = useState(loadSaidas);
+  const saidas = loadSaidas();
   const [expandido, setExpandido] = useState(null);
 
   const realizada     = saidaDeOntem(saidas);

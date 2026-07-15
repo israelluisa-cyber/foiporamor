@@ -12,16 +12,40 @@ import {
 } from '../data/supabase';
 import { hashPassword } from '../data/crypto';
 import { loadConfig, saveConfig, applyBranding, DIAS_SEMANA, formatHora } from '../data/config';
-import { loadContribuicoes, clearContribuicoes, totalContribuicoes, totalPorObra } from '../data/contribuicoes';
-import { MINISTERIOS, loadVagas, saveVagas, VAGAS_KEY } from '../data/vagas';
+import { MINISTERIOS, loadVagas, saveVagas } from '../data/vagas';
 import { loadMinisterios, saveMinisterios, ICON_OPTIONS, COLOR_PRESETS } from '../data/ministeriosData';
 import { loadGrupos, saveGrupos, GRUPO_COLOR_PRESETS } from '../data/gruposData';
 import { loadMural, saveMural } from '../data/muralData';
-import { EVANGELISMO_KEY, loadSaidas, saveSaidas, SAIDAS_DEFAULT } from '../data/evangelismo';
-import { loadTeologia, saveTeologia, TEOLOGIA_DEFAULT } from '../data/teologia';
+import { loadSaidas, saveSaidas } from '../data/evangelismo';
+import { loadTeologia, saveTeologia } from '../data/teologia';
 
 const CADASTROS_KEY = 'cadastros_pendentes';
 const ADMIN_AVISOS_KEY = 'admin_avisos';
+const PEDIDOS_ORACAO_KEY = 'pedidos_oracao';
+const PEDIDOS_ORACAO_LIDOS_KEY = 'pedidos_oracao_lidos_admin';
+
+// Monta o número pro link do WhatsApp — só adiciona o DDI do Brasil (55) se o
+// número digitado ainda não tiver um código de país (evita duplicar "5555...").
+function formatarWhatsApp(tel) {
+  const digits = (tel || '').replace(/\D/g, '');
+  return digits.startsWith('55') ? digits : `55${digits}`;
+}
+
+function loadPedidosOracao() {
+  try { return JSON.parse(localStorage.getItem(PEDIDOS_ORACAO_KEY)) || []; }
+  catch { return []; }
+}
+
+function contarPedidosOracaoNovos(pedidos) {
+  try {
+    const lidos = (JSON.parse(localStorage.getItem(PEDIDOS_ORACAO_LIDOS_KEY)) || []).map(String);
+    return pedidos.filter(p => !lidos.includes(String(p.id))).length;
+  } catch { return pedidos.length; }
+}
+
+function marcarPedidosOracaoComoLidos(pedidos) {
+  localStorage.setItem(PEDIDOS_ORACAO_LIDOS_KEY, JSON.stringify(pedidos.map(p => String(p.id))));
+}
 
 function loadCadastros() {
   try { return JSON.parse(localStorage.getItem(CADASTROS_KEY)) || []; }
@@ -666,92 +690,6 @@ function ModalGerenciarMembros({ onClose, membros, setMembros }) {
   );
 }
 
-function ModalContribuicoes({ onClose, contribs, onLimpar }) {
-  const total = totalContribuicoes(contribs);
-  const porObra = totalPorObra(contribs);
-  const totalFmt = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-
-  const handleLimpar = () => {
-    if (!confirm('Limpar todos os registros? Faça isso após conferir os dados.')) return;
-    clearContribuicoes();
-    onLimpar();
-    onClose();
-  };
-
-  return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}>
-      <div style={{ background: 'var(--bg-color)', borderRadius: 'var(--radius-lg)', width: '100%', maxWidth: '500px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.6)' }}>
-
-        <div style={{ padding: 'var(--spacing-lg)', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
-          <div>
-            <h3 style={{ margin: 0, fontFamily: 'var(--font-heading)' }}>Intenções de Contribuição</h3>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '2px 0 0' }}>Registros do app — intenção de pagamento via PIX</p>
-          </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '1.2rem' }}>
-            <i className="ph ph-x"></i>
-          </button>
-        </div>
-
-        <div style={{ flex: 1, overflowY: 'auto', padding: 'var(--spacing-lg)' }}>
-
-          {/* Total geral */}
-          <div style={{ background: 'linear-gradient(135deg, #1a0533, #3b0764)', borderRadius: 'var(--radius-md)', padding: '18px', marginBottom: 'var(--spacing-md)', textAlign: 'center' }}>
-            <p style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '1.5px', margin: '0 0 4px' }}>Total Estimado</p>
-            <p style={{ fontFamily: 'var(--font-heading)', fontSize: '2rem', fontWeight: 700, color: '#fff', margin: 0 }}>{totalFmt}</p>
-            <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.55)', margin: '4px 0 0' }}>{contribs.length} intenção{contribs.length !== 1 ? 'ões' : ''} registrada{contribs.length !== 1 ? 's' : ''}</p>
-          </div>
-
-          {/* Por obra */}
-          {Object.keys(porObra).length > 0 && (
-            <>
-              <h4 style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 'var(--spacing-sm)' }}>Por Destinação</h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: 'var(--spacing-lg)' }}>
-                {Object.entries(porObra).sort((a, b) => b[1] - a[1]).map(([nome, val]) => (
-                  <div key={nome} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'var(--bg-surface)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
-                    <span style={{ fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 500 }}>{nome}</span>
-                    <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--accent-color)' }}>{val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-
-          {/* Lista de registros */}
-          {contribs.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
-              <i className="ph ph-hand-coins" style={{ fontSize: '2.5rem', display: 'block', marginBottom: '12px' }}></i>
-              <p>Nenhuma intenção registrada ainda.</p>
-            </div>
-          ) : (
-            <>
-              <h4 style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 'var(--spacing-sm)' }}>Histórico</h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                {contribs.map(c => (
-                  <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'var(--bg-surface-elevated)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
-                    <div>
-                      <p style={{ fontSize: '0.82rem', color: 'var(--text-primary)', margin: 0, fontWeight: 500 }}>{c.tipo}</p>
-                      <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: '2px 0 0' }}>{c.data}</p>
-                    </div>
-                    <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)' }}>{c.valorFormatado}</span>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-
-        <div style={{ padding: 'var(--spacing-md) var(--spacing-lg)', borderTop: '1px solid var(--border-color)', display: 'flex', gap: '10px', flexShrink: 0 }}>
-          <button onClick={onClose} style={{ flex: 1, padding: '12px', background: 'transparent', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 600 }}>Fechar</button>
-          {contribs.length > 0 && (
-            <button onClick={handleLimpar} style={{ flex: 1, padding: '12px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 'var(--radius-md)', color: '#ef4444', cursor: 'pointer', fontWeight: 600 }}>
-              <i className="ph ph-trash"></i> Limpar Registros
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 
 /* ── Seletor de horário (Hora/Minuto) — evita o formato AM/PM do <input type="time"> */
@@ -964,7 +902,6 @@ function ModalConfiguracoes({ onClose, onSaved }) {
   const secoes = [
     { key: 'identidade', label: 'Identidade', icon: 'ph-church' },
     { key: 'visual',     label: 'Visual',     icon: 'ph-palette' },
-    { key: 'aviso',      label: 'Aviso',      icon: 'ph-megaphone' },
     { key: 'whatsapp',   label: 'WhatsApp',   icon: 'ph-whatsapp-logo' },
     { key: 'cultos',     label: 'Cultos',     icon: 'ph-calendar' },
     { key: 'obras',      label: 'Obras',      icon: 'ph-hands-heart' },
@@ -1085,20 +1022,6 @@ function ModalConfiguracoes({ onClose, onSaved }) {
                 <input type="url" value={cfg.facebookLink || ''} onChange={e => set('facebookLink', e.target.value)} style={inputSt} placeholder="https://www.facebook.com/suaigreja" />
               </div>
               <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Deixe os links de rede social vazios para ocultar o ícone na Home.</p>
-            </div>
-          )}
-
-          {/* AVISO */}
-          {secao === 'aviso' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0 }}>Texto exibido no banner de aviso na parte inferior da Home.</p>
-              <textarea
-                value={cfg.avisoHome || ''}
-                onChange={e => set('avisoHome', e.target.value)}
-                style={{ ...inputSt, resize: 'none', minHeight: '120px', lineHeight: 1.6 }}
-                placeholder="Reunião de líderes na próxima segunda-feira às 19h30."
-              />
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Deixe vazio para ocultar o aviso na Home.</p>
             </div>
           )}
 
@@ -1508,11 +1431,6 @@ function ModalAconselhamento({ onClose, pedidos, setPedidos }) {
     deleteAconselhamentoFromSupabase(id);
   };
 
-  const formatarWa = (tel) => {
-    const digits = tel.replace(/\D/g, '');
-    return digits.startsWith('55') ? digits : `55${digits}`;
-  };
-
   const CONTATO_ICON = {
     'WhatsApp': 'ph-whatsapp-logo',
     'Ligação telefônica': 'ph-phone',
@@ -1583,7 +1501,7 @@ function ModalAconselhamento({ onClose, pedidos, setPedidos }) {
                           <span style={{ fontSize: '0.95rem', color: 'var(--text-primary)', fontWeight: 700, letterSpacing: '0.5px', flex: 1 }}>{p.telefone}</span>
                           {p.contato === 'WhatsApp' && (
                             <a
-                              href={`https://wa.me/${formatarWa(p.telefone)}?text=${encodeURIComponent(`Olá ${p.nome || ''}! Sou pastor(a) da ${config.nomeIgreja}. Recebi seu pedido de aconselhamento sobre "${p.tipo}" e gostaria de conversar com você. Quando teria um bom momento?`)}`}
+                              href={`https://wa.me/${formatarWhatsApp(p.telefone)}?text=${encodeURIComponent(`Olá ${p.nome || ''}! Sou pastor(a) da ${config.nomeIgreja}. Recebi seu pedido de aconselhamento sobre "${p.tipo}" e gostaria de conversar com você. Quando teria um bom momento?`)}`}
                               target="_blank" rel="noopener noreferrer"
                               style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 12px', background: '#25D366', color: '#fff', borderRadius: 'var(--radius-md)', fontSize: '0.78rem', fontWeight: 700, textDecoration: 'none', flexShrink: 0 }}
                             >
@@ -1861,11 +1779,6 @@ function ModalITEAP({ onClose, onSaved }) {
             <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Descrição</label>
             <input style={inputSt} value={data.descricao} onChange={set('descricao')} placeholder="Ex: Instituto Teológico Amor e Palavra" />
           </div>
-          <div>
-            <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Alunos Matriculados</label>
-            <input style={inputSt} type="number" min="0" value={data.alunosMatriculados} onChange={e => setData(d => ({ ...d, alunosMatriculados: parseInt(e.target.value) || 0 }))} placeholder="Ex: 128" />
-          </div>
-
           {/* Módulo atual e progresso */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
             <div>
@@ -2116,6 +2029,7 @@ function ModalMinisteriosAdmin({ onClose, onSaved, membros }) {
     const novaLista = editando ? lista.map(m => m.id === editando ? item : m) : [...lista, item];
     setLista(novaLista);
     saveMinisterios(novaLista);
+    onSaved();
     setTela('lista');
   };
 
@@ -2124,6 +2038,7 @@ function ModalMinisteriosAdmin({ onClose, onSaved, membros }) {
     const novaLista = lista.filter(m => m.id !== id);
     setLista(novaLista);
     saveMinisterios(novaLista);
+    onSaved();
   };
 
   const toggleLider = (membro) => {
@@ -2402,6 +2317,8 @@ function ModalGruposAdmin({ onClose, onSaved }) {
 }
 
 /* ── Modal Mural de Fotos ──────────────────────────────────────── */
+const MURAL_MAX = 10;
+
 function ModalMuralAdmin({ onClose, onSaved }) {
   const [lista, setLista] = useState(loadMural);
   const [tela, setTela] = useState('lista'); // lista | form
@@ -2477,11 +2394,17 @@ function ModalMuralAdmin({ onClose, onSaved }) {
           {tela === 'lista' ? (
             <>
               <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '0 0 16px' }}>
-                Fotos de eventos do ministério (evangelismo, congressos, cultos especiais...) exibidas em carrossel na Home.
+                Fotos de eventos do ministério (evangelismo, congressos, cultos especiais...) exibidas em carrossel na Home. {lista.length}/{MURAL_MAX} fotos.
               </p>
-              <button onClick={abrirNovo} style={{ width: '100%', padding: '12px', background: 'rgba(255,255,255,0.06)', border: '1px dashed var(--border-color)', borderRadius: 'var(--radius-md)', color: 'var(--accent-color)', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '16px' }}>
-                <i className="ph ph-plus-circle"></i> Adicionar Foto
-              </button>
+              {lista.length < MURAL_MAX ? (
+                <button onClick={abrirNovo} style={{ width: '100%', padding: '12px', background: 'rgba(255,255,255,0.06)', border: '1px dashed var(--border-color)', borderRadius: 'var(--radius-md)', color: 'var(--accent-color)', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '16px' }}>
+                  <i className="ph ph-plus-circle"></i> Adicionar Foto
+                </button>
+              ) : (
+                <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textAlign: 'center', padding: '12px', border: '1px dashed var(--border-color)', borderRadius: 'var(--radius-md)', marginBottom: '16px' }}>
+                  Limite de {MURAL_MAX} fotos atingido. Exclua uma foto para adicionar outra.
+                </p>
+              )}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {lista.map(m => (
                   <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)' }}>
@@ -2537,23 +2460,28 @@ function ModalMuralAdmin({ onClose, onSaved }) {
 }
 
 /* ── Modal Pedidos de Oração ─────────────────────────────────────── */
-function ModalPedidosOracao({ onClose }) {
-  const [pedidos, setPedidos] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('pedidos_oracao')) || []; }
-    catch { return []; }
-  });
+function ModalPedidosOracao({ onClose, onLido }) {
+  const [pedidos, setPedidos] = useState(loadPedidosOracao);
+
+  // Roda só uma vez, ao abrir o modal: marca os pedidos carregados nesse momento
+  // como lidos. Não deve repetir a cada re-render, por isso a lista fica vazia.
+  useEffect(() => {
+    marcarPedidosOracaoComoLidos(pedidos);
+    onLido();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleExcluir = (id) => {
     const atualizados = pedidos.filter(p => p.id !== id && p.id !== String(id));
     setPedidos(atualizados);
-    localStorage.setItem('pedidos_oracao', JSON.stringify(atualizados));
+    localStorage.setItem(PEDIDOS_ORACAO_KEY, JSON.stringify(atualizados));
     deletePedidoOracaoFromSupabase(id);
   };
 
   const handleLimparTodos = () => {
     if (!confirm('Excluir todos os pedidos de oração?')) return;
     setPedidos([]);
-    localStorage.setItem('pedidos_oracao', JSON.stringify([]));
+    localStorage.setItem(PEDIDOS_ORACAO_KEY, JSON.stringify([]));
     clearPedidosOracaoFromSupabase();
   };
 
@@ -2596,7 +2524,7 @@ function ModalPedidosOracao({ onClose }) {
                   </div>
                   {p.celular && (
                     <a
-                      href={`https://wa.me/55${p.celular.replace(/\D/g, '')}`}
+                      href={`https://wa.me/${formatarWhatsApp(p.celular)}`}
                       target="_blank" rel="noreferrer"
                       style={{ fontSize: '0.75rem', color: '#22c55e', display: 'inline-flex', alignItems: 'center', gap: '4px', marginBottom: '6px', textDecoration: 'none' }}
                     >
@@ -2620,19 +2548,55 @@ function ModalPedidosOracao({ onClose }) {
   );
 }
 
+function AdminActionTile({ icon, label, badge, badgeColor, activeBorderColor, danger, onClick }) {
+  const hasBadge = badge > 0;
+  return (
+    <button
+      onClick={onClick}
+      className="event-list-item"
+      style={{
+        border: `1px solid ${danger ? 'rgba(239,68,68,0.3)' : (hasBadge && activeBorderColor) ? activeBorderColor : 'var(--border-color)'}`,
+        borderRadius: 'var(--radius-md)',
+        padding: 'var(--spacing-md) var(--spacing-xs)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '8px',
+        background: 'none',
+        cursor: 'pointer',
+        color: danger ? '#ef4444' : 'var(--text-primary)',
+        width: '100%',
+        position: 'relative',
+        textAlign: 'center',
+      }}
+    >
+      {hasBadge && (
+        <div style={{
+          position: 'absolute', top: '6px', right: '6px',
+          background: badgeColor || 'var(--accent-color)', color: badgeColor ? '#fff' : 'var(--bg-color)',
+          borderRadius: '50%', minWidth: '20px', height: '20px', padding: '0 4px',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontWeight: 700, fontSize: '0.72rem',
+        }}>
+          {badge}
+        </div>
+      )}
+      <i className={`ph ${icon}`} style={{ fontSize: '1.6rem', color: danger ? '#ef4444' : 'var(--accent-color)' }}></i>
+      <span style={{ fontSize: '0.72rem', fontWeight: 500, lineHeight: 1.2 }}>{label}</span>
+    </button>
+  );
+}
+
 export default function Admin() {
   const [isAuthenticated, setIsAuthenticated] = useState(
     () => sessionStorage.getItem('adminAuth') === 'true'
   );
   const [membros, setMembros] = useState(loadMembros);
-  const [teologia, setTeologia] = useState(loadTeologia);
   const [cadastros, setCadastros] = useState(loadCadastros);
-  const [contribs, setContribs] = useState(loadContribuicoes);
   const [modalMembros, setModalMembros] = useState(false);
   const [modalCadastros, setModalCadastros] = useState(false);
   const [modalComunicado, setModalComunicado] = useState(false);
   const [modalConfig, setModalConfig] = useState(false);
-  const [modalContribs, setModalContribs] = useState(false);
   const [modalAconselhamento, setModalAconselhamento] = useState(false);
   const [modalEvangelismo, setModalEvangelismo]   = useState(false);
   const [modalITEAP, setModalITEAP]               = useState(false);
@@ -2641,12 +2605,14 @@ const [modalMinisterios, setModalMinisterios]   = useState(false);
   const [modalMural, setModalMural]               = useState(false);
   const [modalOracao, setModalOracao]             = useState(false);
   const [aconselhamentos, setAconselhamentos] = useState(loadAconselhamentos);
+  const [pedidosOracao, setPedidosOracao] = useState(loadPedidosOracao);
   const [toast, setToast] = useState('');
 
-  const totalNum = totalContribuicoes(contribs);
-  const totalFmt = totalNum.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-
   const pendentes = cadastros.filter(c => c.status === 'pendente').length;
+  // O segundo item (setLidosVersion) força um re-render quando marcarPedidosOracaoComoLidos
+  // atualiza o localStorage — o array pedidosOracao em si não muda nesse momento.
+  const [, setLidosVersion] = useState(0);
+  const pedidosOracaoNovos = contarPedidosOracaoNovos(pedidosOracao);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -2660,9 +2626,8 @@ const [modalMinisterios, setModalMinisterios]   = useState(false);
       syncFromSupabase().then(() => {
         setMembros(loadMembros());
         setCadastros(loadCadastros());
-        setContribs(loadContribuicoes());
-        setTeologia(loadTeologia());
         setAconselhamentos(loadAconselhamentos());
+        setPedidosOracao(loadPedidosOracao());
       }).finally(() => { clearTimeout(travaDeSeguranca); liberar(); });
     };
     atualizar();
@@ -2685,201 +2650,38 @@ const [modalMinisterios, setModalMinisterios]   = useState(false);
       <Header admin={true} />
 
       <main style={{ paddingTop: 'var(--spacing-md)' }}>
-        <h3 className="section-title" style={{ marginTop: 0 }}>Visão Geral (Este Mês)</h3>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--spacing-sm)', marginBottom: 'var(--spacing-lg)' }}>
-          <div style={{ background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: 'var(--spacing-md)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <i className="ph ph-users" style={{ color: 'var(--text-secondary)', fontSize: '1.2rem' }}></i>
-            <span style={{ fontFamily: 'var(--font-heading)', fontSize: '1.8rem', fontWeight: 700, color: 'var(--accent-color)' }}>{membros.length}</span>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600 }}>Membros</span>
-          </div>
-          <div style={{ background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: 'var(--spacing-md)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <i className="ph ph-student" style={{ color: 'var(--text-secondary)', fontSize: '1.2rem' }}></i>
-            <span style={{ fontFamily: 'var(--font-heading)', fontSize: '1.8rem', fontWeight: 700, color: 'var(--accent-color)' }}>{teologia.alunosMatriculados}</span>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600 }}>Alunos (Teologia)</span>
-          </div>
-        </div>
-
-        <h3 className="section-title">Intenções de Contribuição</h3>
-        <section className="glass-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--spacing-md)' }}>
-            <div>
-              <span style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: '1.5rem' }}>{totalFmt}</span>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '2px 0 0' }}>Valor estimado registrado no app</p>
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <span style={{ color: 'var(--accent-color)', fontWeight: 700, fontSize: '1.5rem' }}>{contribs.length}</span>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '2px 0 0' }}>Intenção{contribs.length !== 1 ? 'ões' : ''}</p>
-            </div>
-          </div>
-          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 'var(--spacing-md)', padding: '8px', background: 'rgba(255,255,255,0.03)', borderRadius: 'var(--radius-sm)', borderLeft: '2px solid var(--border-color)' }}>
-            <i className="ph ph-info"></i> Estes dados refletem intenções de pagamento via PIX geradas no app — não confirmações bancárias.
-          </p>
-          <button
-            onClick={() => setModalContribs(true)}
-            className="primary-btn"
-            style={{ padding: '10px', fontSize: '0.9rem', background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-primary)', width: '100%', display: 'flex', justifyContent: 'center', gap: '8px' }}
-          >
-            <i className="ph ph-list-magnifying-glass"></i> Ver Detalhes e Histórico
-          </button>
-        </section>
-
-        <h3 className="section-title">Ações Administrativas</h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <h3 className="section-title" style={{ marginTop: 0 }}>Ações Administrativas</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: 'var(--spacing-md)' }}>
+          <AdminActionTile icon="ph-user-gear" label="Membros" onClick={() => setModalMembros(true)} />
+          <AdminActionTile icon="ph-megaphone" label="Comunicado" onClick={() => setModalComunicado(true)} />
+          <AdminActionTile icon="ph-user-plus" label="Cadastros" badge={pendentes} onClick={() => setModalCadastros(true)} />
+          <AdminActionTile
+            icon="ph-chat-circle-dots"
+            label="Aconselhamento"
+            badge={aconselhamentos.filter(a => !a.atendido).length}
+            badgeColor="#6d28d9"
+            activeBorderColor="rgba(109,40,217,0.4)"
+            onClick={() => setModalAconselhamento(true)}
+          />
+          <AdminActionTile icon="ph-gear" label="Configurações" onClick={() => setModalConfig(true)} />
+          <AdminActionTile icon="ph-footprints" label="Evangelismo" onClick={() => setModalEvangelismo(true)} />
+          <AdminActionTile icon="ph-graduation-cap" label="ITEAP" onClick={() => setModalITEAP(true)} />
+          <AdminActionTile icon="ph-hands-praying" label="Oração" badge={pedidosOracaoNovos} onClick={() => setModalOracao(true)} />
+          <AdminActionTile icon="ph-users-three" label="Ministérios" onClick={() => setModalMinisterios(true)} />
+          <AdminActionTile icon="ph-user-circle-gear" label="Grupos" onClick={() => setModalGrupos(true)} />
+          <AdminActionTile icon="ph-images-square" label="Mural" onClick={() => setModalMural(true)} />
           <button
             onClick={() => setModalMembros(true)}
             className="event-list-item"
-            style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: 'var(--spacing-md)', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', background: 'none', cursor: 'pointer', color: 'var(--text-primary)', width: '100%' }}
+            style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: 'var(--spacing-md) var(--spacing-xs)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'none', cursor: 'pointer', color: 'var(--text-primary)', width: '100%', textAlign: 'center' }}
           >
-            <i className="ph ph-user-gear" style={{ fontSize: '1.5rem', color: 'var(--accent-color)' }}></i>
-            <div style={{ flex: 1 }}>
-              <h4 style={{ fontWeight: 500 }}>Gerenciar Membros</h4>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Adicionar, editar e ajustar fotos</p>
-            </div>
-            <i className="ph ph-caret-right"></i>
+            <i className="ph ph-users" style={{ fontSize: '1.4rem', color: 'var(--accent-color)' }}></i>
+            <span style={{ fontFamily: 'var(--font-heading)', fontSize: '1.3rem', fontWeight: 700, color: 'var(--text-primary)' }}>{membros.length}</span>
+            <span style={{ fontSize: '0.68rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Membros</span>
           </button>
-          <button
-            onClick={() => setModalComunicado(true)}
-            className="event-list-item"
-            style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: 'var(--spacing-md)', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', background: 'none', cursor: 'pointer', color: 'var(--text-primary)', width: '100%' }}
-          >
-            <i className="ph ph-megaphone" style={{ fontSize: '1.5rem', color: 'var(--accent-color)' }}></i>
-            <div style={{ flex: 1 }}>
-              <h4 style={{ fontWeight: 500 }}>Enviar Comunicado</h4>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Publicar aviso para todos os membros</p>
-            </div>
-            <i className="ph ph-caret-right"></i>
-          </button>
-          <button
-            onClick={() => setModalCadastros(true)}
-            className="event-list-item"
-            style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: 'var(--spacing-md)', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', background: 'none', cursor: 'pointer', color: 'var(--text-primary)', width: '100%', position: 'relative' }}
-          >
-            <i className="ph ph-user-plus" style={{ fontSize: '1.5rem', color: 'var(--accent-color)' }}></i>
-            <div style={{ flex: 1 }}>
-              <h4 style={{ fontWeight: 500 }}>Aprovar Novos Cadastros</h4>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{pendentes} pendente{pendentes !== 1 ? 's' : ''}</p>
-            </div>
-            {pendentes > 0 && (
-              <div style={{
-                background: 'var(--accent-color)', color: 'var(--bg-color)',
-                borderRadius: '50%', width: '24px', height: '24px',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontWeight: 700, fontSize: '0.85rem',
-              }}>
-                {pendentes}
-              </div>
-            )}
-            <i className="ph ph-caret-right"></i>
-          </button>
-          <button
-            onClick={() => setModalAconselhamento(true)}
-            className="event-list-item"
-            style={{ border: `1px solid ${aconselhamentos.filter(a => !a.atendido).length > 0 ? 'rgba(109,40,217,0.4)' : 'var(--border-color)'}`, borderRadius: 'var(--radius-md)', padding: 'var(--spacing-md)', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', background: 'none', cursor: 'pointer', color: 'var(--text-primary)', width: '100%', position: 'relative' }}
-          >
-            <i className="ph ph-chat-circle-dots" style={{ fontSize: '1.5rem', color: 'var(--accent-color)' }}></i>
-            <div style={{ flex: 1 }}>
-              <h4 style={{ fontWeight: 500 }}>Pedidos de Aconselhamento</h4>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{aconselhamentos.filter(a => !a.atendido).length} pendente{aconselhamentos.filter(a => !a.atendido).length !== 1 ? 's' : ''} · {aconselhamentos.length} no total</p>
-            </div>
-            {aconselhamentos.filter(a => !a.atendido).length > 0 && (
-              <div style={{ background: '#6d28d9', color: '#fff', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.85rem', flexShrink: 0 }}>
-                {aconselhamentos.filter(a => !a.atendido).length}
-              </div>
-            )}
-            <i className="ph ph-caret-right"></i>
-          </button>
-          <button
-            onClick={() => setModalConfig(true)}
-            className="event-list-item"
-            style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: 'var(--spacing-md)', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', background: 'none', cursor: 'pointer', color: 'var(--text-primary)', width: '100%' }}
-          >
-            <i className="ph ph-gear" style={{ fontSize: '1.5rem', color: 'var(--accent-color)' }}></i>
-            <div style={{ flex: 1 }}>
-              <h4 style={{ fontWeight: 500 }}>Configurações da Igreja</h4>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Imagem, cultos, horários, endereço</p>
-            </div>
-            <i className="ph ph-caret-right"></i>
-          </button>
+        </div>
 
-          <button
-            onClick={() => setModalEvangelismo(true)}
-            className="event-list-item"
-            style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: 'var(--spacing-md)', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', background: 'none', cursor: 'pointer', color: 'var(--text-primary)', width: '100%' }}
-          >
-            <i className="ph ph-megaphone" style={{ fontSize: '1.5rem', color: 'var(--accent-color)' }}></i>
-            <div style={{ flex: 1 }}>
-              <h4 style={{ fontWeight: 500 }}>Saídas de Evangelismo</h4>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Adicionar e remover saídas da agenda</p>
-            </div>
-            <i className="ph ph-caret-right"></i>
-          </button>
-
-          <button
-            onClick={() => setModalITEAP(true)}
-            className="event-list-item"
-            style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: 'var(--spacing-md)', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', background: 'none', cursor: 'pointer', color: 'var(--text-primary)', width: '100%' }}
-          >
-            <i className="ph ph-graduation-cap" style={{ fontSize: '1.5rem', color: 'var(--accent-color)' }}></i>
-            <div style={{ flex: 1 }}>
-              <h4 style={{ fontWeight: 500 }}>ITEAP — Teologia</h4>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Professor, módulos e progresso do curso</p>
-            </div>
-            <i className="ph ph-caret-right"></i>
-          </button>
-
-<button
-            onClick={() => setModalOracao(true)}
-            className="event-list-item"
-            style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: 'var(--spacing-md)', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', background: 'none', cursor: 'pointer', color: 'var(--text-primary)', width: '100%' }}
-          >
-            <i className="ph ph-hands-praying" style={{ fontSize: '1.5rem', color: 'var(--accent-color)' }}></i>
-            <div style={{ flex: 1 }}>
-              <h4 style={{ fontWeight: 500 }}>Pedidos de Oração</h4>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Visualizar e excluir pedidos inadequados</p>
-            </div>
-            <i className="ph ph-caret-right"></i>
-          </button>
-
-          <button
-            onClick={() => setModalMinisterios(true)}
-            className="event-list-item"
-            style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: 'var(--spacing-md)', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', background: 'none', cursor: 'pointer', color: 'var(--text-primary)', width: '100%' }}
-          >
-            <i className="ph ph-users-three" style={{ fontSize: '1.5rem', color: 'var(--accent-color)' }}></i>
-            <div style={{ flex: 1 }}>
-              <h4 style={{ fontWeight: 500 }}>Ministérios da Igreja</h4>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Adicionar, editar e definir líderes</p>
-            </div>
-            <i className="ph ph-caret-right"></i>
-          </button>
-
-          <button
-            onClick={() => setModalGrupos(true)}
-            className="event-list-item"
-            style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: 'var(--spacing-md)', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', background: 'none', cursor: 'pointer', color: 'var(--text-primary)', width: '100%' }}
-          >
-            <i className="ph ph-user-circle-gear" style={{ fontSize: '1.5rem', color: 'var(--accent-color)' }}></i>
-            <div style={{ flex: 1 }}>
-              <h4 style={{ fontWeight: 500 }}>Grupos & Ministérios</h4>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Editar a lista da página Grupos</p>
-            </div>
-            <i className="ph ph-caret-right"></i>
-          </button>
-
-          <button
-            onClick={() => setModalMural(true)}
-            className="event-list-item"
-            style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: 'var(--spacing-md)', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', background: 'none', cursor: 'pointer', color: 'var(--text-primary)', width: '100%' }}
-          >
-            <i className="ph ph-images-square" style={{ fontSize: '1.5rem', color: 'var(--accent-color)' }}></i>
-            <div style={{ flex: 1 }}>
-              <h4 style={{ fontWeight: 500 }}>Mural de Fotos</h4>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Fotos do carrossel de eventos na Home</p>
-            </div>
-            <i className="ph ph-caret-right"></i>
-          </button>
-
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {/* QR Code do App */}
           <div style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: 'var(--spacing-md)', background: 'var(--bg-surface-elevated)', textAlign: 'center' }}>
             <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '12px' }}>
@@ -2948,13 +2750,6 @@ const [modalMinisterios, setModalMinisterios]   = useState(false);
         />
       )}
 
-      {modalContribs && (
-        <ModalContribuicoes
-          onClose={() => setModalContribs(false)}
-          contribs={contribs}
-          onLimpar={() => setContribs([])}
-        />
-      )}
 
       {modalAconselhamento && (
         <ModalAconselhamento onClose={() => setModalAconselhamento(false)} pedidos={aconselhamentos} setPedidos={setAconselhamentos} />
@@ -2970,7 +2765,7 @@ const [modalMinisterios, setModalMinisterios]   = useState(false);
       {modalITEAP && (
         <ModalITEAP
           onClose={() => setModalITEAP(false)}
-          onSaved={() => { setTeologia(loadTeologia()); setToast('ITEAP atualizado com sucesso!'); }}
+          onSaved={() => setToast('ITEAP atualizado com sucesso!')}
         />
       )}
 
@@ -2996,7 +2791,7 @@ const [modalMinisterios, setModalMinisterios]   = useState(false);
         />
       )}
 
-      {modalOracao && <ModalPedidosOracao onClose={() => setModalOracao(false)} />}
+      {modalOracao && <ModalPedidosOracao onClose={() => setModalOracao(false)} onLido={() => setLidosVersion(v => v + 1)} />}
 
       {toast && <Toast message={toast} icon="ph-check-circle" type="success" onClose={() => setToast('')} duration={4000} />}
     </div>

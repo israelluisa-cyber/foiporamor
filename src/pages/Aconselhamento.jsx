@@ -22,6 +22,14 @@ function loadPedidos() {
   catch { return []; }
 }
 
+function Label({ txt }) {
+  return (
+    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.5px', display: 'block', marginBottom: '6px' }}>
+      {txt}
+    </label>
+  );
+}
+
 export default function Aconselhamento() {
   const logado = !!getSession();
   const cfg = loadConfig();
@@ -97,12 +105,6 @@ export default function Aconselhamento() {
 
   const focusStyle = e => e.target.style.borderColor = 'rgba(255,255,255,0.3)';
   const blurStyle  = e => e.target.style.borderColor = 'var(--border-color)';
-
-  const Label = ({ txt }) => (
-    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.5px', display: 'block', marginBottom: '6px' }}>
-      {txt}
-    </label>
-  );
 
   if (enviado) {
     const msgWa = encodeURIComponent(

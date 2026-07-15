@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import Header from '../components/Header';
 import { loadMembros } from '../data/membros';
 import { loadConfig, DIAS_ABBR, formatHora, cultoIcon } from '../data/config';
 import { loadSaidas } from '../data/evangelismo';
 import { loadMural } from '../data/muralData';
+import { loadAvisosValidos, TIPO_CORES } from '../data/avisos';
 
 // EVENTOS_SEMANA é derivado dinamicamente do config no componente
 
@@ -21,13 +22,6 @@ const STORAGE_KEY_PEDIDOS = 'pedidos_oracao';
 // true só na primeira vez que a Home monta nesta sessão do app — evita
 // que a animação de entrada repita toda vez que o usuário navega de volta pra Home
 let homeEntranceShown = false;
-
-// Pedidos mock (IDs string = antigos = sempre intercedidos)
-const MOCK_PREVIEW = [
-  { id: 'm1', nome: 'Maria L.',    texto: 'Peço oração pela saúde da minha mãe que está internada.' },
-  { id: 'm2', nome: 'Roberto S.',  texto: 'Oração pela minha família, estamos passando por dificuldades financeiras.' },
-  { id: 'm3', nome: 'Patrícia M.', texto: 'Meu filho está longe de Deus. Não desisto de orar por ele.' },
-];
 
 function timestampUltimoCulto(cultos) {
   const CULTO_ORACAO = cultos.find(c => c.diaSemana === 4);
@@ -47,22 +41,17 @@ function timestampUltimoCulto(cultos) {
 // Pedido foi intercedido se foi criado ANTES do último culto terminar
 function foiIntercedido(pedido, ultimoCultoMs) {
   if (!ultimoCultoMs) return false;
-  if (typeof pedido.id === 'string') return true; // mock = antigo
   return pedido.id < ultimoCultoMs;
 }
 
-// Carrega pedidos públicos do localStorage + mocks, limita a 3
+// Carrega pedidos públicos do localStorage, limita a 3
 function loadPreviewPedidos() {
   try {
     const user = JSON.parse(localStorage.getItem(STORAGE_KEY_PEDIDOS)) || [];
     const publicos = user.filter(p => !p.privado);
-    const todos = [
-      ...publicos.map(p => ({ id: p.id, nome: p.nome || 'Anônimo', texto: p.texto })),
-      ...MOCK_PREVIEW,
-    ];
-    return todos.slice(0, 3);
+    return publicos.map(p => ({ id: p.id, nome: p.nome || 'Anônimo', texto: p.texto })).slice(0, 3);
   } catch {
-    return MOCK_PREVIEW.slice(0, 3);
+    return [];
   }
 }
 
@@ -225,7 +214,7 @@ export default function Home() {
       diaNome: DIAS_SEMANA_NOME[c.diaSemana],
       periodo: `${formatHora(c.hora, c.min)} às ${formatHora(c.horaFim, c.minFim)}`,
     }));
-  const aviso    = config.avisoHome;
+  const avisosAtivos = loadAvisosValidos();
   const heroBg         = config.heroBg || '/hero_bg.png';
   const heroBgPosition = config.heroBgPosition || 'center';
 
@@ -284,10 +273,59 @@ export default function Home() {
     acessoRapidoRef.current?.scrollBy({ left: direcao * 220, behavior: 'smooth' });
   };
 
+  // Ticker de avisos — quando tem mais de um, troca pro próximo a cada 5s.
+  // Quando só tem um, fica sempre nele (não tem pra onde trocar).
+  const [avisoIndex, setAvisoIndex] = useState(0);
+
+  const avisoAtual = avisosAtivos[avisoIndex % avisosAtivos.length] || null;
+  const avisoTickerTexto = avisoAtual?.texto || '';
+  const avisoTipoCor = TIPO_CORES[avisoAtual?.tipo] || TIPO_CORES.Informativo;
+
+  // Mede a largura real do texto e do bloco pra calcular um percurso exato:
+  // entra pela direita, sai pela esquerda e some por 3s até repetir.
+  const avisoTickerWrapRef  = useRef(null);
+  const avisoTickerTrackRef = useRef(null);
+  const [avisoTickerMedidas, setAvisoTickerMedidas] = useState({ largura: 0, texto: 0 });
+
+  useLayoutEffect(() => {
+    const medir = () => {
+      if (avisoTickerWrapRef.current && avisoTickerTrackRef.current) {
+        setAvisoTickerMedidas({
+          largura: avisoTickerWrapRef.current.offsetWidth,
+          texto:   avisoTickerTrackRef.current.offsetWidth,
+        });
+      }
+    };
+    medir();
+    window.addEventListener('resize', medir);
+    return () => window.removeEventListener('resize', medir);
+  }, [avisoTickerTexto]);
+
+  const AVISO_TICKER_PAUSA_S = 3;
+  const AVISO_TICKER_VELOCIDADE_PX_S = 90;
+  const avisoTickerPercurso = avisoTickerMedidas.largura + avisoTickerMedidas.texto;
+  const avisoTickerDuracaoScroll = avisoTickerMedidas.texto
+    ? Math.max(3, avisoTickerPercurso / AVISO_TICKER_VELOCIDADE_PX_S)
+    : 3;
+  const avisoTickerDuracaoTotal = avisoTickerDuracaoScroll + AVISO_TICKER_PAUSA_S;
+  const avisoTickerScrollPct = (avisoTickerDuracaoScroll / avisoTickerDuracaoTotal) * 100;
+
+  // Só passa pro próximo aviso depois que a mensagem atual termina o ciclo completo
+  // (rolagem + pausa) — um timer fixo cortava mensagens longas no meio do percurso.
+  useEffect(() => {
+    if (avisosAtivos.length <= 1) return;
+    const timer = setTimeout(() => {
+      setAvisoIndex(i => (i + 1) % avisosAtivos.length);
+    }, avisoTickerDuracaoTotal * 1000);
+    return () => clearTimeout(timer);
+  }, [avisoTickerDuracaoTotal, avisosAtivos.length]);
+
   const [aoVivo, setAoVivo]                   = useState(() => cultoEmAndamento(cultosVisiveis));
   const [terminouHoje, setTerminouHoje]       = useState(() => cultoTerminouHoje(cultosVisiveis));
   const [proximoInfo, setProximoInfo]         = useState(() => proximoCulto(cultosVisiveis));
 
+  // cultosVisiveis é um array novo a cada render (vem de um .filter()) — colocá-lo
+  // aqui recriaria o interval a cada render em vez de manter só um rodando por segundo.
   useEffect(() => {
     const tick = () => {
       setAoVivo(cultoEmAndamento(cultosVisiveis));
@@ -296,6 +334,7 @@ export default function Home() {
     };
     const timer = setInterval(tick, 1000);
     return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Mural de fotos do ministério — troca o fundo do hero a cada 5s, entrada da direita
@@ -567,6 +606,34 @@ export default function Home() {
             from { opacity: 1; transform: translateX(0); }
             to   { opacity: 0; transform: translateX(-40px); }
           }
+          .aviso-ticker-mask {
+            display: block;
+            width: 100%;
+            overflow: hidden;
+            -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+            mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+          }
+          .aviso-ticker-track {
+            display: inline-block;
+            white-space: nowrap;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+            animation-name: avisoTickerScroll;
+            animation-timing-function: linear;
+            animation-iteration-count: infinite;
+          }
+          @keyframes avisoTickerScroll {
+            0% { transform: translateX(${avisoTickerMedidas.largura}px); }
+            ${avisoTickerScrollPct}% { transform: translateX(-${avisoTickerMedidas.texto}px); }
+            100% { transform: translateX(-${avisoTickerMedidas.texto}px); }
+          }
+          .aviso-tipo-piscando {
+            animation: avisoTipoPiscar 1s ease-in-out infinite;
+          }
+          @keyframes avisoTipoPiscar {
+            0%, 100% { opacity: 1; }
+            50%      { opacity: 0.35; }
+          }
         `}</style>
 
         {/* Acesso Rápido — scroll horizontal no celular, distribuído em telas maiores */}
@@ -715,19 +782,39 @@ export default function Home() {
               </div>
             );
           })}
+          {pedidosPreview.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '24px 16px', color: 'var(--text-muted)' }}>
+              <i className="ph ph-hands-praying" style={{ fontSize: '1.8rem', display: 'block', marginBottom: '8px' }}></i>
+              <p style={{ fontSize: '0.85rem', margin: 0 }}>Nenhum pedido público no momento.</p>
+            </div>
+          )}
         </section>
 
-        {/* Aviso da Igreja */}
-        {aviso && (
-          <section className="glass-card" style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', padding: 'var(--spacing-md)' }}>
+        {/* Aviso da Igreja — ticker com os avisos válidos no momento, puxados da mesma lista da tela /avisos */}
+        {avisosAtivos.length > 0 && (
+          <Link to="/avisos" className="glass-card" style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', padding: 'var(--spacing-md)', textDecoration: 'none', color: 'inherit' }}>
             <i className="ph ph-megaphone" style={{ fontSize: '1.5rem', color: 'var(--accent-color)', flexShrink: 0 }}></i>
-            <div>
-              <p style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>
-                AVISO DA IGREJA
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 4px' }}>
+                AVISOS DA IGREJA
               </p>
-              <p style={{ fontSize: '0.9rem', color: 'var(--text-primary)', margin: 0 }}>{aviso}</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {avisoAtual && (
+                  <span
+                    className={avisoAtual.tipo === 'Urgente' ? 'aviso-tipo-piscando' : undefined}
+                    style={{ flexShrink: 0, fontSize: '0.65rem', fontWeight: 700, color: avisoTipoCor.text, background: avisoTipoCor.bg, border: `1px solid ${avisoTipoCor.border}`, borderRadius: 'var(--radius-full)', padding: '1px 8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}
+                  >
+                    {avisoAtual.tipo}
+                  </span>
+                )}
+                <div className="aviso-ticker-mask" ref={avisoTickerWrapRef} style={{ flex: 1, minWidth: 0 }}>
+                  <div key={avisoIndex} ref={avisoTickerTrackRef} className="aviso-ticker-track" style={{ animationDuration: `${avisoTickerDuracaoTotal}s` }}>
+                    {avisoTickerTexto}
+                  </div>
+                </div>
+              </div>
             </div>
-          </section>
+          </Link>
         )}
 
         {/* Localização */}

@@ -1,72 +1,21 @@
 import { useState, useEffect } from 'react';
 import Header from '../components/Header';
 import { loadConfig } from '../data/config';
-import { deleteAvisoFromSupabase } from '../data/supabase';
-
-const READ_KEY = 'avisos_lidos';
-const ADMIN_AVISOS_KEY = 'admin_avisos';
-
-function loadAdminAvisos() {
-  try { return JSON.parse(localStorage.getItem(ADMIN_AVISOS_KEY)) || []; }
-  catch { return []; }
-}
-
-export const AVISOS = [
-  { id: 1, tipo: 'Urgente', titulo: 'Culto de Oração Especial', texto: 'Nesta quinta-feira teremos um culto especial de oração pela nação. Venha interceder! Às 19h30.', data: '20/06/2025', icone: 'ph-warning' },
-  { id: 2, tipo: 'Evento', titulo: 'Retiro de Jovens — Julho', texto: 'As inscrições para o Retiro Geração de Fogo estão abertas! De 18 a 20 de julho. Vagas limitadas. Fale com seu líder.', data: '18/06/2025', icone: 'ph-campfire' },
-  { id: 3, tipo: 'Informativo', titulo: 'Nova Turma do ITEAP', texto: 'A nova turma do Instituto Teológico Amor e Palavra iniciará em agosto. Inscrições abertas para membros.', data: '15/06/2025', icone: 'ph-graduation-cap' },
-  { id: 4, tipo: 'Evento', titulo: 'Jantar de Confraternização', texto: 'Dia 29 de junho realizaremos nosso jantar anual. Cada família leva um prato. Confirme presença com a secretaria.', data: '12/06/2025', icone: 'ph-fork-knife' },
-  { id: 5, tipo: 'Informativo', titulo: 'Atualização do Cadastro de Membros', texto: 'A secretaria solicita que todos os membros atualizem seus dados de contato. Acesse seu perfil no app.', data: '10/06/2025', icone: 'ph-identification-card' },
-  { id: 6, tipo: 'Informativo', titulo: 'Batismo nas Águas — Próximo Domingo', texto: 'No próximo domingo haverá cerimônia de batismo. Interessados devem falar com os pastores antes de sábado.', data: '08/06/2025', icone: 'ph-drop' },
-  { id: 7, tipo: 'Evento', titulo: 'Congresso de Mulheres', texto: 'O Congresso Mulher de Fé acontecerá no dia 5 de julho. Convidem amigas e familiares!', data: '05/06/2025', icone: 'ph-star' },
-  { id: 8, tipo: 'Informativo', titulo: 'Coleta de Alimentos', texto: 'Continuamos coletando alimentos não perecíveis para as famílias assistidas pela nossa ação social. Entregue no hall da igreja.', data: '01/06/2025', icone: 'ph-package' },
-];
-
-const TIPO_CORES = {
-  Urgente:     { bg: 'rgba(220,38,38,0.15)',  border: 'rgba(220,38,38,0.4)',  text: '#ef4444' },
-  Evento:      { bg: 'rgba(255,255,255,0.06)', border: 'rgba(255,255,255,0.2)', text: 'var(--text-primary)' },
-  Informativo: { bg: 'rgba(255,255,255,0.04)', border: 'var(--border-color)',   text: 'var(--text-secondary)' },
-};
-
-// Válido só no próprio dia — some assim que a data passa (vira o dia seguinte).
-export function isAvisoValido(aviso) {
-  try {
-    const [dia, mes, ano] = aviso.data.split('/').map(Number);
-    const fimDoDia = new Date(ano, mes - 1, dia, 23, 59, 59, 999).getTime();
-    return Date.now() <= fimDoDia;
-  } catch { return true; }
-}
-
-// Apaga (localStorage + Supabase) os comunicados do admin com mais de
-// duas semanas — chamado uma vez a cada carregamento do app.
-export function limparAvisosExpirados() {
-  const admin = loadAdminAvisos();
-  const expirados = admin.filter(a => !isAvisoValido(a));
-  if (expirados.length === 0) return;
-  const validos = admin.filter(isAvisoValido);
-  localStorage.setItem(ADMIN_AVISOS_KEY, JSON.stringify(validos));
-  expirados.forEach(a => deleteAvisoFromSupabase(a.id));
-}
-
-export function getUnreadCount() {
-  try {
-    const lidos = (JSON.parse(localStorage.getItem(READ_KEY)) || []).map(String);
-    const adminAvisos = loadAdminAvisos();
-    const todos = [...adminAvisos, ...AVISOS].filter(isAvisoValido);
-    return todos.filter(a => !lidos.includes(String(a.id))).length;
-  } catch { return AVISOS.length; }
-}
+import { TIPO_CORES, loadAvisosValidos, marcarAvisosComoLidos } from '../data/avisos';
 
 export default function Avisos() {
   const [filtro, setFiltro] = useState('Todos');
   const [expandido, setExpandido] = useState(null);
-  const [adminAvisos] = useState(loadAdminAvisos);
   const config = loadConfig();
 
-  const todosAvisos = [...adminAvisos, ...AVISOS].filter(isAvisoValido);
+  const todosAvisos = loadAvisosValidos();
 
+  // Roda só uma vez, ao abrir a tela: marca como lidos os avisos que estavam
+  // válidos nesse momento. Não deve rodar de novo a cada re-render (troca de
+  // filtro, por exemplo), então a lista de dependências fica vazia de propósito.
   useEffect(() => {
-    localStorage.setItem(READ_KEY, JSON.stringify(todosAvisos.map(a => String(a.id))));
+    marcarAvisosComoLidos(todosAvisos);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const filtrados = (filtro === 'Todos' ? todosAvisos : todosAvisos.filter(a => a.tipo === filtro)).slice(0, 5);
@@ -91,7 +40,7 @@ export default function Avisos() {
           ))}
         </div>
 
-        {filtrados.map((aviso, idx) => {
+        {filtrados.map((aviso) => {
           const cor = TIPO_CORES[aviso.tipo];
           const aberto = expandido === aviso.id;
           return (
@@ -127,6 +76,13 @@ export default function Avisos() {
             </div>
           );
         })}
+
+        {filtrados.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
+            <i className="ph ph-bell-slash" style={{ fontSize: '2.5rem', display: 'block', marginBottom: '12px' }}></i>
+            <p>Nenhum aviso no momento.</p>
+          </div>
+        )}
 
         {/* ── Redes Sociais ───────────────────────────── */}
         <div style={{ marginTop: 'var(--spacing-xl)' }}>

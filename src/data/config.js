@@ -10,7 +10,6 @@ export const DEFAULT_CONFIG = {
   heroBg:         null, // base64 ou null (usa /hero_bg.png)
   heroBgPosition: 'center',
   youtubeLink: 'https://www.youtube.com/@IgrejaFoiPorAmorOficial/live',
-  avisoHome:   'Reunião de Líderes na próxima segunda-feira às 19h30.',
   pixKey:         'igrejafoiporamor@exemplo.com.br',
   pixNome:        '', // razão social/nome do favorecido da chave PIX geral — exibido para conferência
   pixCnpj:        '', // CNPJ do favorecido da chave PIX geral — exibido para conferência

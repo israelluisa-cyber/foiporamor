@@ -5,7 +5,7 @@ import './styles.css'
 import './App.css'
 import { syncFromSupabase } from './data/supabase'
 import { loadConfig, applyBranding } from './data/config'
-import { limparAvisosExpirados } from './pages/Avisos'
+import { limparAvisosExpirados } from './data/avisos'
 
 applyBranding(loadConfig()); // pinta o splash com o cache local imediatamente
 syncFromSupabase().then(() => {

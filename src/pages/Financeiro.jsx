@@ -1,17 +1,13 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import Header from '../components/Header';
 import PixPanel from '../components/PixPanel';
 import { loadConfig } from '../data/config';
-import { saveContribuicao } from '../data/contribuicoes';
-
-function parseBRL(str) {
-  return parseFloat((str || '').replace('R$', '').replace(/\./g, '').replace(',', '.').trim()) || 0;
-}
 
 export default function Financeiro() {
   const config = loadConfig();
   const obras  = config.obras || [];
   const pixRef = useRef(null);
+  const [obraSelecionada, setObraSelecionada] = useState(null);
 
   const STATS = [
     { icon: 'ph-hands-heart',    valor: '4',      label: 'Obras sociais'    },
@@ -19,15 +15,11 @@ export default function Financeiro() {
     { icon: 'ph-calendar-check', valor: '5 anos', label: 'De missão social' },
   ];
 
-  const handleContribuir = () => {
+  const handleContribuir = (obra) => {
+    setObraSelecionada(obra || null);
     setTimeout(() => {
       pixRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 100);
-  };
-
-  const handlePixSuccess = ({ valor }) => {
-    const valorNum = parseBRL(valor);
-    saveContribuicao({ tipo: 'Contribuição Geral', valorNum, valorFormatado: valor });
   };
 
   return (
@@ -102,7 +94,7 @@ export default function Financeiro() {
               marginBottom: 'var(--spacing-lg)',
               borderRadius: 'var(--radius-lg)',
               overflow: 'hidden',
-              border: '1px solid var(--border-color)',
+              border: `1px solid ${obraSelecionada?.id === obra.id ? 'var(--accent-color)' : 'var(--border-color)'}`,
               boxShadow: '0 4px 24px rgba(0,0,0,0.25)',
               animation: `fadeInUp 0.5s ease both`,
               animationDelay: `${idx * 0.1}s`,
@@ -132,7 +124,7 @@ export default function Financeiro() {
               </p>
               <button
                 className="contrib-btn"
-                onClick={handleContribuir}
+                onClick={() => handleContribuir(obra)}
                 style={{
                   width: '100%', padding: '13px', background: obra.gradiente,
                   border: 'none', borderRadius: 'var(--radius-md)', color: '#fff',
@@ -156,16 +148,38 @@ export default function Financeiro() {
               <i className="ph ph-key" style={{ fontSize: '1.2rem', color: '#fff' }}></i>
             </div>
             <div>
-              <h3 className="font-heading" style={{ fontSize: '1.05rem', margin: 0 }}>Faça sua Contribuição</h3>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '2px 0 0' }}>Via PIX · dividido entre todas as causas</p>
+              <h3 className="font-heading" style={{ fontSize: '1.05rem', margin: 0 }}>
+                {obraSelecionada ? `Contribuir — ${obraSelecionada.nome}` : 'Faça sua Contribuição'}
+              </h3>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '2px 0 0' }}>
+                {obraSelecionada ? 'Via PIX · destinado a esta causa' : 'Via PIX · dividido entre todas as causas'}
+              </p>
             </div>
+          </div>
+
+          {/* Chips de obras */}
+          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px', marginBottom: 'var(--spacing-md)', scrollbarWidth: 'none' }}>
+            <button
+              onClick={() => setObraSelecionada(null)}
+              style={{ flexShrink: 0, padding: '6px 14px', borderRadius: 'var(--radius-full)', fontSize: '0.78rem', fontWeight: 600, border: '1px solid var(--border-color)', background: !obraSelecionada ? 'var(--accent-color)' : 'var(--bg-surface)', color: !obraSelecionada ? 'var(--bg-color)' : 'var(--text-secondary)', cursor: 'pointer' }}
+            >
+              Geral
+            </button>
+            {obras.map(o => (
+              <button
+                key={o.id}
+                onClick={() => setObraSelecionada(o)}
+                style={{ flexShrink: 0, padding: '6px 14px', borderRadius: 'var(--radius-full)', fontSize: '0.78rem', fontWeight: 600, border: '1px solid var(--border-color)', background: obraSelecionada?.id === o.id ? 'var(--accent-color)' : 'var(--bg-surface)', color: obraSelecionada?.id === o.id ? 'var(--bg-color)' : 'var(--text-secondary)', cursor: 'pointer', whiteSpace: 'nowrap' }}
+              >
+                {o.nome.split(' ').slice(0, 3).join(' ')}
+              </button>
+            ))}
           </div>
 
           <section className="glass-card" style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.2)' }}>
             <PixPanel
-              tipo="Contribuição Geral"
+              tipo={obraSelecionada ? obraSelecionada.nome : 'Contribuição Geral'}
               toastText="Chave PIX copiada! Que Deus multiplique sua oferta."
-              onSuccess={handlePixSuccess}
             />
           </section>
 

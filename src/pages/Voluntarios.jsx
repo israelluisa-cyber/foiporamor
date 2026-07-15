@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import Header from '../components/Header';
 import Toast from '../components/Toast';
-import { MINISTERIOS, loadVagas, VAGAS_KEY } from '../data/vagas';
+import { MINISTERIOS, loadVagas } from '../data/vagas';
 
 const INSCRICOES_KEY = 'voluntarios_inscricoes';
 
@@ -16,7 +16,7 @@ function getNome() {
 }
 
 export default function Voluntarios() {
-  const [vagas, setVagas] = useState(loadVagas);
+  const vagas = loadVagas();
   const [inscricoes, setInscricoes] = useState(loadInscricoes);
   const [toast, setToast] = useState('');
   const nome = getNome();

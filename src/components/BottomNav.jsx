@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { getUnreadCount } from '../pages/Avisos';
+import { getUnreadCount } from '../data/avisos';
 
 export default function BottomNav() {
   const location = useLocation();

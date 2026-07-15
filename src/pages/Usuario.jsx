@@ -302,7 +302,9 @@ export default function Usuario() {
     return () => clearInterval(timer);
   }, [tempoRestanteRec]);
 
-  const [statusVersion, setStatusVersion] = useState(0);
+  // Só o setter é usado — força um re-render pra recalcular o status do cadastro
+  // depois de cada sincronização, sem precisar ler o valor em si.
+  const [, setStatusVersion] = useState(0);
 
   useEffect(() => {
     if (!userCadastro) return;
@@ -823,7 +825,7 @@ export default function Usuario() {
         onClose={() => setModalCadastro(false)}
         onSuccess={() => {
           setModalCadastro(false);
-          try { setUserCadastro(JSON.parse(localStorage.getItem(USER_KEY))); } catch {}
+          try { setUserCadastro(JSON.parse(localStorage.getItem(USER_KEY))); } catch { /* localStorage sem o cadastro recém-salvo — segue sem sessão local */ }
           setToast('Cadastro enviado! Aguarde a aprovação do administrador.');
         }}
       />

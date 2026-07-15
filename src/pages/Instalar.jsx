@@ -17,18 +17,20 @@ function detectar() {
 }
 
 export default function Instalar() {
-  const [copiado, setCopiado]       = useState(false);
-  const [podInstalar, setPodInstalar] = useState(false);
-  const [instalado, setInstalado]   = useState(false);
   const { isIOS, isAndroid, isIOSChrome, isInstalled } = detectar();
+  const [copiado, setCopiado]       = useState(false);
+  const [podInstalar, setPodInstalar] = useState(() => !!window._installPrompt);
+  const [instalado, setInstalado]   = useState(isInstalled);
   const config = loadConfig();
 
+  // isInstalled é recalculado a cada render (vem de detectar()) — colocá-lo nas
+  // dependências reinscreveria o listener toda hora em vez de só uma vez.
   useEffect(() => {
-    if (isInstalled) { setInstalado(true); return; }
-    if (window._installPrompt) setPodInstalar(true);
+    if (isInstalled) return;
     const handler = () => setPodInstalar(true);
     window.addEventListener('beforeinstallprompt-ready', handler);
     return () => window.removeEventListener('beforeinstallprompt-ready', handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleInstalar = async () => {
