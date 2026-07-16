@@ -354,19 +354,6 @@ export default function Home() {
     programacaoJaRolouRef.current = true;
   }, [proximoInfo?.id]);
 
-  // Quando os cards cabem inteiros na tela (poucos cultos/eventos na semana), centraliza
-  // a fileira em vez de deixá-la grudada à esquerda com um vão vazio do lado — só entra
-  // no modo "rolável" (alinhado à esquerda) quando os cards realmente não cabem todos.
-  const [programacaoCabeInteira, setProgramacaoCabeInteira] = useState(false);
-  useLayoutEffect(() => {
-    const container = programacaoRef.current;
-    if (!container) return;
-    const medir = () => setProgramacaoCabeInteira(container.scrollWidth <= container.clientWidth + 1);
-    medir();
-    window.addEventListener('resize', medir);
-    return () => window.removeEventListener('resize', medir);
-  }, [eventosFiltrados.length]);
-
   // Mural de fotos do ministério — troca o fundo do hero a cada 5s, entrada da direita.
   // O efeito depende de muralIndex pra reiniciar a contagem dos 5s sempre que a foto
   // muda — seja pelo próprio timer ou por um swipe manual do usuário.
@@ -725,7 +712,7 @@ export default function Home() {
         {/* Programação da Semana — cards verticais */}
         <h3 className="section-title">Programação da Semana</h3>
         {eventosFiltrados.length > 0 && (
-          <div ref={programacaoRef} style={{ display: 'flex', alignItems: 'flex-end', justifyContent: programacaoCabeInteira ? 'center' : 'flex-start', gap: '10px', overflowX: 'auto', paddingTop: '6px', paddingRight: 'var(--spacing-md)', paddingBottom: '4px', paddingLeft: 'var(--spacing-md)', marginLeft: 'calc(-1 * var(--spacing-md))', marginRight: 'calc(-1 * var(--spacing-md))', marginBottom: 'var(--spacing-lg)', scrollbarWidth: 'none' }}>
+          <div ref={programacaoRef} style={{ display: 'flex', alignItems: 'flex-end', gap: '10px', overflowX: 'auto', paddingTop: '6px', paddingRight: 'var(--spacing-md)', paddingBottom: '4px', paddingLeft: 'var(--spacing-md)', marginLeft: 'calc(-1 * var(--spacing-md))', marginRight: 'calc(-1 * var(--spacing-md))', marginBottom: 'var(--spacing-lg)', scrollbarWidth: 'none' }}>
             {eventosFiltrados.map((ev, i) => {
               const isLive = !ev.isEvangelismo && aoVivo?.id === ev.id;
               const isNext = !ev.isEvangelismo && !isLive && !!proximoInfo && ev.id === proximoInfo.id;
