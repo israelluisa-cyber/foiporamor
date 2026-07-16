@@ -2646,7 +2646,7 @@ const [modalMinisterios, setModalMinisterios]   = useState(false);
   };
 
   return (
-    <div className="container" style={{ paddingBottom: 'var(--spacing-xl)', backgroundColor: '#050505', minHeight: '100vh' }}>
+    <div className="container" style={{ paddingBottom: 'var(--spacing-xl)', minHeight: '100vh' }}>
       <Header admin={true} />
 
       <main style={{ paddingTop: 'var(--spacing-md)' }}>

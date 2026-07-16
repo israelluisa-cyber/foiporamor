@@ -52,7 +52,7 @@ export default function Header({ title, backButton = false, admin = false }) {
 
   if (admin) {
     return (
-      <header className="app-header" style={{ background: 'rgba(0,0,0,0.8)' }}>
+      <header className="app-header">
         <div className="header-content">
           <div className="user-greeting" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <img src={config.logoUrl || '/logo-icon.png'} alt={config.nomeIgreja} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />

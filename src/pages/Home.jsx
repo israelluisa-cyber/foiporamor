@@ -337,13 +337,61 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Mural de fotos do ministério — troca o fundo do hero a cada 5s, entrada da direita
+  // Programação da Semana — mantém a ordem cronológica normal dos cards, mas rola
+  // a faixa automaticamente até o card do próximo culto ficar centralizado. Reroda só
+  // quando o próximo culto muda de fato (não a cada tick do relógio).
+  const programacaoRef = useRef(null);
+  const programacaoJaRolouRef = useRef(false);
+  useLayoutEffect(() => {
+    const container = programacaoRef.current;
+    if (!container) return;
+    const proximoCard = container.querySelector('[data-proximo-culto="true"]');
+    if (!proximoCard) return;
+    const containerRect = container.getBoundingClientRect();
+    const cardRect = proximoCard.getBoundingClientRect();
+    const alvo = container.scrollLeft + (cardRect.left - containerRect.left) - (container.clientWidth - cardRect.width) / 2;
+    container.scrollTo({ left: Math.max(0, alvo), behavior: programacaoJaRolouRef.current ? 'smooth' : 'auto' });
+    programacaoJaRolouRef.current = true;
+  }, [proximoInfo?.id]);
+
+  // Quando os cards cabem inteiros na tela (poucos cultos/eventos na semana), centraliza
+  // a fileira em vez de deixá-la grudada à esquerda com um vão vazio do lado — só entra
+  // no modo "rolável" (alinhado à esquerda) quando os cards realmente não cabem todos.
+  const [programacaoCabeInteira, setProgramacaoCabeInteira] = useState(false);
+  useLayoutEffect(() => {
+    const container = programacaoRef.current;
+    if (!container) return;
+    const medir = () => setProgramacaoCabeInteira(container.scrollWidth <= container.clientWidth + 1);
+    medir();
+    window.addEventListener('resize', medir);
+    return () => window.removeEventListener('resize', medir);
+  }, [eventosFiltrados.length]);
+
+  // Mural de fotos do ministério — troca o fundo do hero a cada 5s, entrada da direita.
+  // O efeito depende de muralIndex pra reiniciar a contagem dos 5s sempre que a foto
+  // muda — seja pelo próprio timer ou por um swipe manual do usuário.
   const [muralIndex, setMuralIndex] = useState(0);
   useEffect(() => {
     if (mural.length < 2) return;
     const timer = setInterval(() => setMuralIndex(i => (i + 1) % mural.length), 5000);
     return () => clearInterval(timer);
-  }, [mural.length]);
+  }, [mural.length, muralIndex]);
+
+  // Swipe manual no hero pra navegar entre as fotos do mural
+  const heroTouchStartXRef = useRef(null);
+  const handleHeroTouchStart = (e) => {
+    heroTouchStartXRef.current = e.touches[0].clientX;
+  };
+  const handleHeroTouchEnd = (e) => {
+    const startX = heroTouchStartXRef.current;
+    heroTouchStartXRef.current = null;
+    if (startX == null || mural.length < 2) return;
+    const deltaX = startX - e.changedTouches[0].clientX;
+    const SWIPE_THRESHOLD = 40;
+    if (Math.abs(deltaX) < SWIPE_THRESHOLD) return;
+    const len = mural.length;
+    setMuralIndex(i => deltaX > 0 ? (i + 1) % len : (i - 1 + len) % len);
+  };
 
   return (
     <div className="container" style={{ paddingBottom: 'var(--spacing-xl)' }}>
@@ -358,7 +406,12 @@ export default function Home() {
           const heroBgAtual = fotoMural ? fotoMural.foto : (fotoCulto ? proximoInfo.foto : heroBg);
           const overlayOpacity = 0.15;
           return (
-        <section className="glass-card hero-card image-bg" style={{ marginBottom: 'var(--spacing-lg)', position: 'relative', overflow: 'hidden', borderRadius: 'var(--radius-lg)', minHeight: '260px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+        <section
+          className="glass-card hero-card image-bg"
+          style={{ marginBottom: 'var(--spacing-lg)', position: 'relative', overflow: 'hidden', borderRadius: 'var(--radius-lg)', minHeight: '260px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', touchAction: 'pan-y' }}
+          onTouchStart={handleHeroTouchStart}
+          onTouchEnd={handleHeroTouchEnd}
+        >
           <img
             key={heroBgAtual}
             src={heroBgAtual}
@@ -415,51 +468,43 @@ export default function Home() {
                   ACESSAR YOUTUBE
                 </button>
               </>
-            ) : (
-              /* ── Próximo culto + contagem regressiva ── */
-              <>
-                <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.9)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '10px', textShadow: '0 1px 6px rgba(0,0,0,0.9)' }}>
-                  Próximo culto
-                </p>
-                {proximoInfo ? (
-                  <>
-                    <h1 className="hero-title font-heading" style={{ fontSize: '1.8rem', fontWeight: 700, marginBottom: '6px', lineHeight: 1.2, textShadow: '0 2px 8px rgba(0,0,0,0.8)' }}>
-                      {proximoInfo.nome}
-                    </h1>
-                    <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.95)', marginBottom: '18px', display: 'flex', alignItems: 'center', gap: '6px', textShadow: '0 1px 6px rgba(0,0,0,0.9)' }}>
-                      <i className="ph ph-calendar-blank"></i>
-                      {DIAS_SEMANA_NOME[proximoInfo.diaSemana]} · {formatHora(proximoInfo.hora, proximoInfo.min)}
-                    </p>
-                    {(() => {
-                      const { dias, horas, min, seg } = getCountdownParts(proximoInfo.proximaData);
-                      const partes = dias > 0
-                        ? [{ v: dias, l: dias === 1 ? 'DIA' : 'DIAS' }, { v: horas, l: 'HRS' }, { v: min, l: 'MIN' }, { v: seg, l: 'SEG' }]
-                        : [{ v: horas, l: 'HRS' }, { v: min, l: 'MIN' }, { v: seg, l: 'SEG' }];
-                      return (
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                          {partes.map(({ v, l }) => (
-                            <div key={l} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: 'rgba(0,0,0,0.45)', borderRadius: 'var(--radius-md)', padding: '10px 14px', backdropFilter: 'blur(4px)', border: '1px solid rgba(255,255,255,0.12)', minWidth: '52px' }}>
-                              <span style={{ fontSize: '1.6rem', fontWeight: 700, color: '#fff', fontVariantNumeric: 'tabular-nums', fontFamily: 'monospace', lineHeight: 1 }}>
-                                {String(v).padStart(2, '0')}
-                              </span>
-                              <span style={{ fontSize: '0.58rem', fontWeight: 700, color: 'rgba(255,255,255,0.45)', letterSpacing: '1.5px', marginTop: '5px' }}>
-                                {l}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      );
-                    })()}
-                  </>
-                ) : (
+            ) : (() => {
+              /* ── Legenda da imagem em exibição: legenda do mural, ou nome do culto quando a foto é dele ── */
+              const label = fotoMural ? fotoMural.legenda : (fotoCulto ? proximoInfo.nome : null);
+              if (label) {
+                return (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', fontWeight: 700, color: '#fff', textShadow: '0 1px 6px rgba(0,0,0,0.9)', background: 'rgba(0,0,0,0.45)', padding: '6px 13px', borderRadius: 'var(--radius-full)', backdropFilter: 'blur(4px)', border: '1px solid rgba(255,255,255,0.14)' }}>
+                    <i className="ph ph-image" style={{ fontSize: '0.85rem' }}></i>
+                    {label}
+                  </span>
+                );
+              }
+              if (!proximoInfo) {
+                return (
                   <h1 className="hero-title font-heading" style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '12px', lineHeight: 1.2, textTransform: 'uppercase' }}>
                     {config.nomeIgreja}
                   </h1>
-                )}
-              </>
-            )}
+                );
+              }
+              return null;
+            })()}
 
           </div>
+
+          {mural.length > 1 && (
+            <div style={{ position: 'absolute', bottom: '10px', left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: '5px', zIndex: 3 }}>
+              {mural.map((_, i) => (
+                <span
+                  key={i}
+                  style={{
+                    width: i === muralIndex % mural.length ? '16px' : '6px', height: '6px', borderRadius: 'var(--radius-full)',
+                    background: i === muralIndex % mural.length ? '#fff' : 'rgba(255,255,255,0.45)',
+                    transition: 'all 0.25s ease', boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
+                  }}
+                />
+              ))}
+            </div>
+          )}
         </section>
           );
         })()}
@@ -680,13 +725,13 @@ export default function Home() {
         {/* Programação da Semana — cards verticais */}
         <h3 className="section-title">Programação da Semana</h3>
         {eventosFiltrados.length > 0 && (
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '10px', overflowX: 'auto', paddingTop: '6px', paddingRight: 'var(--spacing-md)', paddingBottom: '4px', paddingLeft: 'var(--spacing-md)', marginLeft: 'calc(-1 * var(--spacing-md))', marginRight: 'calc(-1 * var(--spacing-md))', marginBottom: 'var(--spacing-lg)', scrollbarWidth: 'none' }}>
+          <div ref={programacaoRef} style={{ display: 'flex', alignItems: 'flex-end', justifyContent: programacaoCabeInteira ? 'center' : 'flex-start', gap: '10px', overflowX: 'auto', paddingTop: '6px', paddingRight: 'var(--spacing-md)', paddingBottom: '4px', paddingLeft: 'var(--spacing-md)', marginLeft: 'calc(-1 * var(--spacing-md))', marginRight: 'calc(-1 * var(--spacing-md))', marginBottom: 'var(--spacing-lg)', scrollbarWidth: 'none' }}>
             {eventosFiltrados.map((ev, i) => {
               const isLive = !ev.isEvangelismo && aoVivo?.id === ev.id;
               const isNext = !ev.isEvangelismo && !isLive && !!proximoInfo && ev.id === proximoInfo.id;
               const foto = ev.foto || CULTO_FOTO_PLACEHOLDERS[i % CULTO_FOTO_PLACEHOLDERS.length];
               const card = (
-                <div className={isNext ? 'evento-card evento-card-next' : 'evento-card'} style={{ width: isNext ? '128px' : '108px', aspectRatio: '9 / 16', borderRadius: 'var(--radius-lg)', overflow: 'hidden', position: 'relative', flexShrink: 0, backgroundImage: `url(${foto})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
+                <div data-proximo-culto={isNext ? 'true' : undefined} className={isNext ? 'evento-card evento-card-next' : 'evento-card'} style={{ width: isNext ? '128px' : '108px', aspectRatio: '9 / 16', borderRadius: 'var(--radius-lg)', overflow: 'hidden', position: 'relative', flexShrink: 0, backgroundImage: `url(${foto})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
                   <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0) 35%, rgba(0,0,0,0.8) 100%)' }} />
                   <div style={{ position: 'relative', zIndex: 1, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '10px' }}>
                     {isNext && (
@@ -708,6 +753,16 @@ export default function Home() {
                     )}
                     <p style={{ fontSize: isNext ? '0.62rem' : '0.58rem', fontWeight: 700, color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase', letterSpacing: '0.6px', margin: '0 0 2px' }}>{ev.diaNome || ev.dia}</p>
                     <p style={{ fontSize: isNext ? '0.98rem' : '0.86rem', fontWeight: 800, color: '#fff', textTransform: 'uppercase', lineHeight: 1.15, margin: 0 }}>{ev.nome}</p>
+                    {isNext && proximoInfo && (() => {
+                      const { dias, horas, min, seg } = getCountdownParts(proximoInfo.proximaData);
+                      const pad = n => String(n).padStart(2, '0');
+                      const countdownStr = dias > 0 ? `${dias}d ${pad(horas)}h` : `${pad(horas)}:${pad(min)}:${pad(seg)}`;
+                      return (
+                        <p style={{ fontSize: '0.6rem', fontWeight: 600, color: 'rgba(255,255,255,0.55)', fontFamily: 'monospace', fontVariantNumeric: 'tabular-nums', margin: '3px 0 0' }}>
+                          {countdownStr}
+                        </p>
+                      );
+                    })()}
                   </div>
                 </div>
               );
