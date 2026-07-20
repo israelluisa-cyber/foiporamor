@@ -261,6 +261,7 @@ export async function savePedidoOracaoToSupabase(pedido) {
       privado: !!pedido.privado,
       nome:    pedido.nome    || null,
       celular: pedido.celular || null,
+      foto:    pedido.foto    || null,
       data:    pedido.data || null,
     });
   } catch (e) {

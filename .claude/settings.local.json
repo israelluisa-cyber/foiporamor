@@ -79,7 +79,16 @@
       "Bash(npx vercel *)",
       "mcp__claude_ai_Supabase__execute_sql",
       "Bash(npx --yes playwright install chromium --with-deps)",
-      "Bash(npx playwright *)"
+      "Bash(npx playwright *)",
+      "Bash(grep -n '\"55\"\\\\|wa\\\\.me\\\\|`55' src/pages/Admin.jsx)",
+      "Bash(echo \"EXIT CODE: $?\")",
+      "Bash(echo \"LINT EXIT: $?\")",
+      "Bash(npx --no-install playwright install --dry-run chromium)",
+      "WebSearch",
+      "WebFetch(domain:api.midvash.com)",
+      "Bash(curl -s \"https://api.midvash.com/pt-br\")",
+      "Read(//c/Users/Usuário/AppData/Local/Temp/**)",
+      "mcp__claude_ai_Supabase__list_tables"
     ]
   }
 }

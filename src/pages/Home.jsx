@@ -6,6 +6,7 @@ import { loadConfig, DIAS_ABBR, formatHora, cultoIcon } from '../data/config';
 import { loadSaidas } from '../data/evangelismo';
 import { loadMural } from '../data/muralData';
 import { loadAvisosValidos, TIPO_CORES } from '../data/avisos';
+import { FaInstagram, FaFacebook, FaYoutube } from 'react-icons/fa6';
 
 // EVENTOS_SEMANA é derivado dinamicamente do config no componente
 
@@ -18,6 +19,17 @@ const CULTO_FOTO_PLACEHOLDERS = [
 ];
 
 const STORAGE_KEY_PEDIDOS = 'pedidos_oracao';
+const CADASTROS_KEY_PEDIDOS = 'cadastros_pendentes';
+
+// Foto por celular — cobre pedidos antigos (enviados antes de guardarmos a foto
+// junto) reencontrando o cadastro do membro pelo mesmo celular do pedido.
+function fotoPorCelular(celular) {
+  if (!celular) return null;
+  try {
+    const cadastros = JSON.parse(localStorage.getItem(CADASTROS_KEY_PEDIDOS)) || [];
+    return cadastros.find(c => c.celular === celular)?.foto || null;
+  } catch { return null; }
+}
 
 // true só na primeira vez que a Home monta nesta sessão do app — evita
 // que a animação de entrada repita toda vez que o usuário navega de volta pra Home
@@ -44,12 +56,13 @@ function foiIntercedido(pedido, ultimoCultoMs) {
   return pedido.id < ultimoCultoMs;
 }
 
-// Carrega pedidos públicos do localStorage, limita a 3
-function loadPreviewPedidos() {
+// Carrega pedidos públicos do localStorage, limita a 3 — os já intercedidos no
+// último Culto de Oração saem da lista (mesmo critério do mural em /oracao).
+function loadPreviewPedidos(ultimoCultoMs) {
   try {
     const user = JSON.parse(localStorage.getItem(STORAGE_KEY_PEDIDOS)) || [];
-    const publicos = user.filter(p => !p.privado);
-    return publicos.map(p => ({ id: p.id, nome: p.nome || 'Anônimo', texto: p.texto })).slice(0, 3);
+    const publicos = user.filter(p => !p.privado && !foiIntercedido(p, ultimoCultoMs));
+    return publicos.map(p => ({ id: p.id, nome: p.nome || 'Anônimo', texto: p.texto, foto: p.foto || fotoPorCelular(p.celular) })).slice(0, 3);
   } catch {
     return [];
   }
@@ -195,13 +208,17 @@ function tipoMsgCulto(culto) {
   const nome = (culto.nome || '').toLowerCase();
   if (culto.diaSemana === 0)
     return { titulo: 'ESTAMOS ONLINE!', badge: 'AO VIVO', cor: '#dc2626', pulso: true, youtube: true };
+  if (nome.includes('teologia') || nome.includes('curso'))
+    return { titulo: 'ESTAMOS EM AULA', badge: 'AO VIVO', cor: '#1d4ed8', pulso: true, youtube: true };
   if (nome.includes('oração') || nome.includes('oracao'))
-    return { titulo: 'ESTAMOS EM ORAÇÃO', badge: 'EM ORAÇÃO', cor: '#0c4a6e', pulso: false, youtube: false };
+    return { titulo: 'ESTAMOS EM ORAÇÃO', badge: 'AO VIVO', cor: '#0c4a6e', pulso: true, youtube: true };
   if (nome.includes('ensino') || nome.includes('estudo'))
-    return { titulo: 'ESTAMOS NO ESTUDO', badge: 'ESTUDO', cor: '#4c1d95', pulso: false, youtube: false };
+    return { titulo: 'ESTAMOS NO ESTUDO', badge: 'AO VIVO', cor: '#4c1d95', pulso: true, youtube: true };
+  if (nome.includes('ensaio'))
+    return { titulo: 'ESTAMOS ENSAIANDO', badge: 'AGORA', cor: '#92400e', pulso: true, youtube: false };
   if (nome.includes('louvor') || nome.includes('adoração') || nome.includes('adoracao'))
-    return { titulo: 'ESTAMOS EM ADORAÇÃO', badge: 'ADORAÇÃO', cor: '#92400e', pulso: false, youtube: false };
-  return { titulo: 'ESTAMOS CULTUANDO', badge: 'EM CULTO', cor: '#1f2937', pulso: false, youtube: false };
+    return { titulo: 'ESTAMOS EM ADORAÇÃO', badge: 'AO VIVO', cor: '#92400e', pulso: true, youtube: true };
+  return { titulo: 'ESTAMOS CULTUANDO', badge: 'AO VIVO', cor: '#1f2937', pulso: true, youtube: true };
 }
 
 export default function Home() {
@@ -233,7 +250,7 @@ export default function Home() {
   const logado          = !!sessionStorage.getItem('user_session');
   const admin           = sessionStorage.getItem('adminAuth') === 'true';
   const ultimoCultoMs   = timestampUltimoCulto(cultos);
-  const pedidosPreview  = loadPreviewPedidos();
+  const pedidosPreview  = loadPreviewPedidos(ultimoCultoMs);
   const versoDia        = getVersoDia();
   const aniversariantes = getAniversariantesSemana();
 
@@ -246,6 +263,33 @@ export default function Home() {
 
   const [showEntrance] = useState(() => !homeEntranceShown);
   useEffect(() => { homeEntranceShown = true; }, []);
+
+  // Zoom de entrada — só na primeira vez que a Home monta na sessão (mesmo gatilho
+  // do showEntrance): a tela toda começa afastada (dá pra ver do topo até as redes
+  // sociais) e puxa rápido pro zoom normal, bem no momento em que o splash termina.
+  const containerRef = useRef(null);
+  const [introAtivo, setIntroAtivo] = useState(showEntrance);
+  const [introEscala, setIntroEscala] = useState(0.55);
+  const INTRO_ZOOM_DURACAO_MS = 900;
+  const INTRO_ZOOM_ATRASO_MS = 3000; // casa com o tempo mínimo do splash (main.jsx)
+
+  useLayoutEffect(() => {
+    if (!introAtivo || !containerRef.current) return;
+    const alturaConteudo = containerRef.current.scrollHeight;
+    const alturaTela = window.innerHeight;
+    const escala = Math.min(0.85, Math.max(0.32, alturaTela / alturaConteudo));
+    setIntroEscala(escala);
+  }, [introAtivo]);
+
+  useEffect(() => {
+    if (!introAtivo) return;
+    document.body.style.overflow = 'hidden';
+    const timer = setTimeout(() => setIntroAtivo(false), INTRO_ZOOM_ATRASO_MS + INTRO_ZOOM_DURACAO_MS);
+    return () => {
+      clearTimeout(timer);
+      document.body.style.overflow = '';
+    };
+  }, [introAtivo]);
 
   // Indicador de "tem mais itens pro lado" no Acesso Rápido
   const acessoRapidoRef = useRef(null);
@@ -381,7 +425,18 @@ export default function Home() {
   };
 
   return (
-    <div className="container" style={{ paddingBottom: 'var(--spacing-xl)' }}>
+    <div
+      ref={containerRef}
+      className="container"
+      style={{
+        paddingBottom: 'var(--spacing-xl)',
+        ...(introAtivo ? {
+          position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50,
+          background: 'var(--bg-color)', transformOrigin: 'top center',
+          animation: `homeZoomIntro ${INTRO_ZOOM_DURACAO_MS}ms cubic-bezier(0.16, 1, 0.3, 1) ${INTRO_ZOOM_ATRASO_MS}ms both`,
+        } : {}),
+      }}
+    >
       <Header />
 
       <main className={showEntrance ? 'home-entrance' : ''} style={{ paddingTop: 'var(--spacing-md)' }}>
@@ -497,6 +552,10 @@ export default function Home() {
         })()}
 
         <style>{`
+          @keyframes homeZoomIntro {
+            0%   { transform: scale(${introEscala}); }
+            100% { transform: scale(1); }
+          }
           @keyframes pulseAoVivo {
             0%, 100% { opacity: 1; transform: scale(1); }
             50%       { opacity: 0.4; transform: scale(0.75); }
@@ -715,11 +774,16 @@ export default function Home() {
           <div ref={programacaoRef} style={{ display: 'flex', alignItems: 'flex-end', gap: '10px', overflowX: 'auto', paddingTop: '6px', paddingRight: 'var(--spacing-md)', paddingBottom: '4px', paddingLeft: 'var(--spacing-md)', marginLeft: 'calc(-1 * var(--spacing-md))', marginRight: 'calc(-1 * var(--spacing-md))', marginBottom: 'var(--spacing-lg)', scrollbarWidth: 'none' }}>
             {eventosFiltrados.map((ev, i) => {
               const isLive = !ev.isEvangelismo && aoVivo?.id === ev.id;
-              const isNext = !ev.isEvangelismo && !isLive && !!proximoInfo && ev.id === proximoInfo.id;
+              // Ensaio de sexta não tem transmissão — mostra "Agora" em vez de "Ao vivo"
+              const liveComLink = isLive && tipoMsgCulto(ev).youtube;
+              // Enquanto algum culto está ao vivo, ninguém é "Próximo" — o destaque
+              // vai todo pro card que está acontecendo agora, não pro que vem depois.
+              const isNext = !ev.isEvangelismo && !isLive && !aoVivo && !!proximoInfo && ev.id === proximoInfo.id;
+              const destaque = isNext || isLive;
               const foto = ev.foto || CULTO_FOTO_PLACEHOLDERS[i % CULTO_FOTO_PLACEHOLDERS.length];
               const card = (
-                <div data-proximo-culto={isNext ? 'true' : undefined} className={isNext ? 'evento-card evento-card-next' : 'evento-card'} style={{ width: isNext ? '128px' : '108px', aspectRatio: '9 / 16', borderRadius: 'var(--radius-lg)', overflow: 'hidden', position: 'relative', flexShrink: 0, backgroundImage: `url(${foto})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
-                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0) 35%, rgba(0,0,0,0.8) 100%)' }} />
+                <div data-proximo-culto={destaque ? 'true' : undefined} className={destaque ? 'evento-card evento-card-next' : 'evento-card'} style={{ width: '108px', aspectRatio: '9 / 16', borderRadius: 'var(--radius-lg)', overflow: 'hidden', position: 'relative', flexShrink: 0, backgroundImage: `url(${foto})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
+                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0) 30%, rgba(0,0,0,0.6) 65%, rgba(0,0,0,0.95) 100%)' }} />
                   <div style={{ position: 'relative', zIndex: 1, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '10px' }}>
                     {isNext && (
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', alignSelf: 'flex-start', fontSize: '0.55rem', fontWeight: 700, color: '#1f2937', textTransform: 'uppercase', letterSpacing: '0.5px', background: '#fbbf24', padding: '2px 7px', borderRadius: 'var(--radius-full)', marginBottom: '6px' }}>
@@ -728,9 +792,9 @@ export default function Home() {
                       </span>
                     )}
                     {isLive && (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', alignSelf: 'flex-start', fontSize: '0.55rem', fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.5px', background: 'rgba(220,38,38,0.9)', padding: '2px 7px', borderRadius: 'var(--radius-full)', marginBottom: '6px' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', alignSelf: 'flex-start', fontSize: '0.55rem', fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.5px', background: liveComLink ? 'rgba(220,38,38,0.9)' : 'rgba(146,64,14,0.9)', padding: '2px 7px', borderRadius: 'var(--radius-full)', marginBottom: '6px' }}>
                         <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#fff', animation: 'pulseAoVivo 1.2s ease-in-out infinite' }} />
-                        Ao vivo
+                        {liveComLink ? 'Ao vivo' : 'Agora'}
                       </span>
                     )}
                     {ev.isEvangelismo && (
@@ -738,8 +802,8 @@ export default function Home() {
                         Evangelismo
                       </span>
                     )}
-                    <p style={{ fontSize: isNext ? '0.62rem' : '0.58rem', fontWeight: 700, color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase', letterSpacing: '0.6px', margin: '0 0 2px' }}>{ev.diaNome || ev.dia}</p>
-                    <p style={{ fontSize: isNext ? '0.98rem' : '0.86rem', fontWeight: 800, color: '#fff', textTransform: 'uppercase', lineHeight: 1.15, margin: 0 }}>{ev.nome}</p>
+                    <p style={{ fontSize: '0.58rem', fontWeight: 700, color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase', letterSpacing: '0.6px', margin: '0 0 2px' }}>{ev.diaNome || ev.dia}</p>
+                    <p style={{ fontSize: '0.86rem', fontWeight: 800, color: '#fff', textTransform: 'uppercase', lineHeight: 1.15, margin: 0 }}>{ev.nome}</p>
                     {isNext && proximoInfo && (() => {
                       const { dias, horas, min, seg } = getCountdownParts(proximoInfo.proximaData);
                       const pad = n => String(n).padStart(2, '0');
@@ -807,11 +871,14 @@ export default function Home() {
         </div>
         <section className="glass-card" style={{ padding: 0, overflow: 'hidden', marginBottom: 'var(--spacing-lg)' }}>
           {pedidosPreview.map((pedido, i) => {
-            const intercedido = foiIntercedido(pedido, ultimoCultoMs);
             return (
-              <div key={pedido.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--spacing-md)', padding: 'var(--spacing-md)', borderBottom: i < pedidosPreview.length - 1 ? '1px solid var(--border-color)' : 'none', opacity: intercedido ? 0.6 : 1, transition: 'opacity 0.3s' }}>
-                <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'var(--bg-surface-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: '1px solid var(--border-color)' }}>
-                  <i className="ph ph-hands-praying" style={{ fontSize: '1.1rem', color: 'var(--text-secondary)' }}></i>
+              <div key={pedido.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--spacing-md)', padding: 'var(--spacing-md)', borderBottom: i < pedidosPreview.length - 1 ? '1px solid var(--border-color)' : 'none' }}>
+                <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'var(--bg-surface-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: '1px solid var(--border-color)', overflow: 'hidden' }}>
+                  {pedido.foto ? (
+                    <img src={pedido.foto} alt={pedido.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <i className="ph ph-hands-praying" style={{ fontSize: '1.1rem', color: 'var(--text-secondary)' }}></i>
+                  )}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px' }}>
@@ -894,9 +961,9 @@ export default function Home() {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
             {[
-              { nome: 'YouTube',   icon: 'ph-youtube-logo',   gradient: 'linear-gradient(135deg,#c4302b,#ff6347)', url: config.youtubeLink },
-              { nome: 'Instagram', icon: 'ph-instagram-logo', gradient: 'linear-gradient(135deg,#833ab4,#fd1d1d,#f77737)', url: config.instagramLink },
-              { nome: 'Facebook',  icon: 'ph-facebook-logo',  gradient: 'linear-gradient(135deg,#1877f2,#0c5ebf)', url: config.facebookLink },
+              { nome: 'YouTube',   Icon: FaYoutube,   gradient: 'linear-gradient(135deg,#c4302b,#ff6347)', url: config.youtubeLink },
+              { nome: 'Instagram', Icon: FaInstagram, gradient: 'linear-gradient(135deg,#833ab4,#fd1d1d,#f77737)', url: config.instagramLink },
+              { nome: 'Facebook',  Icon: FaFacebook,  gradient: 'linear-gradient(135deg,#1877f2,#0c5ebf)', url: config.facebookLink },
             ].filter(r => r.url).map(r => (
               <button
                 key={r.nome}
@@ -909,7 +976,7 @@ export default function Home() {
                 }}
               >
                 <div style={{ width: '44px', height: '44px', borderRadius: 'var(--radius-sm)', background: r.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}>
-                  <i className={`ph ${r.icon}`} style={{ fontSize: '1.4rem', color: '#fff' }}></i>
+                  <r.Icon size="1.4rem" color="#fff" />
                 </div>
                 <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-secondary)' }}>{r.nome}</span>
               </button>

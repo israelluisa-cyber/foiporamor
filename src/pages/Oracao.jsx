@@ -4,10 +4,29 @@ import Toast from '../components/Toast';
 import { loadConfig } from '../data/config';
 import { savePedidoOracaoToSupabase, deletePedidoOracaoFromSupabase } from '../data/supabase';
 
-const STORAGE_KEY  = 'pedidos_oracao';
-const AMENS_KEY    = 'oracao_amens';
-const SESSION_KEY  = 'user_session';
-const MEUS_IDS_KEY = 'meus_pedidos_ids'; // IDs enviados a partir deste aparelho — nunca sincronizado, só local
+const STORAGE_KEY   = 'pedidos_oracao';
+const AMENS_KEY     = 'oracao_amens';
+const SESSION_KEY   = 'user_session';
+const CADASTROS_KEY = 'cadastros_pendentes';
+const MEUS_IDS_KEY  = 'meus_pedidos_ids'; // IDs enviados a partir deste aparelho — nunca sincronizado, só local
+
+function loadCadastros() {
+  try { return JSON.parse(localStorage.getItem(CADASTROS_KEY)) || []; }
+  catch { return []; }
+}
+
+// Foto de perfil do membro logado (mesma fonte usada em Usuario.jsx)
+function fotoDoMembroLogado(session) {
+  if (!session) return null;
+  return loadCadastros().find(c => String(c.id) === String(session.id))?.foto || null;
+}
+
+// Foto por celular — cobre pedidos antigos (enviados antes de guardarmos a foto
+// junto) reencontrando o cadastro do membro pelo mesmo celular do pedido.
+function fotoPorCelular(celular) {
+  if (!celular) return null;
+  return loadCadastros().find(c => c.celular === celular)?.foto || null;
+}
 
 // Retorna o timestamp do fim do último culto de oração (quinta-feira)
 function ultimoCultoOracaoMs() {
@@ -85,6 +104,7 @@ export default function Oracao() {
     const novo = {
       id: Date.now(), texto: texto.trim(), privado,
       nome: nome || null, celular: celular || null,
+      foto: fotoDoMembroLogado(session),
       data: new Date().toLocaleDateString('pt-BR'),
     };
     const atualizados = [novo, ...pedidos];
@@ -128,7 +148,7 @@ export default function Oracao() {
   const corteMural = ultimoCultoOracaoMs();
   const pedidosPublicos = pedidos
     .filter(p => !p.privado && !jaFoiIntercedido(p, corteMural))
-    .map(p => ({ ...p, nome: p.nome || 'Anônimo', amens: p.amens || 0 }));
+    .map(p => ({ ...p, nome: p.nome || 'Anônimo', amens: p.amens || 0, foto: p.foto || fotoPorCelular(p.celular) }));
   const mural = [...pedidosPublicos].sort((a, b) => Number(b.id) - Number(a.id));
 
   return (
@@ -240,10 +260,14 @@ export default function Oracao() {
                 <div key={pedido.id} className="glass-card" style={{ marginBottom: '10px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                          {pedido.nome.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-                        </span>
+                      <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'hidden' }}>
+                        {pedido.foto ? (
+                          <img src={pedido.foto} alt={pedido.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                            {pedido.nome.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                          </span>
+                        )}
                       </div>
                       <div>
                         <p style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-primary)' }}>{pedido.nome}</p>
