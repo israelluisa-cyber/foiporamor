@@ -5,6 +5,7 @@ import Toast from '../components/Toast';
 import { uploadFotoToStorage, saveCadastroToSupabase, updateCadastroSenhaSupabase, syncFromSupabase, verificarLoginSupabase, supabase } from '../data/supabase';
 import { hashPassword, verifyPassword } from '../data/crypto';
 import { loadConfig } from '../data/config';
+import { PLANOS, loadPlanosConcluidos } from '../data/biblia';
 
 const CADASTROS_KEY      = 'cadastros_pendentes';
 const USER_KEY           = 'user_cadastro';
@@ -279,6 +280,7 @@ export default function Usuario() {
   const [toast, setToast]   = useState('');
   const [tempoRestante, setTempoRestante] = useState(0);
   const [tempoRestanteRec, setTempoRestanteRec] = useState(0);
+  const [planosConcluidos] = useState(loadPlanosConcluidos);
 
   useEffect(() => {
     if (tempoRestante <= 0) return;
@@ -558,6 +560,33 @@ export default function Usuario() {
                 </div>
               </div>
             ))}
+          </section>
+
+          {/* Conquistas — planos de leitura da Bíblia concluídos */}
+          <section className="glass-card" style={{ marginBottom: 'var(--spacing-md)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: planosConcluidos.length ? 'var(--spacing-sm)' : 0 }}>
+              <i className="ph ph-trophy" style={{ fontSize: '1.1rem', color: '#facc15' }}></i>
+              <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>Conquistas de Leitura</p>
+            </div>
+            {planosConcluidos.length === 0 ? (
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                Nenhum plano de leitura concluído ainda. Que tal começar um na aba Bíblia?
+              </p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {PLANOS.filter(p => planosConcluidos.includes(p.id)).map(p => (
+                  <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px', background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)' }}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(250,204,21,0.15)', border: '1px solid rgba(250,204,21,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <i className="ph ph-trophy" style={{ fontSize: '0.9rem', color: '#facc15' }}></i>
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <p style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>{p.nome}</p>
+                      <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: 0 }}>Plano de {p.dias.length} dias concluído</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
 
           <button
