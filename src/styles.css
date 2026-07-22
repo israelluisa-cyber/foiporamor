@@ -704,3 +704,36 @@ body.light .bottom-nav {
 .badge-notify {
   animation: badge-pulse 1.8s ease infinite;
 }
+
+/* ===========================
+   CELULAR EM PAISAGEM (landscape) — altura de tela curta é o problema real,
+   não a largura, então mira em max-height em vez de max-width
+=========================== */
+@media (orientation: landscape) and (max-height: 500px) {
+  body {
+    padding-bottom: 64px;
+  }
+
+  .hero-card {
+    min-height: 160px !important;
+  }
+
+  .bottom-nav {
+    padding: 4px 0;
+    padding-bottom: calc(4px + env(safe-area-inset-bottom));
+  }
+
+  .nav-item {
+    padding: 4px 12px;
+    gap: 2px;
+    font-size: 0.68rem;
+  }
+
+  .nav-icon {
+    font-size: 1.15rem;
+  }
+
+  .app-header {
+    padding: var(--spacing-sm) 0;
+  }
+}

@@ -88,7 +88,20 @@
       "WebFetch(domain:api.midvash.com)",
       "Bash(curl -s \"https://api.midvash.com/pt-br\")",
       "Read(//c/Users/Usuário/AppData/Local/Temp/**)",
-      "mcp__claude_ai_Supabase__list_tables"
+      "mcp__claude_ai_Supabase__list_tables",
+      "Bash(python -c \"import matplotlib; print\\(matplotlib.__version__\\)\"22)",
+      "Bash(npm --version)",
+      "Bash(npx --version)",
+      "Bash(npx --yes @mermaid-js/mermaid-cli -i roubo-furto.mmd -o roubo-furto.png -b white -w 1600)",
+      "Bash(npx --yes @mermaid-js/mermaid-cli -i colisao.mmd -o colisao.png -b white -w 1600)",
+      "Bash(npx --yes @mermaid-js/mermaid-cli -i capotamento.mmd -o capotamento.png -b white -w 1600)",
+      "Bash(npx --yes @mermaid-js/mermaid-cli -i incendio.mmd -o incendio.png -b white -w 1600)",
+      "Bash(npx --yes @mermaid-js/mermaid-cli -i natureza.mmd -o natureza.png -b white -w 1600)",
+      "Bash(npx --yes @mermaid-js/mermaid-cli -i queda-transporte.mmd -o queda-transporte.png -b white -w 1600)",
+      "Bash(npx --yes @mermaid-js/mermaid-cli -i queda-objetos.mmd -o queda-objetos.png -b white -w 1600)",
+      "Skill(claude-in-chrome)",
+      "Bash(sort -u -t: -k3)",
+      "mcp__claude_ai_higgsfield__generate_image"
     ]
   }
 }

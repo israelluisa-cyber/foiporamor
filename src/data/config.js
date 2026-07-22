@@ -7,9 +7,11 @@ export const DEFAULT_CONFIG = {
   cidade:      'Sua Cidade — SP',
   mapsLink:    'https://maps.google.com/?q=Igreja+Foi+Por+Amor',
   enderecoFoto:   '/endereco-foto.jpg', // base64/URL ou null — foto exibida no card "Onde nos encontrar" (recomendado 16:9)
+  palavraDiaFoto: null, // base64/URL ou null — foto de fundo do card "Palavra do Dia" (recomendado 16:9)
   heroBg:         null, // base64 ou null (usa /hero_bg.png)
   heroBgPosition: 'center',
   youtubeLink: 'https://www.youtube.com/@IgrejaFoiPorAmorOficial/live',
+  youtubeApiKey: '', // chave da YouTube Data API v3 — usada só pra buscar a "Última Pregação" automaticamente
   pixKey:         'igrejafoiporamor@exemplo.com.br',
   pixNome:        '', // razão social/nome do favorecido da chave PIX geral — exibido para conferência
   pixCnpj:        '', // CNPJ do favorecido da chave PIX geral — exibido para conferência
@@ -17,7 +19,7 @@ export const DEFAULT_CONFIG = {
   pixNomeTeologia: '', // razão social/nome do favorecido da chave PIX do curso de teologia
   pixCnpjTeologia: '', // CNPJ do favorecido da chave PIX do curso de teologia
   logoUrl:        null, // base64/URL ou null (usa /logo-icon.png)
-  corDestaque:    '#ffffff',
+  corDestaque:    '#fbbf24',
   instagramLink:  'https://www.instagram.com/igrejafoiporamor/',
   facebookLink:   'https://www.facebook.com/igrejafpa',
   whatsappPastor: '',

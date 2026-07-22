@@ -1,5 +1,6 @@
 import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import UltimaPregacaoCard from '../components/UltimaPregacaoCard';
 import Header from '../components/Header';
 import { loadMembros } from '../data/membros';
 import { loadConfig, DIAS_ABBR, formatHora, cultoIcon } from '../data/config';
@@ -248,7 +249,6 @@ export default function Home() {
   }));
 
   const logado          = !!sessionStorage.getItem('user_session');
-  const admin           = sessionStorage.getItem('adminAuth') === 'true';
   const ultimoCultoMs   = timestampUltimoCulto(cultos);
   const pedidosPreview  = loadPreviewPedidos(ultimoCultoMs);
   const versoDia        = getVersoDia();
@@ -264,58 +264,7 @@ export default function Home() {
   const [showEntrance] = useState(() => !homeEntranceShown);
   useEffect(() => { homeEntranceShown = true; }, []);
 
-  // Zoom de entrada — só na primeira vez que a Home monta na sessão (mesmo gatilho
-  // do showEntrance): a tela toda começa afastada (dá pra ver do topo até as redes
-  // sociais) e puxa rápido pro zoom normal, bem no momento em que o splash termina.
   const containerRef = useRef(null);
-  const [introAtivo, setIntroAtivo] = useState(showEntrance);
-  const [introEscala, setIntroEscala] = useState(0.55);
-  const INTRO_ZOOM_DURACAO_MS = 900;
-  const INTRO_ZOOM_ATRASO_MS = 3000; // casa com o tempo mínimo do splash (main.jsx)
-
-  useLayoutEffect(() => {
-    if (!introAtivo || !containerRef.current) return;
-    const alturaConteudo = containerRef.current.scrollHeight;
-    const alturaTela = window.innerHeight;
-    const escala = Math.min(0.85, Math.max(0.32, alturaTela / alturaConteudo));
-    setIntroEscala(escala);
-  }, [introAtivo]);
-
-  useEffect(() => {
-    if (!introAtivo) return;
-    document.body.style.overflow = 'hidden';
-    const timer = setTimeout(() => setIntroAtivo(false), INTRO_ZOOM_ATRASO_MS + INTRO_ZOOM_DURACAO_MS);
-    return () => {
-      clearTimeout(timer);
-      document.body.style.overflow = '';
-    };
-  }, [introAtivo]);
-
-  // Indicador de "tem mais itens pro lado" no Acesso Rápido
-  const acessoRapidoRef = useRef(null);
-  const [scrollFade, setScrollFade] = useState({ left: false, right: false });
-
-  useEffect(() => {
-    const el = acessoRapidoRef.current;
-    if (!el) return;
-    const atualizarFade = () => {
-      setScrollFade({
-        left:  el.scrollLeft > 4,
-        right: el.scrollLeft + el.clientWidth < el.scrollWidth - 4,
-      });
-    };
-    atualizarFade();
-    el.addEventListener('scroll', atualizarFade, { passive: true });
-    window.addEventListener('resize', atualizarFade);
-    return () => {
-      el.removeEventListener('scroll', atualizarFade);
-      window.removeEventListener('resize', atualizarFade);
-    };
-  }, []);
-
-  const scrollAcessoRapido = (direcao) => {
-    acessoRapidoRef.current?.scrollBy({ left: direcao * 220, behavior: 'smooth' });
-  };
 
   // Ticker de avisos — quando tem mais de um, troca pro próximo a cada 5s.
   // Quando só tem um, fica sempre nele (não tem pra onde trocar).
@@ -428,14 +377,7 @@ export default function Home() {
     <div
       ref={containerRef}
       className="container"
-      style={{
-        paddingBottom: 'var(--spacing-xl)',
-        ...(introAtivo ? {
-          position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50,
-          background: 'var(--bg-color)', transformOrigin: 'top center',
-          animation: `homeZoomIntro ${INTRO_ZOOM_DURACAO_MS}ms cubic-bezier(0.16, 1, 0.3, 1) ${INTRO_ZOOM_ATRASO_MS}ms both`,
-        } : {}),
-      }}
+      style={{ paddingBottom: 'var(--spacing-xl)' }}
     >
       <Header />
 
@@ -448,9 +390,25 @@ export default function Home() {
           const heroBgAtual = fotoMural ? fotoMural.foto : (fotoCulto ? proximoInfo.foto : heroBg);
           const overlayOpacity = 0.15;
           return (
+        <div style={{ position: 'relative', padding: '20px', marginLeft: '-20px', marginRight: '-20px', marginBottom: 'calc(var(--spacing-lg) - 20px)' }}>
+          {/* Glow ambiente — cópia borrada da própria foto do hero, vazando atrás do
+              card. Troca de cor sozinho a cada foto porque é a mesma imagem, só borrada. */}
+          <div
+            key={heroBgAtual + '-glow'}
+            aria-hidden="true"
+            style={{
+              position: 'absolute', inset: '20px', zIndex: 0,
+              backgroundImage: `url(${heroBgAtual})`, backgroundSize: 'cover',
+              backgroundPosition: fotoMural ? 'center' : heroBgPosition,
+              filter: 'blur(32px) saturate(1.7) brightness(0.85)',
+              transform: 'scale(1.06)', opacity: 0.9,
+              borderRadius: 'var(--radius-lg)',
+              animation: 'heroGlowIn 0.5s ease both',
+            }}
+          />
         <section
           className="glass-card hero-card image-bg"
-          style={{ marginBottom: 'var(--spacing-lg)', position: 'relative', overflow: 'hidden', borderRadius: 'var(--radius-lg)', minHeight: '260px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', touchAction: 'pan-y' }}
+          style={{ position: 'relative', zIndex: 1, margin: 0, overflow: 'hidden', borderRadius: 'var(--radius-lg)', minHeight: '260px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', touchAction: 'pan-y' }}
           onTouchStart={handleHeroTouchStart}
           onTouchEnd={handleHeroTouchEnd}
         >
@@ -467,10 +425,10 @@ export default function Home() {
               const msg = tipoMsgCulto(aoVivo);
               return (
                 <>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 'var(--spacing-md)', background: `${msg.cor}dd`, padding: '5px 12px', borderRadius: 'var(--radius-full)' }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 'var(--spacing-md)', background: 'rgba(0,0,0,0.35)', border: `1.5px solid ${msg.cor}`, backdropFilter: 'blur(6px)', padding: '5px 12px', borderRadius: 'var(--radius-full)' }}>
                     {msg.pulso
-                      ? <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#fff', display: 'inline-block', animation: 'pulseAoVivo 1.2s ease-in-out infinite' }} />
-                      : <i className="ph ph-broadcast" style={{ fontSize: '0.9rem' }}></i>
+                      ? <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: msg.cor, display: 'inline-block', animation: 'pulseAoVivo 1.2s ease-in-out infinite' }} />
+                      : <i className="ph ph-broadcast" style={{ fontSize: '0.9rem', color: msg.cor }}></i>
                     }
                     {msg.badge}
                   </span>
@@ -484,7 +442,7 @@ export default function Home() {
                     <i className="ph ph-clock"></i> {aoVivo.periodo}
                   </p>
                   {msg.youtube && (
-                    <button onClick={() => window.open(config.youtubeLink || 'https://youtube.com', '_blank')} className="primary-btn" style={{ width: '100%', justifyContent: 'center', gap: '8px', background: '#dc2626', color: '#fff', fontWeight: 700, fontSize: '1rem', border: 'none', cursor: 'pointer', marginTop: 'var(--spacing-lg)' }}>
+                    <button onClick={() => window.open(config.youtubeLink || 'https://youtube.com', '_blank')} className="primary-btn" style={{ width: '100%', justifyContent: 'center', gap: '8px', background: 'rgba(255,255,255,0.08)', color: '#fff', fontWeight: 700, fontSize: '1rem', border: '1.5px solid #fff', backdropFilter: 'blur(6px)', cursor: 'pointer', marginTop: 'var(--spacing-lg)' }}>
                       <i className="ph ph-play-circle"></i>
                       ENTRAR NA LIVE
                     </button>
@@ -495,7 +453,7 @@ export default function Home() {
             : terminouHoje && terminouHoje.diaSemana === 0 ? (
               /* ── Culto de domingo encerrado ── */
               <>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 'var(--spacing-md)', background: 'rgba(30,30,30,0.7)', padding: '5px 12px', borderRadius: 'var(--radius-full)' }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 'var(--spacing-md)', background: 'rgba(0,0,0,0.35)', border: '1.5px solid rgba(255,255,255,0.6)', backdropFilter: 'blur(6px)', padding: '5px 12px', borderRadius: 'var(--radius-full)' }}>
                   <i className="ph ph-check-circle" style={{ fontSize: '0.9rem' }}></i>
                   CULTO ENCERRADO
                 </span>
@@ -505,7 +463,7 @@ export default function Home() {
                 <p style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.75)', marginBottom: 'var(--spacing-lg)' }}>
                   Assista a pregação de hoje no YouTube
                 </p>
-                <button onClick={() => window.open(config.youtubeLink || 'https://youtube.com', '_blank')} className="primary-btn" style={{ width: '100%', justifyContent: 'center', gap: '8px', background: '#c4302b', color: '#fff', fontWeight: 700, fontSize: '1rem', border: 'none', cursor: 'pointer' }}>
+                <button onClick={() => window.open(config.youtubeLink || 'https://youtube.com', '_blank')} className="primary-btn" style={{ width: '100%', justifyContent: 'center', gap: '8px', background: 'rgba(255,255,255,0.08)', color: '#fff', fontWeight: 700, fontSize: '1rem', border: '1.5px solid #fff', backdropFilter: 'blur(6px)', cursor: 'pointer' }}>
                   <i className="ph ph-youtube-logo"></i>
                   ACESSAR YOUTUBE
                 </button>
@@ -515,7 +473,7 @@ export default function Home() {
               const label = fotoMural ? fotoMural.legenda : (fotoCulto ? proximoInfo.nome : null);
               if (label) {
                 return (
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', fontWeight: 700, color: '#fff', textShadow: '0 1px 6px rgba(0,0,0,0.9)', background: 'rgba(0,0,0,0.45)', padding: '6px 13px', borderRadius: 'var(--radius-full)', backdropFilter: 'blur(4px)', border: '1px solid rgba(255,255,255,0.14)' }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', fontWeight: 700, color: '#fff', textShadow: '0 1px 6px rgba(0,0,0,0.9)', background: 'rgba(0,0,0,0.35)', padding: '6px 13px', borderRadius: 'var(--radius-full)', backdropFilter: 'blur(6px)', border: '1.5px solid var(--accent-color)' }}>
                     <i className="ph ph-image" style={{ fontSize: '0.85rem' }}></i>
                     {label}
                   </span>
@@ -534,42 +492,40 @@ export default function Home() {
           </div>
 
           {mural.length > 1 && (
-            <div style={{ position: 'absolute', bottom: '10px', left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: '5px', zIndex: 3 }}>
+            <div style={{ position: 'absolute', bottom: '12px', left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: '6px', zIndex: 3 }}>
               {mural.map((_, i) => (
                 <span
                   key={i}
                   style={{
-                    width: i === muralIndex % mural.length ? '16px' : '6px', height: '6px', borderRadius: 'var(--radius-full)',
-                    background: i === muralIndex % mural.length ? '#fff' : 'rgba(255,255,255,0.45)',
-                    transition: 'all 0.25s ease', boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
+                    width: '6px', height: '6px', borderRadius: '50%',
+                    background: i === muralIndex % mural.length ? 'var(--accent-color)' : 'transparent',
+                    border: `1px solid ${i === muralIndex % mural.length ? 'var(--accent-color)' : 'rgba(255,255,255,0.5)'}`,
+                    transition: 'all 0.25s ease',
                   }}
                 />
               ))}
             </div>
           )}
         </section>
+        </div>
           );
         })()}
 
         <style>{`
-          @keyframes homeZoomIntro {
-            0%   { transform: scale(${introEscala}); }
-            100% { transform: scale(1); }
+          /* Espaçamento entre seções mais apertado só na Home (pedido do usuário
+             comparando com um mockup) — sobrescreve o .section-title global
+             (margin-top: 32px) sem mexer nas outras páginas, já que esse <style>
+             só existe no DOM enquanto a Home está montada. */
+          .section-title {
+            margin-top: var(--spacing-md);
+          }
+          @keyframes heroGlowIn {
+            from { opacity: 0; }
+            to   { opacity: 0.9; }
           }
           @keyframes pulseAoVivo {
             0%, 100% { opacity: 1; transform: scale(1); }
             50%       { opacity: 0.4; transform: scale(0.75); }
-          }
-          @keyframes floatIcon {
-            0%, 100% { transform: translateY(0); }
-            50%       { transform: translateY(-4px); }
-          }
-          @keyframes popIn {
-            0%   { opacity: 0; transform: scale(0.3) translateY(46px); }
-            45%  { opacity: 1; transform: scale(1.12) translateY(-16px); }
-            65%  { transform: scale(0.94) translateY(5px); }
-            82%  { transform: scale(1.05) translateY(-4px); }
-            100% { transform: scale(1) translateY(0); }
           }
           @keyframes cascadeIn {
             from { opacity: 0; transform: translateY(18px); }
@@ -594,92 +550,28 @@ export default function Home() {
           .home-entrance > *:nth-child(9)  { animation-delay: 3.48s; }
           .home-entrance > *:nth-child(10) { animation-delay: 3.54s; }
           .home-entrance > *:nth-child(n+11) { animation-delay: 3.60s; }
-          .quick-btn {
-            text-decoration: none;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 6px;
-            padding: 12px 4px;
-            background: var(--bg-surface);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-md);
-            transition: transform 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
-            animation: popIn 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-            min-width: 72px;
-            flex: 0 0 auto;
-          }
-          .quick-btn:active {
-            transform: scale(0.92);
-          }
-          .quick-btn:hover .quick-icon {
-            animation: floatIcon 0.7s ease infinite;
-          }
-          .quick-btn:hover {
-            background: var(--bg-surface-elevated);
-            box-shadow: 0 4px 16px rgba(0,0,0,0.25);
-            border-color: rgba(255,255,255,0.15);
-          }
-          .quick-icon {
-            width: 40px; height: 40px;
-            border-radius: var(--radius-sm);
-            display: flex; align-items: center; justify-content: center;
-            transition: filter 0.18s ease, width 0.18s ease, height 0.18s ease;
-          }
-          .quick-icon-glyph {
-            font-size: 1.2rem;
-          }
-          .quick-label {
-            font-size: 0.68rem;
-            font-weight: 600;
-            color: var(--text-secondary);
-            text-align: center;
-            line-height: 1.2;
-          }
-          .quick-btn:hover .quick-icon {
-            filter: brightness(1.25);
-          }
-          .scroll-fade {
-            position: absolute;
-            top: 0; bottom: 4px;
-            width: 40px;
-            display: flex;
-            align-items: center;
-            pointer-events: none;
-            transition: opacity 0.2s ease;
-            z-index: 2;
-          }
-          .scroll-fade i {
-            font-size: 1rem;
-            color: var(--text-secondary);
-          }
-          .scroll-fade-left {
-            left: 0;
-            background: linear-gradient(90deg, var(--bg-color) 15%, transparent 100%);
-            justify-content: flex-start;
-          }
-          .scroll-fade-right {
-            right: 0;
-            background: linear-gradient(270deg, var(--bg-color) 15%, transparent 100%);
-            justify-content: flex-end;
-          }
-          @media (min-width: 768px) and (max-width: 1024px) {
-            .quick-btn {
-              min-width: 88px;
-              padding: 16px 8px;
-            }
-            .quick-icon {
-              width: 52px; height: 52px;
-            }
-            .quick-icon-glyph {
-              font-size: 1.5rem;
-            }
-            .quick-label {
-              font-size: 0.78rem;
-            }
-          }
           .evento-card {
             transition: transform 0.2s ease, box-shadow 0.2s ease;
+          }
+          /* Qualquer tela de toque (celular ou tablet, retrato ou paisagem) larga o
+             suficiente pra sobrar espaço depois dos cards: em vez de travar numa
+             largura fixa por formato de aparelho, os cards crescem e dividem o
+             espaço (com scroll de sobra só se não couberem no mínimo de 64px).
+             (hover:none)+(pointer:coarse) pega qualquer touchscreen sem depender
+             de faixas de largura específicas de modelo — funciona pra iPad, outros
+             tablets e qualquer celular virado, independente do tamanho de tela. */
+          @media (hover: none) and (pointer: coarse) and (min-width: 640px) {
+            .evento-card {
+              flex: 1 1 0 !important;
+              width: auto !important;
+              min-width: 64px !important;
+              aspect-ratio: auto !important;
+              height: min(200px, 40vh) !important;
+            }
+          }
+              aspect-ratio: auto !important;
+              height: 132px !important;
+            }
           }
           .evento-card-next {
             box-shadow: 0 0 0 2px #fbbf24, 0 6px 22px rgba(251,191,36,0.5);
@@ -727,51 +619,10 @@ export default function Home() {
           }
         `}</style>
 
-        {/* Acesso Rápido — scroll horizontal no celular, distribuído em telas maiores */}
-        <div className="quick-access-wrap" style={{ position: 'relative', marginBottom: 'var(--spacing-lg)' }}>
-        <section ref={acessoRapidoRef} className="quick-access-row" style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
-          {[
-            { to: '/oracao',         icon: 'ph-hands-praying',   label: 'Oração',        delay: '0s',    color: '#c084fc', bg: 'rgba(192,132,252,0.15)' },
-            { to: '/financeiro',     icon: 'ph-hand-heart',      label: 'Contribuir',    delay: '0.07s', color: '#facc15', bg: 'rgba(250,204,21,0.15)'  },
-            { to: '/evangelismo',    icon: 'ph-megaphone',       label: 'Evangelismo',   delay: '0.14s', color: '#fb923c', bg: 'rgba(251,146,60,0.15)'  },
-            { to: '/teologia',       icon: 'ph-graduation-cap',  label: 'Teologia',      delay: '0.21s', color: '#94a3b8', bg: 'rgba(148,163,184,0.12)' },
-            { to: '/ministerios',    icon: 'ph-users-three',     label: 'Ministérios',   delay: '0.28s', color: '#818cf8', bg: 'rgba(129,140,248,0.15)' },
-            { to: '/devocional',     icon: 'ph-sun-horizon',     label: 'Devocional',    delay: '0.35s', color: '#f97316', bg: 'rgba(249,115,22,0.15)'  },
-            { to: '/biblia',         icon: 'ph-book-bookmark',   label: 'Bíblia',        delay: '0.42s', color: '#60a5fa', bg: 'rgba(96,165,250,0.15)'  },
-            { to: '/voluntarios',    icon: 'ph-heart',           label: 'Voluntários',   delay: '0.49s', color: '#f472b6', bg: 'rgba(244,114,182,0.15)' },
-            { to: '/aconselhamento', icon: 'ph-chat-circle-dots', label: 'Aconselhamento', delay: '0.56s', color: '#4ade80', bg: 'rgba(74,222,128,0.15)'  },
-            { to: '/admin',          icon: 'ph-shield-check',    label: 'Painel Admin',  delay: '0.63s', color: '#a3a3a3', bg: 'rgba(163,163,163,0.15)', apenasAdmin: true },
-          ].filter(item => (!item.apenasLogado || logado) && (!item.apenasAdmin || admin)).map(item => (
-            <Link key={item.to} to={item.to} className="quick-btn" style={{ animationDelay: item.delay }}>
-              <div className="quick-icon" style={{ background: item.bg }}>
-                <i className={`ph ${item.icon} quick-icon-glyph`} style={{ color: item.color }}></i>
-              </div>
-              <span className="quick-label">{item.label}</span>
-            </Link>
-          ))}
-        </section>
-
-        {/* Fade + seta indicando (e permitindo, no clique) rolar pros lados */}
-        <div
-          className="scroll-fade scroll-fade-left"
-          onClick={() => scrollAcessoRapido(-1)}
-          style={{ opacity: scrollFade.left ? 1 : 0, pointerEvents: scrollFade.left ? 'auto' : 'none', cursor: 'pointer' }}
-        >
-          <i className="ph ph-caret-left"></i>
-        </div>
-        <div
-          className="scroll-fade scroll-fade-right"
-          onClick={() => scrollAcessoRapido(1)}
-          style={{ opacity: scrollFade.right ? 1 : 0, pointerEvents: scrollFade.right ? 'auto' : 'none', cursor: 'pointer' }}
-        >
-          <i className="ph ph-caret-right"></i>
-        </div>
-        </div>
-
         {/* Programação da Semana — cards verticais */}
         <h3 className="section-title">Programação da Semana</h3>
         {eventosFiltrados.length > 0 && (
-          <div ref={programacaoRef} style={{ display: 'flex', alignItems: 'flex-end', gap: '10px', overflowX: 'auto', paddingTop: '6px', paddingRight: 'var(--spacing-md)', paddingBottom: '4px', paddingLeft: 'var(--spacing-md)', marginLeft: 'calc(-1 * var(--spacing-md))', marginRight: 'calc(-1 * var(--spacing-md))', marginBottom: 'var(--spacing-lg)', scrollbarWidth: 'none' }}>
+          <div ref={programacaoRef} style={{ display: 'flex', alignItems: 'flex-end', gap: '10px', overflowX: 'auto', paddingTop: '6px', paddingRight: 'var(--spacing-md)', paddingBottom: '4px', paddingLeft: 'var(--spacing-md)', marginLeft: 'calc(-1 * var(--spacing-md))', marginRight: 'calc(-1 * var(--spacing-md))', marginBottom: 'var(--spacing-md)', scrollbarWidth: 'none' }}>
             {eventosFiltrados.map((ev, i) => {
               const isLive = !ev.isEvangelismo && aoVivo?.id === ev.id;
               // Ensaio de sexta não tem transmissão — mostra "Agora" em vez de "Ao vivo"
@@ -824,18 +675,41 @@ export default function Home() {
           </div>
         )}
 
+        <UltimaPregacaoCard config={config} />
+
         {/* Palavra do Dia */}
-        <h3 className="section-title">Palavra do Dia</h3>
-        <section className="glass-card word-card" style={{ marginBottom: 'var(--spacing-lg)' }}>
-          <p className="word-text" style={{ fontStyle: 'italic', marginBottom: 'var(--spacing-md)' }}>{versoDia.texto}</p>
-          <p className="word-ref">{versoDia.ref}</p>
+        <h3 className="section-title">
+          <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <i className="ph ph-book-open" style={{ color: 'var(--accent-color)' }}></i>
+            Palavra do Dia
+          </span>
+        </h3>
+        <section
+          className="glass-card word-card"
+          style={{
+            marginBottom: 'var(--spacing-md)', position: 'relative', overflow: 'hidden',
+            border: config.palavraDiaFoto ? 'none' : undefined,
+          }}
+        >
+          {config.palavraDiaFoto && (
+            <>
+              <img src={config.palavraDiaFoto} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0 }} />
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(100deg, rgba(0,0,0,0.85) 30%, rgba(0,0,0,0.4) 100%)', zIndex: 0 }} />
+            </>
+          )}
+          <p className="word-text" style={{ fontStyle: 'italic', marginBottom: 'var(--spacing-md)', position: 'relative', zIndex: 1, color: config.palavraDiaFoto ? 'rgba(255,255,255,0.92)' : undefined }}>
+            {versoDia.texto}
+          </p>
+          <p className="word-ref" style={{ position: 'relative', zIndex: 1, color: config.palavraDiaFoto ? '#fff' : undefined }}>
+            {versoDia.ref}
+          </p>
         </section>
 
         {/* Aniversariantes da Semana — apenas para membros logados */}
         {logado && aniversariantes.length > 0 && (
           <>
             <h3 className="section-title">🎂 Aniversariantes da Semana</h3>
-            <section className="glass-card" style={{ padding: 0, overflow: 'hidden', marginBottom: 'var(--spacing-lg)' }}>
+            <section className="glass-card" style={{ padding: 0, overflow: 'hidden', marginBottom: 'var(--spacing-md)' }}>
               {aniversariantes.map((m, i) => (
                 <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', padding: 'var(--spacing-md)', borderBottom: i < aniversariantes.length - 1 ? '1px solid var(--border-color)' : 'none' }}>
                   <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: m.isHoje ? 'rgba(251,146,60,0.15)' : 'var(--bg-surface-elevated)', border: `2px solid ${m.isHoje ? 'rgba(251,146,60,0.6)' : 'var(--border-color)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -869,7 +743,7 @@ export default function Home() {
             Ver todos <i className="ph ph-caret-right"></i>
           </Link>
         </div>
-        <section className="glass-card" style={{ padding: 0, overflow: 'hidden', marginBottom: 'var(--spacing-lg)' }}>
+        <section className="glass-card" style={{ padding: 0, overflow: 'hidden', marginBottom: 'var(--spacing-md)' }}>
           {pedidosPreview.map((pedido, i) => {
             return (
               <div key={pedido.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--spacing-md)', padding: 'var(--spacing-md)', borderBottom: i < pedidosPreview.length - 1 ? '1px solid var(--border-color)' : 'none' }}>
@@ -928,7 +802,7 @@ export default function Home() {
 
         {/* Localização */}
         <h3 className="section-title">Onde nos encontrar</h3>
-        <section className="glass-card" style={{ marginBottom: 'var(--spacing-lg)', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', border: config.enderecoFoto ? 'none' : undefined }}>
+        <section className="glass-card" style={{ marginBottom: 'var(--spacing-md)', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', border: config.enderecoFoto ? 'none' : undefined }}>
           {config.enderecoFoto && (
             <>
               <img src={config.enderecoFoto} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0 }} />

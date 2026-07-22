@@ -812,6 +812,28 @@ function ModalConfiguracoes({ onClose, onSaved }) {
     reader.readAsDataURL(file);
   };
 
+  const handlePalavraDiaFotoUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const img = new Image();
+      img.onload = async () => {
+        const MAX = 900;
+        const ratio = Math.min(MAX / img.width, MAX / img.height, 1);
+        const canvas = document.createElement('canvas');
+        canvas.width  = img.width  * ratio;
+        canvas.height = img.height * ratio;
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        const compressed = canvas.toDataURL('image/jpeg', 0.8);
+        const url = await uploadFotoToStorage(compressed, 'palavra-dia');
+        setCfg(c => ({ ...c, palavraDiaFoto: url }));
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleLogoUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -957,6 +979,22 @@ function ModalConfiguracoes({ onClose, onSaved }) {
 
               <div>
                 <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                  Chave da API do YouTube (YouTube Data API v3)
+                </label>
+                <input
+                  type="text"
+                  value={cfg.youtubeApiKey || ''}
+                  onChange={e => set('youtubeApiKey', e.target.value)}
+                  style={inputSt}
+                  placeholder="AIzaSy..."
+                />
+                <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: '6px 0 0' }}>
+                  Preenchendo isso, a Home busca sozinha o último vídeo do canal do YouTube (link acima) e mostra na seção "Última Pregação" — atualiza automaticamente assim que a igreja sobe um vídeo novo. Gere a chave no Google Cloud Console, ativando a "YouTube Data API v3". Deixe em branco pra desativar essa seção.
+                </p>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
                   Foto do local <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>— aparece no card "Onde nos encontrar" (proporção recomendada 16:9, ex: 1200×675px)</span>
                 </label>
                 {cfg.enderecoFoto && (
@@ -972,6 +1010,29 @@ function ModalConfiguracoes({ onClose, onSaved }) {
                   </label>
                   {cfg.enderecoFoto && (
                     <button onClick={() => set('enderecoFoto', null)} style={{ padding: '10px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 'var(--radius-md)', color: '#ef4444', cursor: 'pointer' }}>
+                      <i className="ph ph-trash"></i>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                  Foto de fundo — Palavra do Dia <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>— aparece atrás do card "Palavra do Dia" na Home (proporção recomendada 16:9, ex: 1200×675px)</span>
+                </label>
+                {cfg.palavraDiaFoto && (
+                  <div style={{ width: '100%', aspectRatio: '16 / 9', borderRadius: 'var(--radius-md)', overflow: 'hidden', marginBottom: '10px', border: '1px solid var(--border-color)' }}>
+                    <img src={cfg.palavraDiaFoto} alt="Foto de fundo da Palavra do Dia" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </div>
+                )}
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <label style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '10px', background: 'var(--bg-surface)', border: '1px dashed var(--border-color)', borderRadius: 'var(--radius-md)', cursor: 'pointer', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.85rem' }}>
+                    <i className="ph ph-upload-simple"></i>
+                    {cfg.palavraDiaFoto ? 'Trocar foto' : 'Escolher foto'}
+                    <input type="file" accept="image/*" onChange={handlePalavraDiaFotoUpload} style={{ display: 'none' }} />
+                  </label>
+                  {cfg.palavraDiaFoto && (
+                    <button onClick={() => set('palavraDiaFoto', null)} style={{ padding: '10px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 'var(--radius-md)', color: '#ef4444', cursor: 'pointer' }}>
                       <i className="ph ph-trash"></i>
                     </button>
                   )}
