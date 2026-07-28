@@ -437,7 +437,7 @@ body.light .bottom-nav {
 }
 
 .nav-item.active {
-  color: var(--accent-color);
+  color: var(--text-primary);
 }
 
 @media (hover: hover) {
@@ -470,8 +470,8 @@ body.light .bottom-nav {
   45%  {
     transform: translateY(-12px) scale(1.32);
     background: var(--bg-color);
-    border-color: var(--accent-color);
-    box-shadow: 0 0 0 5px var(--accent-glow), 0 6px 16px rgba(0, 0, 0, 0.45);
+    border-color: var(--border-color);
+    box-shadow: 0 0 0 5px var(--bg-surface-elevated), 0 6px 16px rgba(0, 0, 0, 0.45);
   }
   100% { transform: translateY(0) scale(1); background: transparent; border-color: transparent; box-shadow: none; }
 }
