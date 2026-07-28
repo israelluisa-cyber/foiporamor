@@ -103,6 +103,7 @@ function ModalCadastroMembro({ isOpen, onClose, onSuccess }) {
       foto: previewFoto || null,
       status: 'pendente',
       dataCadastro: new Date().toLocaleDateString('pt-BR'),
+      synced: false,
     };
 
     cadastros.push(novoCadastro);
@@ -110,13 +111,19 @@ function ModalCadastroMembro({ isOpen, onClose, onSuccess }) {
     localStorage.setItem(USER_KEY, JSON.stringify(novoCadastro));
     const enviado = await saveCadastroToSupabase(novoCadastro);
 
+    if (enviado) {
+      novoCadastro.synced = true;
+      const atualizados = cadastros.map(c => c.id === novoCadastro.id ? novoCadastro : c);
+      localStorage.setItem(CADASTROS_KEY, JSON.stringify(atualizados));
+      localStorage.setItem(USER_KEY, JSON.stringify(novoCadastro));
+    }
+
     setFormData({ nome: '', email: '', celular: '', dataNascimento: '', bairro: '', celula: 'Geração de Fogo (Jovens)', experiencia: '', password: '', confirmPassword: '' });
     setPreviewFoto(null);
-    if (!enviado) {
-      setErro('Não foi possível enviar seu cadastro ao administrador. Verifique sua internet e tente novamente.');
-      return;
-    }
     setErro('');
+    // Mesmo se o envio falhar aqui, o cadastro já está salvo no aparelho
+    // com synced:false — a tela "Cadastro Pendente" assume dali pra frente
+    // e continua tentando enviar em segundo plano até confirmar.
     onSuccess();
   };
 
@@ -271,6 +278,7 @@ export default function Usuario() {
   const [userCadastro, setUserCadastro] = useState(() => {
     try { return JSON.parse(localStorage.getItem(USER_KEY)) || null; } catch { return null; }
   });
+  const [reenviando, setReenviando] = useState(false);
 
   const [tela, setTela] = useState('inicio'); // 'inicio' | 'login'
   const [email, setEmail]   = useState('');
@@ -311,14 +319,40 @@ export default function Usuario() {
   useEffect(() => {
     if (!userCadastro) return;
     let cancelado = false;
-    const checarStatus = () => {
-      syncFromSupabase().then(() => {
-        if (!cancelado) setStatusVersion(v => v + 1);
-      });
+    const checarStatus = async () => {
+      // Se o cadastro ainda não foi confirmado no servidor (ex.: falhou
+      // por causa da internet no momento do envio), tenta reenviar antes
+      // de puxar o status — assim ele se autocorrige sem o usuário precisar
+      // refazer o cadastro.
+      const cadastros = loadCadastros();
+      const local = cadastros.find(c => String(c.id) === String(userCadastro.id));
+      if (local && local.synced === false) {
+        const enviado = await saveCadastroToSupabase(local, 1);
+        if (cancelado) return;
+        if (enviado) {
+          const atualizado = { ...local, synced: true };
+          const atualizados = cadastros.map(c => c.id === atualizado.id ? atualizado : c);
+          localStorage.setItem(CADASTROS_KEY, JSON.stringify(atualizados));
+          localStorage.setItem(USER_KEY, JSON.stringify(atualizado));
+        } else {
+          // Ainda não sincronizado — não chama syncFromSupabase agora, pois ele
+          // sobrescreve cadastros_pendentes inteiro com a lista do servidor e
+          // apagaria esse registro local (que o servidor ainda não tem).
+          setStatusVersion(v => v + 1);
+          return;
+        }
+      }
+      await syncFromSupabase();
+      if (!cancelado) setStatusVersion(v => v + 1);
     };
     checarStatus();
     const intervalId = setInterval(checarStatus, 20000);
-    return () => { cancelado = true; clearInterval(intervalId); };
+    window.addEventListener('online', checarStatus);
+    return () => {
+      cancelado = true;
+      clearInterval(intervalId);
+      window.removeEventListener('online', checarStatus);
+    };
   }, [userCadastro]);
 
   const [fotoAtual, setFotoAtual] = useState(() => {
@@ -607,6 +641,7 @@ export default function Usuario() {
     const cadastroAtualizado = cadastros.find(c => String(c.id) === String(userCadastro.id));
     const foiAprovado = cadastroAtualizado?.status === 'aprovado';
     const foiRejeitado = cadastroAtualizado?.status === 'rejeitado';
+    const naoSincronizado = cadastroAtualizado?.synced === false;
 
     return (
       <div className="container" style={{ paddingBottom: 'var(--spacing-xl)' }}>
@@ -644,19 +679,45 @@ export default function Usuario() {
 
           {!foiAprovado && !foiRejeitado && (
             <div className="glass-card" style={{ textAlign: 'center' }}>
-              <i className="ph ph-clock-countdown" style={{ fontSize: '2.5rem', color: 'var(--accent-color)', display: 'block', marginBottom: '12px' }}></i>
-              <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.3rem', marginBottom: '8px' }}>Cadastro Pendente</h2>
+              <i className={naoSincronizado ? 'ph ph-cloud-arrow-up' : 'ph ph-clock-countdown'} style={{ fontSize: '2.5rem', color: naoSincronizado ? '#f59e0b' : 'var(--accent-color)', display: 'block', marginBottom: '12px' }}></i>
+              <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.3rem', marginBottom: '8px' }}>
+                {naoSincronizado ? 'Enviando seu cadastro...' : 'Cadastro Pendente'}
+              </h2>
               <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: 'var(--spacing-lg)' }}>
-                Aguarde a aprovação do administrador. Quando aprovado, você poderá entrar com seu e-mail e senha.
+                {naoSincronizado
+                  ? 'Ainda não conseguimos confirmar o envio ao servidor — provavelmente por causa da internet. Deixe o app aberto que tentamos automaticamente; se preferir, toque em "Tentar agora".'
+                  : 'Aguarde a aprovação do administrador. Quando aprovado, você poderá entrar com seu e-mail e senha.'}
               </p>
               <div style={{ background: 'var(--bg-surface)', padding: '16px', borderRadius: 'var(--radius-md)', textAlign: 'left', marginBottom: 'var(--spacing-lg)' }}>
                 <p style={{ fontSize: '0.9rem', color: 'var(--text-primary)', margin: 0 }}><strong>Nome:</strong> {userCadastro.nome}</p>
                 <p style={{ fontSize: '0.9rem', color: 'var(--text-primary)', margin: '8px 0 0 0' }}><strong>E-mail:</strong> {userCadastro.email}</p>
                 <p style={{ fontSize: '0.9rem', margin: '8px 0 0 0' }}>
                   <strong>Status: </strong>
-                  <span style={{ color: '#f59e0b', fontWeight: 600 }}>Aguardando aprovação</span>
+                  {naoSincronizado
+                    ? <span style={{ color: '#f59e0b', fontWeight: 600 }}>Não enviado ainda — tentando de novo</span>
+                    : <span style={{ color: '#f59e0b', fontWeight: 600 }}>Aguardando aprovação</span>}
                 </p>
               </div>
+              {naoSincronizado && (
+                <button
+                  onClick={async () => {
+                    setReenviando(true);
+                    const enviado = await saveCadastroToSupabase(cadastroAtualizado, 1);
+                    if (enviado) {
+                      const atualizado = { ...cadastroAtualizado, synced: true };
+                      const atualizados = cadastros.map(c => c.id === atualizado.id ? atualizado : c);
+                      localStorage.setItem(CADASTROS_KEY, JSON.stringify(atualizados));
+                      localStorage.setItem(USER_KEY, JSON.stringify(atualizado));
+                      setStatusVersion(v => v + 1);
+                    }
+                    setReenviando(false);
+                  }}
+                  disabled={reenviando}
+                  style={{ width: '100%', padding: '12px', background: 'var(--accent-color)', border: 'none', borderRadius: 'var(--radius-md)', color: 'var(--bg-color)', cursor: reenviando ? 'default' : 'pointer', fontWeight: 700, marginBottom: 'var(--spacing-sm)', opacity: reenviando ? 0.7 : 1 }}
+                >
+                  {reenviando ? 'Tentando...' : 'Tentar agora'}
+                </button>
+              )}
               <button onClick={handleCancelCadastro} style={{ width: '100%', padding: '12px', background: 'transparent', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', color: 'var(--text-secondary)', cursor: 'pointer', fontWeight: 600 }}>
                 Cancelar Cadastro
               </button>
@@ -677,10 +738,22 @@ export default function Usuario() {
         {/* Tela inicial */}
         {tela === 'inicio' && (
           <>
-            <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)', padding: '48px 20px', textAlign: 'center', marginBottom: 'var(--spacing-lg)' }}>
-              <i className="ph ph-user-circle" style={{ fontSize: '4rem', color: 'var(--accent-color)', display: 'block', marginBottom: '16px' }}></i>
-              <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.8rem', margin: 0, marginBottom: '8px' }}>Bem-vindo(a)!</h1>
-              <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', margin: 0 }}>Faça parte da comunidade {config.nomeCurto}</p>
+            <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 'var(--radius-lg)', padding: '48px 20px', textAlign: 'center', marginBottom: 'var(--spacing-lg)', border: config.enderecoFoto ? 'none' : '1px solid var(--border-color)', background: config.enderecoFoto ? undefined : 'var(--bg-surface)' }}>
+              {config.enderecoFoto && (
+                <>
+                  <img src={config.enderecoFoto} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0 }} />
+                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(170deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.82) 100%)', zIndex: 0 }} />
+                </>
+              )}
+              <div style={{ position: 'relative', zIndex: 1 }}>
+                <img
+                  src={config.logoUrl || '/logo-icon.png'}
+                  alt={config.nomeIgreja}
+                  style={{ width: '84px', height: '84px', borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.7)', boxShadow: '0 4px 18px rgba(0,0,0,0.4)', display: 'block', margin: '0 auto 16px' }}
+                />
+                <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.8rem', margin: 0, marginBottom: '8px', color: config.enderecoFoto ? '#fff' : undefined }}>Bem-vindo(a)!</h1>
+                <p style={{ fontSize: '0.95rem', color: config.enderecoFoto ? 'rgba(255,255,255,0.85)' : 'var(--text-secondary)', margin: 0 }}>Faça parte da comunidade {config.nomeCurto}</p>
+              </div>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>

@@ -37,33 +37,42 @@ export async function uploadFotoToStorage(base64DataUrl, pasta = 'geral') {
   }
 }
 
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 // -------------------------------------------------------
-// Cadastros: salva novo cadastro de membro no Supabase
+// Cadastros: salva novo cadastro de membro no Supabase.
+// Tenta algumas vezes antes de desistir — uma falha de rede
+// passageira não pode fazer o cadastro se perder.
 // -------------------------------------------------------
-export async function saveCadastroToSupabase(cadastro) {
+export async function saveCadastroToSupabase(cadastro, tentativas = 3) {
   if (!supabase) return false;
-  try {
-    const { error } = await supabase.from('cadastros').upsert({
-      id:              String(cadastro.id),
-      nome:            cadastro.nome            || null,
-      email:           cadastro.email           || null,
-      celular:         cadastro.celular         || null,
-      data_nascimento: cadastro.dataNascimento  || null,
-      bairro:          cadastro.bairro          || null,
-      celula:          cadastro.celula          || null,
-      experiencia:     cadastro.experiencia     || null,
-      foto:            cadastro.foto            || null,
-      password_hash:   cadastro.passwordHash    || null,
-      password_salt:   cadastro.passwordSalt    || null,
-      status:          cadastro.status          || 'pendente',
-      data_cadastro:   cadastro.dataCadastro    || null,
-    });
-    if (error) throw error;
-    return true;
-  } catch (e) {
-    console.warn('[Supabase] Erro ao salvar cadastro:', e.message);
-    return false;
+  for (let tentativa = 1; tentativa <= tentativas; tentativa++) {
+    try {
+      const { error } = await supabase.from('cadastros').upsert({
+        id:              String(cadastro.id),
+        nome:            cadastro.nome            || null,
+        email:           cadastro.email           || null,
+        celular:         cadastro.celular         || null,
+        data_nascimento: cadastro.dataNascimento  || null,
+        bairro:          cadastro.bairro          || null,
+        celula:          cadastro.celula          || null,
+        experiencia:     cadastro.experiencia     || null,
+        foto:            cadastro.foto            || null,
+        password_hash:   cadastro.passwordHash    || null,
+        password_salt:   cadastro.passwordSalt    || null,
+        status:          cadastro.status          || 'pendente',
+        data_cadastro:   cadastro.dataCadastro    || null,
+      });
+      if (error) throw error;
+      return true;
+    } catch (e) {
+      console.warn(`[Supabase] Erro ao salvar cadastro (tentativa ${tentativa}/${tentativas}):`, e.message);
+      if (tentativa < tentativas) await sleep(tentativa * 1500);
+    }
   }
+  return false;
 }
 
 // -------------------------------------------------------

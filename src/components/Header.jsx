@@ -66,8 +66,13 @@ export default function Header({ title, backButton = false, admin = false }) {
     );
   }
 
+  const isHome = location.pathname === '/';
+
   return (
-    <header className={`app-header ${location.pathname === '/culto' ? 'no-border' : ''}`} style={location.pathname === '/culto' ? { borderBottom: 'none', paddingBottom: 0 } : {}}>
+    <header
+      className={`app-header ${location.pathname === '/culto' ? 'no-border' : ''} ${isHome ? 'app-header-transparent' : ''}`}
+      style={location.pathname === '/culto' ? { borderBottom: 'none', paddingBottom: 0 } : {}}
+    >
       <div className="header-content">
         {backButton ? (
           <button

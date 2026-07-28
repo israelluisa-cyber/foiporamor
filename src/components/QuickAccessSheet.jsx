@@ -2,16 +2,16 @@ import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 
 const ITENS = [
-  { to: '/oracao',         icon: 'ph-hands-praying',    label: 'Oração',         color: '#c084fc', bg: 'rgba(192,132,252,0.15)' },
-  { to: '/financeiro',     icon: 'ph-hand-heart',       label: 'Contribuir',     color: '#facc15', bg: 'rgba(250,204,21,0.15)'  },
-  { to: '/evangelismo',    icon: 'ph-megaphone',        label: 'Evangelismo',    color: '#fb923c', bg: 'rgba(251,146,60,0.15)'  },
-  { to: '/teologia',       icon: 'ph-graduation-cap',   label: 'Teologia',       color: '#94a3b8', bg: 'rgba(148,163,184,0.12)' },
-  { to: '/ministerios',    icon: 'ph-users-three',      label: 'Ministérios',    color: '#818cf8', bg: 'rgba(129,140,248,0.15)' },
-  { to: '/devocional',     icon: 'ph-sun-horizon',      label: 'Devocional',     color: '#f97316', bg: 'rgba(249,115,22,0.15)'  },
-  { to: '/biblia',         icon: 'ph-book-bookmark',    label: 'Bíblia',         color: '#60a5fa', bg: 'rgba(96,165,250,0.15)'  },
-  { to: '/voluntarios',    icon: 'ph-heart',            label: 'Voluntários',    color: '#f472b6', bg: 'rgba(244,114,182,0.15)' },
-  { to: '/aconselhamento', icon: 'ph-chat-circle-dots', label: 'Aconselhamento', color: '#4ade80', bg: 'rgba(74,222,128,0.15)'  },
-  { to: '/admin',          icon: 'ph-shield-check',     label: 'Painel Admin',   color: '#a3a3a3', bg: 'rgba(163,163,163,0.15)', apenasAdmin: true },
+  { to: '/oracao',         icon: 'ph-hands-praying',    label: 'Oração',         desc: 'Envie seu pedido de oração',            color: '#c084fc', bg: 'rgba(192,132,252,0.15)' },
+  { to: '/financeiro',     icon: 'ph-hand-heart',       label: 'Contribuir',     desc: 'Dízimos e ofertas com amor',            color: '#facc15', bg: 'rgba(250,204,21,0.15)'  },
+  { to: '/evangelismo',    icon: 'ph-megaphone',        label: 'Evangelismo',    desc: 'Compartilhe o amor de Cristo',          color: '#fb923c', bg: 'rgba(251,146,60,0.15)'  },
+  { to: '/teologia',       icon: 'ph-graduation-cap',   label: 'Teologia',       desc: 'Estude e aprofunde seu conhecimento',   color: '#94a3b8', bg: 'rgba(148,163,184,0.12)' },
+  { to: '/ministerios',    icon: 'ph-users-three',      label: 'Ministérios',    desc: 'Conheça e participe dos ministérios',   color: '#818cf8', bg: 'rgba(129,140,248,0.15)' },
+  { to: '/devocional',     icon: 'ph-sun-horizon',      label: 'Devocional',     desc: 'Palavra diária para edificar sua fé',   color: '#f97316', bg: 'rgba(249,115,22,0.15)'  },
+  { to: '/biblia',         icon: 'ph-book-bookmark',    label: 'Bíblia',         desc: 'Leia e medite a Palavra',               color: '#60a5fa', bg: 'rgba(96,165,250,0.15)'  },
+  { to: '/voluntarios',    icon: 'ph-heart',            label: 'Voluntários',    desc: 'Seja um instrumento nas mãos de Deus',  color: '#f472b6', bg: 'rgba(244,114,182,0.15)' },
+  { to: '/aconselhamento', icon: 'ph-chat-circle-dots', label: 'Aconselhamento', desc: 'Fale conosco, estamos aqui',            color: '#4ade80', bg: 'rgba(74,222,128,0.15)'  },
+  { to: '/admin',          icon: 'ph-shield-check',     label: 'Painel Admin',   desc: 'Gestão e configurações da igreja',      color: '#a3a3a3', bg: 'rgba(163,163,163,0.15)', apenasAdmin: true },
 ];
 
 // Curva de easing do próprio UISheetPresentationController da Apple — dá a
@@ -31,6 +31,10 @@ export default function QuickAccessSheet({ onClose }) {
   const [dragY, setDragY] = useState(0);
   const dragging = useRef(false);
   const startY = useRef(0);
+  // A grade de cards agora pode rolar (mais itens, cards maiores) — só deixa
+  // o gesto de arrastar pra fechar assumir quando a grade já está no topo,
+  // senão um scroll normal vira um fechamento acidental do sheet.
+  const gridRef = useRef(null);
 
   // Enquanto a animação de entrada dos ícones (qasTilePop) está segurando o
   // transform com fill-mode "both", o :active de toque não consegue competir
@@ -63,7 +67,9 @@ export default function QuickAccessSheet({ onClose }) {
   const handleTouchMove = (e) => {
     if (!dragging.current) return;
     const delta = e.touches[0].clientY - startY.current;
-    if (delta > 0) setDragY(delta);
+    if (delta > 0 && (!gridRef.current || gridRef.current.scrollTop <= 0)) {
+      setDragY(delta);
+    }
   };
   const handleTouchEnd = () => {
     if (!dragging.current) return;
@@ -96,24 +102,31 @@ export default function QuickAccessSheet({ onClose }) {
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         style={{
-          width: '100%', maxWidth: '600px',
+          width: '100%', maxWidth: '600px', maxHeight: '85vh',
+          display: 'flex', flexDirection: 'column',
           background: 'var(--glass-bg)',
           backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
           border: '1px solid var(--glass-border)', borderBottom: 'none',
           borderRadius: '28px 28px 0 0',
           boxShadow: '0 -8px 40px rgba(0,0,0,0.5)',
-          paddingBottom: 'calc(var(--spacing-md) + env(safe-area-inset-bottom))',
           transform: `translateY(calc(${offScreen ? '100%' : '0%'} + ${dragY}px))`,
           transition: dragging.current ? 'none' : `transform ${sheetDuration}ms ${APPLE_EASE}`,
         }}
       >
-        <div style={{ width: '36px', height: '5px', borderRadius: 'var(--radius-full)', background: 'var(--border-color)', margin: '10px auto 4px' }} />
+        <div style={{ width: '36px', height: '5px', borderRadius: 'var(--radius-full)', background: 'var(--border-color)', margin: '10px auto 4px', flexShrink: 0 }} />
 
-        <h3 style={{ fontSize: '0.95rem', fontWeight: 700, textAlign: 'center', margin: '4px 0 14px', color: 'var(--text-primary)' }}>
+        <h3 style={{ fontSize: '0.95rem', fontWeight: 700, textAlign: 'center', margin: '4px 0 14px', color: 'var(--text-primary)', flexShrink: 0 }}>
           Menu
         </h3>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px', padding: '0 14px' }}>
+        <div
+          ref={gridRef}
+          style={{
+            overflowY: 'auto', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain',
+            display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px',
+            padding: '2px 14px calc(var(--spacing-lg) + env(safe-area-inset-bottom))',
+          }}
+        >
           {itens.map((item, i) => (
             <Link
               key={item.to}
@@ -121,17 +134,32 @@ export default function QuickAccessSheet({ onClose }) {
               onClick={onClose}
               className="qas-tile"
               style={{
-                textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center',
-                gap: '8px', padding: '14px 6px', borderRadius: 'var(--radius-md)',
+                textDecoration: 'none', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center',
+                gap: '10px', padding: '18px 8px 14px', borderRadius: 'var(--radius-lg)',
+                background: `linear-gradient(160deg, ${item.color}26, ${item.color}08)`,
+                border: `1px solid ${item.color}33`,
                 animation: (phase === 'open' && !tilesEntered) ? `qasTilePop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) ${i * 0.035}s both` : 'none',
               }}
             >
-              <div style={{ width: '52px', height: '52px', borderRadius: 'var(--radius-full)', background: item.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <i className={`ph ${item.icon}`} style={{ fontSize: '1.35rem', color: item.color }}></i>
+              <div style={{
+                width: '56px', height: '56px', borderRadius: 'var(--radius-full)',
+                background: `radial-gradient(circle at 35% 30%, ${item.color}59, ${item.color}14 72%)`,
+                boxShadow: `0 0 16px ${item.color}66, inset 0 0 0 1px ${item.color}4d`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <i className={`ph ${item.icon}`} style={{ fontSize: '1.5rem', color: item.color, filter: `drop-shadow(0 0 6px ${item.color}80)` }}></i>
               </div>
-              <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-secondary)', textAlign: 'center', lineHeight: 1.2 }}>
-                {item.label}
-              </span>
+              <div>
+                <p style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0, lineHeight: 1.2 }}>
+                  {item.label}
+                </p>
+                <p style={{
+                  fontSize: '0.66rem', color: 'var(--text-muted)', margin: '3px 0 0', lineHeight: 1.3,
+                  display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                }}>
+                  {item.desc}
+                </p>
+              </div>
             </Link>
           ))}
         </div>
@@ -144,8 +172,8 @@ export default function QuickAccessSheet({ onClose }) {
           100% { opacity: 1; transform: scale(1) translateY(0); }
         }
         .qas-tile:active {
-          transform: scale(0.92);
-          background: var(--bg-surface-elevated);
+          transform: scale(0.94);
+          filter: brightness(1.15);
         }
       `}</style>
     </div>
