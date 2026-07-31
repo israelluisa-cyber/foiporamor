@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import './styles.css'
 import './App.css'
-import { syncFromSupabase } from './data/supabase'
+import { syncFromSupabase, retryCadastrosPendentes } from './data/supabase'
 import { loadConfig, applyBranding } from './data/config'
 import { limparAvisosExpirados } from './data/avisos'
 
@@ -11,6 +11,7 @@ applyBranding(loadConfig()); // pinta o splash com o cache local imediatamente
 syncFromSupabase().then(() => {
   limparAvisosExpirados();
   applyBranding(loadConfig());
+  retryCadastrosPendentes(); // reenvia cadastro que ficou preso sem confirmar no servidor
 });
 
 // Captura o prompt de instalação nativo do Android/Chrome

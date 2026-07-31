@@ -41,37 +41,47 @@ export default function UltimaPregacaoCard({ config }) {
         target="_blank"
         rel="noopener noreferrer"
         className="glass-card"
-        style={{ display: 'flex', gap: 'var(--spacing-md)', padding: 'var(--spacing-md)', marginBottom: 'var(--spacing-md)', textDecoration: 'none' }}
+        style={{
+          position: 'relative', display: 'flex', overflow: 'hidden', padding: 0,
+          marginBottom: 'var(--spacing-md)', textDecoration: 'none', minHeight: '170px',
+          background: pregacao.thumbnail ? `url(${pregacao.thumbnail})` : 'var(--bg-surface-elevated)',
+          backgroundSize: 'cover', backgroundPosition: 'center',
+        }}
       >
-        <div
-          style={{
-            position: 'relative', width: '128px', flexShrink: 0, aspectRatio: '4 / 5',
-            borderRadius: 'var(--radius-md)', overflow: 'hidden', background: 'var(--bg-surface-elevated)',
-            backgroundImage: pregacao.thumbnail ? `url(${pregacao.thumbnail})` : 'none',
-            backgroundSize: 'cover', backgroundPosition: 'center',
-          }}
-        >
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'rgba(0,0,0,0.55)', border: '1px solid rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <i className="ph-fill ph-play" style={{ fontSize: '1.1rem', color: '#fff', marginLeft: '2px' }}></i>
-            </div>
+        {/* Metade visível da foto, com o botão de play */}
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'rgba(0,0,0,0.55)', border: '1px solid rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <i className="ph-fill ph-play" style={{ fontSize: '1.1rem', color: '#fff', marginLeft: '2px' }}></i>
           </div>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', minWidth: 0 }}>
-          <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 10px', lineHeight: 1.25, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+        {/* Metade escurecida com degradê, onde fica o texto por cima da foto */}
+        <div
+          style={{
+            flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center',
+            padding: 'var(--spacing-md)',
+            background: 'linear-gradient(to right, transparent, rgba(0,0,0,0.55) 12%, rgba(0,0,0,0.85) 45%, rgba(0,0,0,0.9) 100%)',
+          }}
+        >
+          <span style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--accent-color)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px', textShadow: '0 1px 3px rgba(0,0,0,0.6)' }}>
+            Última Pregação
+          </span>
+          <h4 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#fff', margin: '0 0 10px', lineHeight: 1.25, textShadow: '0 1px 4px rgba(0,0,0,0.5)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
             {pregacao.titulo}
           </h4>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginBottom: '14px' }}>
             {pregacao.duracao && (
-              <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.85)', display: 'flex', alignItems: 'center', gap: '5px' }}>
                 <i className="ph ph-clock"></i> {pregacao.duracao}
               </span>
             )}
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+            <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.85)', display: 'flex', alignItems: 'center', gap: '5px' }}>
               <i className="ph ph-calendar-blank"></i> {formatarData(pregacao.publicadoEm)}
             </span>
           </div>
+          <span style={{ display: 'inline-flex', alignSelf: 'flex-start', alignItems: 'center', gap: '6px', background: 'var(--accent-color)', color: 'var(--bg-color)', padding: '8px 16px', borderRadius: 'var(--radius-full)', fontSize: '0.8rem', fontWeight: 700 }}>
+            <i className="ph-fill ph-play"></i> Assistir Culto
+          </span>
         </div>
       </a>
     </>

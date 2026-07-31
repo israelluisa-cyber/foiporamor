@@ -50,7 +50,14 @@ export async function saveCadastroToSupabase(cadastro, tentativas = 3) {
   if (!supabase) return false;
   for (let tentativa = 1; tentativa <= tentativas; tentativa++) {
     try {
-      const { error } = await supabase.from('cadastros').upsert({
+      // insert() puro em vez de upsert(): o ON CONFLICT do upsert exige
+      // privilégio de SELECT na tabela pro Postgres checar duplicidade —
+      // o que expõe password_hash/password_salt ao role anon. Como cada
+      // cadastro novo já nasce com um id único (Date.now()), colisão não
+      // acontece na prática; um 23505 (id duplicado) só ocorre se uma
+      // tentativa anterior já tiver salvo com sucesso, então tratamos
+      // como sucesso também.
+      const { error } = await supabase.from('cadastros').insert({
         id:              String(cadastro.id),
         nome:            cadastro.nome            || null,
         email:           cadastro.email           || null,
@@ -65,7 +72,7 @@ export async function saveCadastroToSupabase(cadastro, tentativas = 3) {
         status:          cadastro.status          || 'pendente',
         data_cadastro:   cadastro.dataCadastro    || null,
       });
-      if (error) throw error;
+      if (error && error.code !== '23505') throw error;
       return true;
     } catch (e) {
       console.warn(`[Supabase] Erro ao salvar cadastro (tentativa ${tentativa}/${tentativas}):`, e.message);
@@ -374,7 +381,7 @@ export async function syncFromSupabase() {
     ]);
 
     if (membros?.length)        localStorage.setItem('membros_data',           JSON.stringify(mapMembros(membros)));
-    if (cadastros?.length)      localStorage.setItem('cadastros_pendentes',    JSON.stringify(mapCadastros(cadastros)));
+    if (cadastros?.length)      localStorage.setItem('cadastros_pendentes',    JSON.stringify(mergeCadastrosLocaisNaoSincronizados(mapCadastros(cadastros))));
     if (avisos?.length)         localStorage.setItem('admin_avisos',           JSON.stringify(avisos));
     if (oracao?.length)         localStorage.setItem('pedidos_oracao',         JSON.stringify(oracao));
     if (visitantes?.length)     localStorage.setItem('visitantes',             JSON.stringify(visitantes));
@@ -392,6 +399,33 @@ export async function syncFromSupabase() {
 }
 
 // -------------------------------------------------------
+// Reenvia cadastros que ficaram presos no aparelho sem
+// confirmar no servidor (ex.: internet caiu no envio original).
+// Chamado a cada boot do app — não só quando a pessoa reabre a
+// tela "Minha Conta" — pra não depender dela voltar lá.
+// -------------------------------------------------------
+export async function retryCadastrosPendentes() {
+  if (!supabase) return;
+  let locais = [];
+  try { locais = JSON.parse(localStorage.getItem('cadastros_pendentes')) || []; } catch { return; }
+  const naoSincronizados = locais.filter(c => c.synced === false);
+  if (!naoSincronizados.length) return;
+
+  for (const cadastro of naoSincronizados) {
+    const enviado = await saveCadastroToSupabase(cadastro, 1);
+    if (!enviado) continue;
+    locais = locais.map(c => c.id === cadastro.id ? { ...c, synced: true } : c);
+    localStorage.setItem('cadastros_pendentes', JSON.stringify(locais));
+    try {
+      const usuarioAtual = JSON.parse(localStorage.getItem('user_cadastro'));
+      if (String(usuarioAtual?.id) === String(cadastro.id)) {
+        localStorage.setItem('user_cadastro', JSON.stringify({ ...cadastro, synced: true }));
+      }
+    } catch { /* sem sessão local ativa — segue sem atualizar */ }
+  }
+}
+
+// -------------------------------------------------------
 // Mapeamento: snake_case do banco → camelCase do app
 // -------------------------------------------------------
 function mapMembros(rows) {
@@ -404,6 +438,18 @@ function mapMembros(rows) {
     foto: r.foto,
     dataNascimento: r.data_nascimento,
   }));
+}
+
+// Evita que um sync (que substitui cadastros_pendentes pela lista do
+// servidor) apague um cadastro que só existe no aparelho ainda — ex.:
+// o envio original falhou por causa da internet e o reenvio automático
+// não teve chance de completar antes deste sync rodar.
+function mergeCadastrosLocaisNaoSincronizados(cadastrosDoServidor) {
+  let locais = [];
+  try { locais = JSON.parse(localStorage.getItem('cadastros_pendentes')) || []; } catch { /* ignore */ }
+  const idsDoServidor = new Set(cadastrosDoServidor.map(c => String(c.id)));
+  const naoSincronizados = locais.filter(c => c.synced === false && !idsDoServidor.has(String(c.id)));
+  return [...cadastrosDoServidor, ...naoSincronizados];
 }
 
 function mapCadastros(rows) {

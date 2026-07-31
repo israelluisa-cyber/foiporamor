@@ -124,7 +124,7 @@ function ModalCadastroMembro({ isOpen, onClose, onSuccess }) {
     // Mesmo se o envio falhar aqui, o cadastro já está salvo no aparelho
     // com synced:false — a tela "Cadastro Pendente" assume dali pra frente
     // e continua tentando enviar em segundo plano até confirmar.
-    onSuccess();
+    onSuccess(enviado);
   };
 
   if (!isOpen) return null;
@@ -925,10 +925,12 @@ export default function Usuario() {
       <ModalCadastroMembro
         isOpen={modalCadastro}
         onClose={() => setModalCadastro(false)}
-        onSuccess={() => {
+        onSuccess={(enviado) => {
           setModalCadastro(false);
           try { setUserCadastro(JSON.parse(localStorage.getItem(USER_KEY))); } catch { /* localStorage sem o cadastro recém-salvo — segue sem sessão local */ }
-          setToast('Cadastro enviado! Aguarde a aprovação do administrador.');
+          setToast(enviado
+            ? 'Cadastro enviado! Aguarde a aprovação do administrador.'
+            : 'Cadastro salvo no aparelho. Não conseguimos confirmar o envio agora — vamos tentar de novo automaticamente.');
         }}
       />
 

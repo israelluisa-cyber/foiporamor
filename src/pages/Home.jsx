@@ -802,24 +802,22 @@ export default function Home() {
 
         {/* Localização */}
         <h3 className="section-title">Onde nos encontrar</h3>
-        <section className="glass-card" style={{ marginBottom: 'var(--spacing-md)', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', border: config.enderecoFoto ? 'none' : undefined }}>
+        <section className="glass-card" style={{ marginBottom: 'var(--spacing-md)', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)', padding: '12px 14px', border: config.enderecoFoto ? 'none' : undefined }}>
           {config.enderecoFoto && (
             <>
               <img src={config.enderecoFoto} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0 }} />
               <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(170deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.7) 100%)', zIndex: 0 }} />
             </>
           )}
-          <div style={{ width: '48px', height: '48px', borderRadius: 'var(--radius-md)', background: config.enderecoFoto ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.06)', border: `1px solid ${config.enderecoFoto ? 'rgba(255,255,255,0.3)' : 'var(--border-color)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative', zIndex: 1 }}>
-            <i className="ph ph-map-pin" style={{ fontSize: '1.4rem', color: config.enderecoFoto ? '#fff' : 'var(--accent-color)' }}></i>
+          <div style={{ width: '38px', height: '38px', borderRadius: 'var(--radius-md)', background: config.enderecoFoto ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.06)', border: `1px solid ${config.enderecoFoto ? 'rgba(255,255,255,0.3)' : 'var(--border-color)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative', zIndex: 1 }}>
+            <i className="ph ph-map-pin" style={{ fontSize: '1.2rem', color: config.enderecoFoto ? '#fff' : 'var(--accent-color)' }}></i>
           </div>
-          <div style={{ flex: 1, minWidth: 0, position: 'relative', zIndex: 1 }}>
-            <p style={{ fontSize: '0.7rem', fontWeight: 700, color: config.enderecoFoto ? 'rgba(255,255,255,0.7)' : 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>{config.nomeIgreja}</p>
-            <p style={{ fontSize: '0.9rem', color: config.enderecoFoto ? '#fff' : 'var(--text-primary)', marginBottom: '2px' }}>{config.endereco}</p>
-            <p style={{ fontSize: '0.8rem', color: config.enderecoFoto ? 'rgba(255,255,255,0.7)' : 'var(--text-muted)' }}>{config.cidade}</p>
-          </div>
+          <p style={{ flex: 1, minWidth: 0, fontSize: '0.95rem', fontWeight: 700, color: config.enderecoFoto ? '#fff' : 'var(--text-primary)', position: 'relative', zIndex: 1, margin: 0 }}>
+            {config.nomeIgreja}
+          </p>
           <button
             onClick={() => window.open(config.mapsLink || 'https://maps.google.com', '_blank')}
-            style={{ padding: '8px 14px', background: config.enderecoFoto ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.06)', border: `1px solid ${config.enderecoFoto ? 'rgba(255,255,255,0.3)' : 'var(--border-color)'}`, borderRadius: 'var(--radius-full)', color: config.enderecoFoto ? '#fff' : 'var(--text-primary)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '5px', whiteSpace: 'nowrap', flexShrink: 0, position: 'relative', zIndex: 1 }}
+            style={{ padding: '7px 12px', background: config.enderecoFoto ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.06)', border: `1px solid ${config.enderecoFoto ? 'rgba(255,255,255,0.3)' : 'var(--border-color)'}`, borderRadius: 'var(--radius-full)', color: config.enderecoFoto ? '#fff' : 'var(--text-primary)', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '5px', whiteSpace: 'nowrap', flexShrink: 0, position: 'relative', zIndex: 1 }}
           >
             <i className="ph ph-navigation-arrow"></i> Como chegar
           </button>
@@ -827,32 +825,35 @@ export default function Home() {
 
         {/* Redes Sociais */}
         <div style={{ marginTop: 'var(--spacing-lg)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: 'var(--spacing-md)' }}>
-            <div style={{ flex: 1, height: '1px', background: 'var(--border-color)' }} />
-            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1.5px', whiteSpace: 'nowrap' }}>Nos siga nas redes</span>
-            <div style={{ flex: 1, height: '1px', background: 'var(--border-color)' }} />
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', marginBottom: 'var(--spacing-lg)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%' }}>
+              <div style={{ flex: 1, height: '1px', background: 'var(--border-color)' }} />
+              <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1.5px', whiteSpace: 'nowrap' }}>Nos siga nas redes</span>
+              <div style={{ flex: 1, height: '1px', background: 'var(--border-color)' }} />
+            </div>
+            <div style={{ width: '32px', height: '2px', borderRadius: '2px', background: 'var(--accent-color)' }} />
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
             {[
-              { nome: 'YouTube',   Icon: FaYoutube,   gradient: 'linear-gradient(135deg,#c4302b,#ff6347)', url: config.youtubeLink },
-              { nome: 'Instagram', Icon: FaInstagram, gradient: 'linear-gradient(135deg,#833ab4,#fd1d1d,#f77737)', url: config.instagramLink },
-              { nome: 'Facebook',  Icon: FaFacebook,  gradient: 'linear-gradient(135deg,#1877f2,#0c5ebf)', url: config.facebookLink },
+              { nome: 'YouTube',   Icon: FaYoutube,   cor: '#ff0000', gradient: 'linear-gradient(135deg,#ff0000,#c4302b)', url: config.youtubeLink },
+              { nome: 'Instagram', Icon: FaInstagram, cor: '#e1306c', gradient: 'linear-gradient(135deg,#833ab4,#fd1d1d,#f77737)', url: config.instagramLink },
+              { nome: 'Facebook',  Icon: FaFacebook,  cor: '#1877f2', gradient: 'linear-gradient(135deg,#1877f2,#0c5ebf)', url: config.facebookLink },
             ].filter(r => r.url).map(r => (
               <button
                 key={r.nome}
                 onClick={() => window.open(r.url, '_blank')}
                 style={{
-                  background: 'var(--bg-surface)', border: '1px solid var(--border-color)',
-                  borderRadius: 'var(--radius-md)', padding: '14px 8px', cursor: 'pointer',
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
-                  transition: 'all 0.2s',
+                  background: 'transparent', border: 'none', cursor: 'pointer',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px',
+                  padding: '8px 4px',
                 }}
               >
-                <div style={{ width: '44px', height: '44px', borderRadius: 'var(--radius-sm)', background: r.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}>
-                  <r.Icon size="1.4rem" color="#fff" />
+                <div style={{ width: '58px', height: '58px', borderRadius: '50%', background: r.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 18px 2px ${r.cor}66` }}>
+                  <r.Icon size="1.6rem" color="#fff" />
                 </div>
-                <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-secondary)' }}>{r.nome}</span>
+                <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-primary)' }}>{r.nome}</span>
+                <div style={{ width: '22px', height: '2px', borderRadius: '2px', background: r.gradient }} />
               </button>
             ))}
           </div>
