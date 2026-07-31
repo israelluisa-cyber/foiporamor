@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import Toast from '../components/Toast';
@@ -38,6 +38,57 @@ const inputStyle = {
 
 function getInitials(nome) {
   return nome.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase() || '?';
+}
+
+/* Céu estrelado do hero de login — canvas leve, respeita reduced-motion */
+function Starfield() {
+  const canvasRef = useRef(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let stars = [];
+    let raf;
+
+    function size() {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+      stars = Array.from({ length: 70 }, () => ({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height * 0.85,
+        r: Math.random() * 1.2 + 0.3,
+        base: Math.random() * 0.5 + 0.3,
+        speed: Math.random() * 0.02 + 0.01,
+        phase: Math.random() * Math.PI * 2,
+      }));
+    }
+    size();
+
+    let t = 0;
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#fff';
+      stars.forEach(s => {
+        const tw = reduceMotion ? s.base : s.base + Math.sin(t * s.speed * 10 + s.phase) * 0.35;
+        ctx.globalAlpha = Math.max(0, Math.min(1, tw));
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.globalAlpha = 1;
+      t += 0.06;
+      if (!reduceMotion) raf = requestAnimationFrame(draw);
+    }
+    draw();
+
+    window.addEventListener('resize', size);
+    return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', size); };
+  }, []);
+
+  return <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, zIndex: 0 }} />;
 }
 
 /* ── Modal de Cadastro ─────────────────────────────────────────────── */
@@ -290,6 +341,10 @@ export default function Usuario() {
   const [tempoRestanteRec, setTempoRestanteRec] = useState(0);
   const [planosConcluidos] = useState(loadPlanosConcluidos);
 
+  const [loginFlash, setLoginFlash] = useState(false);
+  const loginGlowRef = useRef(null);
+  const reduceMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
   useEffect(() => {
     if (tempoRestante <= 0) return;
     const timer = setInterval(() => {
@@ -435,15 +490,22 @@ export default function Usuario() {
     };
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
     setFotoAtual(user.foto || null);
-    setSession(sessionData);
     setEmail(''); setSenha(''); setErro('');
 
-    if (user.isAdmin) {
-      sessionStorage.setItem('adminAuth', 'true');
-      navigate('/admin');
-      return;
-    }
-    navigate('/');
+    const entrar = () => {
+      setSession(sessionData);
+      if (user.isAdmin) {
+        sessionStorage.setItem('adminAuth', 'true');
+        navigate('/admin');
+        return;
+      }
+      navigate('/');
+    };
+
+    // A luz dourada "abre caminho" antes de navegar — como se estivesse entrando na igreja.
+    if (reduceMotion) { entrar(); return; }
+    setLoginFlash(true);
+    setTimeout(entrar, 650);
   };
 
   /* Recuperar senha (confere e-mail + celular do cadastro aprovado) */
@@ -735,119 +797,106 @@ export default function Usuario() {
 
       <main style={{ paddingTop: 'var(--spacing-md)' }}>
 
-        {/* Tela inicial */}
-        {tela === 'inicio' && (
-          <>
-            <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 'var(--radius-lg)', padding: '48px 20px', textAlign: 'center', marginBottom: 'var(--spacing-lg)', border: config.enderecoFoto ? 'none' : '1px solid var(--border-color)', background: config.enderecoFoto ? undefined : 'var(--bg-surface)' }}>
-              {config.enderecoFoto && (
-                <>
-                  <img src={config.enderecoFoto} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0 }} />
-                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(170deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.82) 100%)', zIndex: 0 }} />
-                </>
-              )}
-              <div style={{ position: 'relative', zIndex: 1 }}>
-                <img
-                  src={config.logoUrl || '/logo-icon.png'}
-                  alt={config.nomeIgreja}
-                  style={{ width: '84px', height: '84px', borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.7)', boxShadow: '0 4px 18px rgba(0,0,0,0.4)', display: 'block', margin: '0 auto 16px' }}
-                />
-                <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.8rem', margin: 0, marginBottom: '8px', color: config.enderecoFoto ? '#fff' : undefined }}>Bem-vindo(a)!</h1>
-                <p style={{ fontSize: '0.95rem', color: config.enderecoFoto ? 'rgba(255,255,255,0.85)' : 'var(--text-secondary)', margin: 0 }}>Faça parte da comunidade {config.nomeCurto}</p>
-              </div>
-            </div>
+        {/* Tela inicial + login, unificadas — a Bíblia abre conforme a senha é digitada */}
+        {(tela === 'inicio' || tela === 'login') && (
+          <div className="login-hero" style={{ marginBottom: 'var(--spacing-lg)', '--open': Math.min(1, senha.length / 8) }}>
+            <Starfield />
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <button
-                onClick={() => setTela('login')}
-                className="primary-btn"
-                style={{ width: '100%', justifyContent: 'center', padding: '14px' }}
-              >
-                <i className="ph ph-sign-in"></i>
-                <span>Entrar na minha conta</span>
-              </button>
-
-              <button
-                onClick={() => setModalCadastro(true)}
-                style={{ width: '100%', padding: '14px', background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '0.95rem' }}
-              >
-                <i className="ph ph-user-plus"></i>
-                <span>Cadastrar como Membro</span>
-              </button>
-            </div>
-          </>
-        )}
-
-        {/* Tela de login */}
-        {tela === 'login' && (
-          <>
-            <button
-              onClick={() => { setTela('inicio'); setErro(''); setEmail(''); setSenha(''); }}
-              style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', marginBottom: 'var(--spacing-lg)', padding: 0, fontSize: '0.9rem' }}
-            >
-              <i className="ph ph-arrow-left"></i> Voltar
-            </button>
-
-            <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.5rem', marginBottom: '4px' }}>Entrar</h2>
-            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: 'var(--spacing-lg)' }}>
-              Use o e-mail e senha do seu cadastro aprovado.
-            </p>
-
-            <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
-              <div>
-                <label style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.5px', display: 'block', marginBottom: '6px' }}>E-mail</label>
-                <input
-                  type="email" value={email}
-                  onChange={e => { setEmail(e.target.value); setErro(''); }}
-                  style={inputStyle} placeholder="seu@email.com"
-                  autoFocus required
-                  onFocus={e => e.target.style.borderColor = 'rgba(255,255,255,0.3)'}
-                  onBlur={e => e.target.style.borderColor = 'var(--border-color)'}
-                />
+            <div style={{ position: 'relative', zIndex: 2, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <div style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '2.5px', textTransform: 'uppercase', color: 'rgba(245,242,234,0.55)', marginBottom: '30px' }}>
+                {config.nomeIgreja}
               </div>
 
-              <div>
-                <label style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.5px', display: 'block', marginBottom: '6px' }}>Senha</label>
-                <input
-                  type="password" value={senha}
-                  onChange={e => { setSenha(e.target.value); setErro(''); }}
-                  style={inputStyle} placeholder="••••••"
-                  required
-                  onFocus={e => e.target.style.borderColor = 'rgba(255,255,255,0.3)'}
-                  onBlur={e => e.target.style.borderColor = 'var(--border-color)'}
-                />
-              </div>
-
-              {erro && (
-                <div style={{ padding: '12px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 'var(--radius-md)', color: '#ef4444', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <i className="ph ph-warning-circle"></i> {erro}
+              <div className="login-book-wrap">
+                <div ref={loginGlowRef} className="login-glow" />
+                <div className="login-pages" />
+                <div className="login-cover">
+                  <span className="login-spine-line" />
+                  <div className="login-cover-content">
+                    <span className="login-cross" />
+                    <span className="login-cover-title">BÍBLIA<br />SAGRADA</span>
+                  </div>
                 </div>
-              )}
+              </div>
 
-              <button type="submit" className="primary-btn" disabled={tempoRestante > 0} style={{ width: '100%', justifyContent: 'center', padding: '14px', marginTop: 'var(--spacing-sm)', opacity: tempoRestante > 0 ? 0.5 : 1, cursor: tempoRestante > 0 ? 'not-allowed' : 'pointer' }}>
-                <i className="ph ph-sign-in"></i>
-                <span>{tempoRestante > 0 ? `Aguarde ${Math.ceil(tempoRestante / 1000)}s` : 'Entrar'}</span>
-              </button>
-            </form>
+              <div className="login-verse">
+                <div className="ref">João 3:16</div>
+                <div className="txt">"Porque Deus amou o mundo de tal maneira que deu o seu Filho unigênito, para que todo aquele que nele crê não pereça, mas tenha a vida eterna."</div>
+              </div>
 
-            <p style={{ textAlign: 'center', marginTop: 'var(--spacing-md)' }}>
-              <button
-                onClick={() => { setTela('recuperar'); setErro(''); setEmail(''); setSenha(''); }}
-                style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.85rem', padding: 0, textDecoration: 'underline' }}
-              >
-                Esqueci minha senha
-              </button>
-            </p>
+              <form onSubmit={handleLogin} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <div className="login-field">
+                  <i className="ph ph-envelope-simple ic"></i>
+                  <input
+                    type="email" value={email}
+                    onChange={e => { setEmail(e.target.value); setErro(''); }}
+                    placeholder="seu@email.com"
+                    autoFocus required
+                  />
+                </div>
 
-            <p style={{ textAlign: 'center', marginTop: 'var(--spacing-lg)', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-              Ainda não tem conta?{' '}
-              <button
-                onClick={() => setModalCadastro(true)}
-                style={{ background: 'none', border: 'none', color: 'var(--accent-color)', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem', padding: 0 }}
-              >
-                Cadastrar
-              </button>
-            </p>
-          </>
+                <div className="login-field">
+                  <i className="ph ph-lock-simple ic"></i>
+                  <input
+                    type="password" value={senha}
+                    onChange={e => {
+                      setSenha(e.target.value); setErro('');
+                      if (!reduceMotion && loginGlowRef.current) {
+                        loginGlowRef.current.classList.remove('pulse');
+                        void loginGlowRef.current.offsetWidth; // reflow, pra reiniciar a animação a cada tecla
+                        loginGlowRef.current.classList.add('pulse');
+                      }
+                    }}
+                    placeholder="digite sua senha..."
+                    required
+                  />
+                </div>
+
+                {erro && (
+                  <div style={{ width: '100%', maxWidth: '260px', padding: '12px', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 'var(--radius-md)', color: '#fca5a5', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                    <i className="ph ph-warning-circle"></i> {erro}
+                  </div>
+                )}
+
+                <p style={{ width: '100%', maxWidth: '260px', textAlign: 'right', margin: '-8px 0 20px' }}>
+                  <button
+                    type="button"
+                    onClick={() => { setTela('recuperar'); setErro(''); setEmail(''); setSenha(''); }}
+                    style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.65)', cursor: 'pointer', fontSize: '0.78rem', padding: 0, textDecoration: 'underline' }}
+                  >
+                    Esqueci minha senha
+                  </button>
+                </p>
+
+                <button
+                  type="submit" disabled={tempoRestante > 0}
+                  style={{
+                    width: '100%', maxWidth: '260px', padding: '15px', border: 'none', borderRadius: 'var(--radius-full)',
+                    background: `linear-gradient(135deg, var(--accent-color), var(--accent-hover))`,
+                    color: 'var(--bg-color)', fontWeight: 700, fontSize: '0.95rem',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                    boxShadow: '0 10px 24px var(--accent-glow)',
+                    opacity: tempoRestante > 0 ? 0.6 : 1, cursor: tempoRestante > 0 ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  <i className="ph ph-sign-in"></i>
+                  <span>{tempoRestante > 0 ? `Aguarde ${Math.ceil(tempoRestante / 1000)}s` : 'Entrar'}</span>
+                </button>
+              </form>
+
+              <p style={{ textAlign: 'center', marginTop: '18px', fontSize: '0.84rem', color: 'rgba(255,255,255,0.65)' }}>
+                Ainda não tem conta?{' '}
+                <button
+                  onClick={() => setModalCadastro(true)}
+                  style={{ background: 'none', border: 'none', color: 'var(--accent-color)', cursor: 'pointer', fontWeight: 700, fontSize: '0.84rem', padding: 0 }}
+                >
+                  Cadastrar como membro
+                </button>
+              </p>
+            </div>
+
+            <div className={`login-flash${loginFlash ? ' show' : ''}`} />
+          </div>
         )}
 
         {/* Tela de recuperação de senha */}

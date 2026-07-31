@@ -766,3 +766,219 @@ body.light .bottom-nav {
     padding: var(--spacing-sm) 0;
   }
 }
+
+/* ===========================
+   LOGIN — "Entrando na Igreja"
+   Bíblia que abre conforme a senha é digitada, com transição de
+   luz dourada ao entrar. Ver Usuario.jsx (LoginHero).
+=========================== */
+.login-hero {
+  --open: 0;
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  min-height: 68vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(120% 70% at 50% -10%, #171308 0%, #05050a 55%);
+  padding: var(--spacing-lg) var(--spacing-md);
+}
+
+.login-book-wrap {
+  position: relative;
+  width: 112px;
+  height: 150px;
+  margin-bottom: 18px;
+  perspective: 700px;
+}
+
+.login-glow {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 70px;
+  height: 70px;
+  background: radial-gradient(circle, rgba(255,224,140,1) 0%, rgba(251,191,36,0.85) 30%, rgba(251,191,36,0) 72%);
+  transform: translate(-50%, -50%) scale(calc(0.7 + var(--open) * 1.35));
+  opacity: calc(var(--open) * 0.95);
+  filter: blur(2px);
+  transition: transform 0.25s ease-out, opacity 0.25s ease-out;
+}
+
+.login-glow.pulse {
+  animation: login-glow-pulse 0.3s ease-out;
+}
+
+@keyframes login-glow-pulse {
+  0%   { filter: blur(2px) brightness(1); }
+  35%  { filter: blur(1px) brightness(1.9); }
+  100% { filter: blur(2px) brightness(1); }
+}
+
+.login-pages {
+  position: absolute;
+  inset: 6px 4px;
+  border-radius: 3px 6px 6px 3px;
+  background: linear-gradient(100deg, #f3e9c9, #fff8e4 55%, #f3e9c9);
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.35);
+}
+
+.login-pages::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(180deg, rgba(150,120,50,0.12) 0 1px, transparent 1px 5px);
+  opacity: calc(0.3 + var(--open) * 0.5);
+}
+
+.login-cover {
+  position: absolute;
+  inset: 0;
+  border-radius: 4px 8px 8px 4px;
+  background: linear-gradient(145deg, #171a24, #0b0d13 60%);
+  box-shadow: 0 10px 22px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.06) inset;
+  transform-origin: left center;
+  transform: rotateY(calc(var(--open) * -152deg));
+  transition: transform 0.35s cubic-bezier(0.3, 0.7, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backface-visibility: hidden;
+}
+
+.login-cover-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  opacity: calc(1 - var(--open) * 1.15);
+  transition: opacity 0.3s ease;
+}
+
+.login-cross {
+  width: 20px;
+  height: 26px;
+  position: relative;
+}
+
+.login-cross::before,
+.login-cross::after {
+  content: "";
+  position: absolute;
+  background: var(--accent-color);
+  box-shadow: 0 0 8px var(--accent-glow);
+}
+
+.login-cross::before { left: 50%; top: 0; width: 3px; height: 100%; transform: translateX(-50%); border-radius: 2px; }
+.login-cross::after  { top: 34%; left: 0; width: 100%; height: 3px; border-radius: 2px; }
+
+.login-cover-title {
+  font-size: 0.44rem;
+  font-weight: 700;
+  letter-spacing: 1.8px;
+  text-align: center;
+  line-height: 1.4;
+  color: var(--accent-color);
+}
+
+.login-spine-line {
+  position: absolute;
+  left: 6px;
+  top: 8px;
+  bottom: 8px;
+  width: 1px;
+  background: var(--accent-glow);
+}
+
+.login-verse {
+  max-width: 260px;
+  margin-bottom: 18px;
+  text-align: center;
+  opacity: calc(var(--open) * 1.15);
+  transform: translateY(calc((1 - var(--open)) * 6px));
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+.login-verse .ref {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  color: var(--accent-color);
+  margin-bottom: 4px;
+}
+
+.login-verse .txt {
+  font-size: 0.73rem;
+  font-style: italic;
+  line-height: 1.5;
+  color: rgba(245,242,234,0.78);
+}
+
+.login-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 260px;
+  padding-bottom: 9px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid rgba(245,242,234,0.22);
+}
+
+.login-field .ic {
+  color: var(--accent-color);
+  font-size: 1rem;
+  width: 16px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.login-field input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #fff;
+  font-size: 0.92rem;
+  font-family: var(--font-body);
+}
+
+.login-field input::placeholder { color: #75716a; }
+
+.login-scene {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: opacity 0.5s ease, filter 0.5s ease;
+}
+
+.login-scene.hidden {
+  opacity: 0;
+  filter: blur(6px);
+  pointer-events: none;
+  position: absolute;
+}
+
+.login-flash {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  border-radius: var(--radius-lg);
+  background: radial-gradient(circle at 50% 55%, #fff 0%, #f3d88a 28%, var(--accent-color) 46%, rgba(251,191,36,0) 72%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s ease;
+}
+
+.login-flash.show { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .login-glow.pulse { animation: none; }
+  .login-cover, .login-glow, .login-flash, .login-scene { transition-duration: 0.15s; }
+}
