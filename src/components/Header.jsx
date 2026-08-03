@@ -122,7 +122,7 @@ export default function Header({ title, backButton = false, admin = false }) {
           <div style={{ display: 'flex', gap: '4px', position: 'relative', alignItems: 'center' }}>
             {/* Toggle dark/light */}
             <button
-              className="icon-btn"
+              className="icon-btn theme-toggle"
               aria-label="Alternar tema"
               onClick={() => setDarkMode(d => !d)}
               title={darkMode ? 'Modo claro' : 'Modo escuro'}
