@@ -512,6 +512,7 @@ body.light .bottom-nav {
   backdrop-filter: blur(2px);
   -webkit-backdrop-filter: blur(2px);
   animation: fabBackdropIn 0.25s ease both;
+  touch-action: none;
 }
 
 @keyframes fabBackdropIn {
@@ -927,6 +928,36 @@ body.light .fab-petal {
 @keyframes spin {
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
+}
+
+/* ===========================
+   PULL TO REFRESH
+=========================== */
+.ptr-indicator {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 950;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.ptr-indicator i {
+  font-size: 1.3rem;
+  color: var(--text-primary);
+}
+
+.ptr-refreshing i {
+  animation: spin 0.7s linear infinite;
 }
 
 @keyframes bell-ring {

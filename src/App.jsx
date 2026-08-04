@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import BottomNav from './components/BottomNav';
 import ScrollToTop from './components/ScrollToTop';
+import PullToRefresh from './components/PullToRefresh';
 
 import Home        from './pages/Home';
 import Culto       from './pages/Culto';
@@ -24,26 +25,28 @@ function App() {
   return (
     <Router>
       <ScrollToTop />
-      <Routes>
-        <Route path="/"              element={<Home />} />
-        <Route path="/culto"         element={<Culto />} />
-        <Route path="/financeiro"    element={<Financeiro />} />
-        <Route path="/teologia"      element={<Teologia />} />
-        <Route path="/admin"         element={<Admin />} />
-        <Route path="/grupos"        element={<Grupos />} />
-        <Route path="/oracao"        element={<Oracao />} />
-        <Route path="/usuario"       element={<Usuario />} />
-        <Route path="/avisos"        element={<Avisos />} />
-        <Route path="/devocional"    element={<Devocional />} />
-        <Route path="/biblia"        element={<Biblia />} />
-        <Route path="/aconselhamento" element={<Aconselhamento />} />
-        <Route path="/voluntarios"   element={<Voluntarios />} />
-        <Route path="/contribuir"    element={<Contribuir />} />
-        <Route path="/evangelismo"   element={<Evangelismo />} />
-        <Route path="/ministerios"   element={<Ministerios />} />
-        <Route path="/instalar"      element={<Instalar />} />
-      </Routes>
-      <BottomNav />
+      <PullToRefresh>
+        <Routes>
+          <Route path="/"              element={<Home />} />
+          <Route path="/culto"         element={<Culto />} />
+          <Route path="/financeiro"    element={<Financeiro />} />
+          <Route path="/teologia"      element={<Teologia />} />
+          <Route path="/admin"         element={<Admin />} />
+          <Route path="/grupos"        element={<Grupos />} />
+          <Route path="/oracao"        element={<Oracao />} />
+          <Route path="/usuario"       element={<Usuario />} />
+          <Route path="/avisos"        element={<Avisos />} />
+          <Route path="/devocional"    element={<Devocional />} />
+          <Route path="/biblia"        element={<Biblia />} />
+          <Route path="/aconselhamento" element={<Aconselhamento />} />
+          <Route path="/voluntarios"   element={<Voluntarios />} />
+          <Route path="/contribuir"    element={<Contribuir />} />
+          <Route path="/evangelismo"   element={<Evangelismo />} />
+          <Route path="/ministerios"   element={<Ministerios />} />
+          <Route path="/instalar"      element={<Instalar />} />
+        </Routes>
+        <BottomNav />
+      </PullToRefresh>
     </Router>
   );
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { getUnreadCount } from '../data/avisos';
 import QuickAccessSheet from './QuickAccessSheet';
@@ -42,6 +42,12 @@ export default function BottomNav() {
   };
 
   const emUmDosItens = navItems.some(item => item.to && item.to === path);
+
+  useEffect(() => {
+    if (phase === 'closed') return;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, [phase]);
 
   return (
     <>
