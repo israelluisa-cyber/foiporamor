@@ -1063,11 +1063,16 @@ body.light .fab-petal {
   display: flex;
   flex-direction: column;
   align-items: center;
-  animation: login-card-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-@keyframes login-card-in {
-  0%   { opacity: 0; transform: translateY(22px); }
+.login-anim {
+  opacity: 0;
+  animation: login-item-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: var(--login-anim-delay, 0s);
+}
+
+@keyframes login-item-in {
+  0%   { opacity: 0; transform: translateY(16px); }
   100% { opacity: 1; transform: translateY(0); }
 }
 
@@ -1311,8 +1316,10 @@ body.light .fab-petal {
 
 @media (prefers-reduced-motion: reduce) {
   .login-card-bg,
-  .login-card-content {
+  .login-card-content,
+  .login-anim {
     animation: none;
+    opacity: 1;
   }
 }
 

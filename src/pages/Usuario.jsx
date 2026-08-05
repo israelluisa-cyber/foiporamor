@@ -751,18 +751,19 @@ export default function Usuario() {
                 <img
                   src={config.logoUrl || '/logo-icon.png'}
                   alt={config.nomeIgreja}
-                  className="login-logo"
+                  className="login-logo login-anim"
+                  style={{ '--login-anim-delay': '0s' }}
                 />
-                <div className="login-brand">
+                <div className="login-brand login-anim" style={{ '--login-anim-delay': '0.25s' }}>
                   <span className="login-brand-kicker">Igreja</span>
                   <span className="login-brand-name">{config.nomeCurto}</span>
                 </div>
 
-                <h1 className="login-title">Bem-vindo(a)!</h1>
-                <p className="login-subtitle">Faça login para acessar sua conta</p>
+                <h1 className="login-title login-anim" style={{ '--login-anim-delay': '0.5s' }}>Bem-vindo(a)!</h1>
+                <p className="login-subtitle login-anim" style={{ '--login-anim-delay': '0.75s' }}>Faça login para acessar sua conta</p>
 
                 <form onSubmit={handleLogin} className="login-form">
-                  <div className="login-input">
+                  <div className="login-input login-anim" style={{ '--login-anim-delay': '1s' }}>
                     <i className="ph ph-envelope-simple"></i>
                     <input
                       type="email" value={email}
@@ -772,7 +773,7 @@ export default function Usuario() {
                     />
                   </div>
 
-                  <div className="login-input">
+                  <div className="login-input login-anim" style={{ '--login-anim-delay': '1.25s' }}>
                     <i className="ph ph-lock-simple"></i>
                     <input
                       type={mostrarSenha ? 'text' : 'password'} value={senha}
@@ -798,36 +799,37 @@ export default function Usuario() {
 
                   <button
                     type="button"
-                    className="login-forgot"
+                    className="login-forgot login-anim"
+                    style={{ '--login-anim-delay': '1.5s' }}
                     onClick={() => { setTela('recuperar'); setErro(''); setEmail(''); setSenha(''); }}
                   >
                     Esqueci minha senha
                   </button>
 
-                  <button type="submit" className="login-submit" disabled={tempoRestante > 0}>
+                  <button type="submit" className="login-submit login-anim" style={{ '--login-anim-delay': '1.75s' }} disabled={tempoRestante > 0}>
                     <i className="ph ph-sign-in"></i>
                     <span>{tempoRestante > 0 ? `Aguarde ${Math.ceil(tempoRestante / 1000)}s` : 'Entrar'}</span>
                   </button>
                 </form>
 
-                <div className="login-divider"><span>nossas redes</span></div>
+                <div className="login-divider login-anim" style={{ '--login-anim-delay': '2s' }}><span>nossas redes</span></div>
 
                 <div className="login-social-row">
-                  <a href={config.youtubeLink} target="_blank" rel="noopener noreferrer" className="login-social-btn youtube">
+                  <a href={config.youtubeLink} target="_blank" rel="noopener noreferrer" className="login-social-btn youtube login-anim" style={{ '--login-anim-delay': '2.25s' }}>
                     <i className="ph-fill ph-youtube-logo"></i>
                     <span>YouTube</span>
                   </a>
-                  <a href={config.facebookLink} target="_blank" rel="noopener noreferrer" className="login-social-btn facebook">
+                  <a href={config.facebookLink} target="_blank" rel="noopener noreferrer" className="login-social-btn facebook login-anim" style={{ '--login-anim-delay': '2.5s' }}>
                     <i className="ph-fill ph-facebook-logo"></i>
                     <span>Facebook</span>
                   </a>
-                  <a href={config.instagramLink} target="_blank" rel="noopener noreferrer" className="login-social-btn instagram">
+                  <a href={config.instagramLink} target="_blank" rel="noopener noreferrer" className="login-social-btn instagram login-anim" style={{ '--login-anim-delay': '2.75s' }}>
                     <i className="ph-fill ph-instagram-logo"></i>
                     <span>Instagram</span>
                   </a>
                 </div>
 
-                <p className="login-signup">
+                <p className="login-signup login-anim" style={{ '--login-anim-delay': '3s' }}>
                   <i className="ph ph-user-plus"></i>
                   Ainda não tem conta?{' '}
                   <button onClick={() => setModalCadastro(true)}>Cadastrar como membro</button>
@@ -836,17 +838,17 @@ export default function Usuario() {
             </div>
 
             <div className="login-badges">
-              <div className="login-badge">
+              <div className="login-badge login-anim" style={{ '--login-anim-delay': '3.25s' }}>
                 <i className="ph ph-shield-check"></i>
                 <strong>Ambiente Seguro</strong>
                 <span>Seus dados protegidos</span>
               </div>
-              <div className="login-badge">
+              <div className="login-badge login-anim" style={{ '--login-anim-delay': '3.5s' }}>
                 <i className="ph ph-users-three"></i>
                 <strong>Comunidade</strong>
                 <span>Conecte-se e participe</span>
               </div>
-              <div className="login-badge">
+              <div className="login-badge login-anim" style={{ '--login-anim-delay': '3.75s' }}>
                 <i className="ph ph-heart"></i>
                 <strong>Propósito</strong>
                 <span>Juntos por um só amor</span>
