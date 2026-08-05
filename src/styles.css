@@ -1067,13 +1067,24 @@ body.light .fab-petal {
 
 .login-anim {
   opacity: 0;
-  animation: login-item-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: login-item-in 0.6s ease both;
+  animation-delay: var(--login-anim-delay, 0s);
+}
+
+.login-anim-pop {
+  opacity: 0;
+  animation: login-logo-pop 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both;
   animation-delay: var(--login-anim-delay, 0s);
 }
 
 @keyframes login-item-in {
-  0%   { opacity: 0; transform: translateY(16px); }
+  0%   { opacity: 0; transform: translateY(10px); }
   100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes login-logo-pop {
+  0%   { opacity: 0; transform: scale(0.7); }
+  100% { opacity: 1; transform: scale(1); }
 }
 
 .login-logo {
@@ -1317,7 +1328,8 @@ body.light .fab-petal {
 @media (prefers-reduced-motion: reduce) {
   .login-card-bg,
   .login-card-content,
-  .login-anim {
+  .login-anim,
+  .login-anim-pop {
     animation: none;
     opacity: 1;
   }
