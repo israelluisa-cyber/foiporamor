@@ -40,7 +40,7 @@ export default function UltimaPregacaoCard({ config }) {
         href={`https://www.youtube.com/watch?v=${pregacao.videoId}`}
         target="_blank"
         rel="noopener noreferrer"
-        className="glass-card"
+        className="glass-card pregacao-thumb-card"
         style={{
           position: 'relative', display: 'flex', overflow: 'hidden', padding: 0,
           marginBottom: 'var(--spacing-md)', textDecoration: 'none', minHeight: '170px',

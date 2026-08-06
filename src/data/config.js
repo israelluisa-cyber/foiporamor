@@ -90,6 +90,10 @@ export function applyBranding(config) {
     root.setProperty('--accent-color', config.corDestaque);
     root.setProperty('--accent-hover', shadeColor(config.corDestaque, -25));
     root.setProperty('--accent-glow', `${config.corDestaque}26`); // ~15% de opacidade
+    // Cópia fixa da cor de marca, sempre disponível independente do tema — usada
+    // por cards com fundo sempre escuro (foto + degradê, ex.: .login-card), que
+    // precisam manter o texto na cor de marca mesmo no modo claro (ver styles.css).
+    root.setProperty('--brand-accent-color', config.corDestaque);
   }
 
   const splashLogo  = document.getElementById('splash-logo');

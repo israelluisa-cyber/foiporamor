@@ -7,6 +7,7 @@ import { loadConfig, DIAS_ABBR, formatHora, cultoIcon } from '../data/config';
 import { loadSaidas } from '../data/evangelismo';
 import { loadMural } from '../data/muralData';
 import { loadAvisosValidos, TIPO_CORES } from '../data/avisos';
+import { jaFoiIntercedido } from '../data/oracao';
 import { FaInstagram, FaFacebook, FaYoutube } from 'react-icons/fa6';
 
 // EVENTOS_SEMANA é derivado dinamicamente do config no componente
@@ -36,33 +37,13 @@ function fotoPorCelular(celular) {
 // que a animação de entrada repita toda vez que o usuário navega de volta pra Home
 let homeEntranceShown = false;
 
-function timestampUltimoCulto(cultos) {
-  const CULTO_ORACAO = cultos.find(c => c.diaSemana === 4);
-  if (!CULTO_ORACAO) return null;
-  const now = new Date();
-  for (let d = 0; d <= 13; d++) {
-    const candidate = new Date(now);
-    candidate.setDate(now.getDate() - d);
-    if (candidate.getDay() !== 4) continue;
-    candidate.setHours(CULTO_ORACAO.horaFim, CULTO_ORACAO.minFim, 0, 0);
-    if (candidate.getTime() <= now.getTime()) return candidate.getTime();
-    break;
-  }
-  return null;
-}
-
-// Pedido foi intercedido se foi criado ANTES do último culto terminar
-function foiIntercedido(pedido, ultimoCultoMs) {
-  if (!ultimoCultoMs) return false;
-  return pedido.id < ultimoCultoMs;
-}
-
 // Carrega pedidos públicos do localStorage, limita a 3 — os já intercedidos no
-// último Culto de Oração saem da lista (mesmo critério do mural em /oracao).
-function loadPreviewPedidos(ultimoCultoMs) {
+// último Culto de Oração saem da lista (mesmo critério do mural em /oracao,
+// via data/oracao.js — fonte única pra não desalinhar entre as duas telas).
+function loadPreviewPedidos() {
   try {
     const user = JSON.parse(localStorage.getItem(STORAGE_KEY_PEDIDOS)) || [];
-    const publicos = user.filter(p => !p.privado && !foiIntercedido(p, ultimoCultoMs));
+    const publicos = user.filter(p => !p.privado && !jaFoiIntercedido(p));
     return publicos.map(p => ({ id: p.id, nome: p.nome || 'Anônimo', texto: p.texto, foto: p.foto || fotoPorCelular(p.celular) })).slice(0, 3);
   } catch {
     return [];
@@ -232,7 +213,9 @@ export default function Home() {
       diaNome: DIAS_SEMANA_NOME[c.diaSemana],
       periodo: `${formatHora(c.hora, c.min)} às ${formatHora(c.horaFim, c.minFim)}`,
     }));
-  const avisosAtivos = loadAvisosValidos();
+  // Avisos são conteúdo exclusivo de membros — visitante não vê nem no ticker da Home.
+  const logado        = !!sessionStorage.getItem('user_session');
+  const avisosAtivos  = logado ? loadAvisosValidos() : [];
   const heroBg         = config.heroBg || '/hero_bg.png';
   const heroBgPosition = config.heroBgPosition || 'center';
 
@@ -248,9 +231,7 @@ export default function Home() {
     foto:      c.foto || null,
   }));
 
-  const logado          = !!sessionStorage.getItem('user_session');
-  const ultimoCultoMs   = timestampUltimoCulto(cultos);
-  const pedidosPreview  = loadPreviewPedidos(ultimoCultoMs);
+  const pedidosPreview  = loadPreviewPedidos();
   const versoDia        = getVersoDia();
   const aniversariantes = getAniversariantesSemana();
 
@@ -263,6 +244,18 @@ export default function Home() {
 
   const [showEntrance] = useState(() => !homeEntranceShown);
   useEffect(() => { homeEntranceShown = true; }, []);
+
+  // A cascata foi calibrada pra começar só depois que o splash de abertura
+  // some (main.jsx: hideSplash aguarda 3000ms desde window._splashStart).
+  // Isso só é verdade quando a Home é a primeira tela do app. Se ela monta
+  // depois, via navegação (ex.: login puxa navigate('/')), esses 3s já
+  // se passaram — sem esse cálculo, a tela ficava toda opacity:0 (preta)
+  // por até 3.6s após o login, parecendo travada.
+  const [entranceDelayBase] = useState(() => {
+    if (!showEntrance) return 0;
+    const decorrido = Date.now() - (window._splashStart || Date.now());
+    return Math.max(0, 3000 - decorrido) / 1000;
+  });
 
   const containerRef = useRef(null);
 
@@ -381,7 +374,10 @@ export default function Home() {
     >
       <Header />
 
-      <main className={showEntrance ? 'home-entrance' : ''} style={{ paddingTop: 'var(--spacing-md)' }}>
+      <main
+        className={showEntrance ? 'home-entrance' : ''}
+        style={{ paddingTop: 'var(--spacing-md)', '--home-entrance-delay-base': `${entranceDelayBase}s` }}
+      >
 
         {/* Hero */}
         {(() => {
@@ -392,9 +388,13 @@ export default function Home() {
           return (
         <div style={{ position: 'relative', padding: '20px', marginLeft: '-20px', marginRight: '-20px', marginBottom: 'calc(var(--spacing-lg) - 20px)' }}>
           {/* Glow ambiente — cópia borrada da própria foto do hero, vazando atrás do
-              card. Troca de cor sozinho a cada foto porque é a mesma imagem, só borrada. */}
+              card. Troca de cor sozinho a cada foto porque é a mesma imagem, só borrada.
+              Sem "key" de propósito: trocar a key a cada foto forçava o React a destruir
+              e recriar essa camada (blur pesado) a cada troca, o que em celular deixava
+              uma mancha "fantasma" presa na tela — sobretudo no topo, onde o glow vaza
+              pra fora do card. Mantendo o mesmo elemento, o navegador só atualiza a
+              imagem de fundo, sem esse recriar-e-repintar. */}
           <div
-            key={heroBgAtual + '-glow'}
             aria-hidden="true"
             style={{
               position: 'absolute', inset: '20px', zIndex: 0,
@@ -403,7 +403,7 @@ export default function Home() {
               filter: 'blur(32px) saturate(1.7) brightness(0.85)',
               transform: 'scale(1.06)', opacity: 0.9,
               borderRadius: 'var(--radius-lg)',
-              animation: 'heroGlowIn 0.5s ease both',
+              transition: 'background-image 0.3s ease',
             }}
           />
         <section
@@ -519,10 +519,6 @@ export default function Home() {
           .section-title {
             margin-top: var(--spacing-md);
           }
-          @keyframes heroGlowIn {
-            from { opacity: 0; }
-            to   { opacity: 0.9; }
-          }
           @keyframes pulseAoVivo {
             0%, 100% { opacity: 1; transform: scale(1); }
             50%       { opacity: 0.4; transform: scale(0.75); }
@@ -532,24 +528,27 @@ export default function Home() {
             to   { opacity: 1; transform: translateY(0); }
           }
           /* Entrada em cascata dos blocos da Home — só na primeira vez que o app abre.
-             O atraso de 3s embutido em cada regra casa com o tempo mínimo do splash
-             screen (main.jsx: hideSplash aguarda 3000ms), pra cascata só começar
-             quando o splash já sumiu. Se mudar o tempo do splash, ajuste aqui também. */
+             O atraso embutido em cada regra casa com o tempo mínimo do splash screen
+             (main.jsx: hideSplash aguarda 3000ms), pra cascata só começar quando o
+             splash já sumiu. --home-entrance-delay-base (calculado no componente) já
+             desconta o tempo que passou desde a abertura do app — fica 0 quando a Home
+             monta depois de um tempo (ex.: navegação vinda do login), senão a tela
+             ficava com opacity:0 (preta) por até 3.6s sem motivo. */
           .home-entrance > * {
             opacity: 0;
             animation: cascadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
           }
-          .home-entrance > *:nth-child(1)  { animation-delay: 3.00s; }
-          .home-entrance > *:nth-child(2)  { animation-delay: 3.06s; }
-          .home-entrance > *:nth-child(3)  { animation-delay: 3.12s; }
-          .home-entrance > *:nth-child(4)  { animation-delay: 3.18s; }
-          .home-entrance > *:nth-child(5)  { animation-delay: 3.24s; }
-          .home-entrance > *:nth-child(6)  { animation-delay: 3.30s; }
-          .home-entrance > *:nth-child(7)  { animation-delay: 3.36s; }
-          .home-entrance > *:nth-child(8)  { animation-delay: 3.42s; }
-          .home-entrance > *:nth-child(9)  { animation-delay: 3.48s; }
-          .home-entrance > *:nth-child(10) { animation-delay: 3.54s; }
-          .home-entrance > *:nth-child(n+11) { animation-delay: 3.60s; }
+          .home-entrance > *:nth-child(1)  { animation-delay: calc(var(--home-entrance-delay-base) + 0.00s); }
+          .home-entrance > *:nth-child(2)  { animation-delay: calc(var(--home-entrance-delay-base) + 0.06s); }
+          .home-entrance > *:nth-child(3)  { animation-delay: calc(var(--home-entrance-delay-base) + 0.12s); }
+          .home-entrance > *:nth-child(4)  { animation-delay: calc(var(--home-entrance-delay-base) + 0.18s); }
+          .home-entrance > *:nth-child(5)  { animation-delay: calc(var(--home-entrance-delay-base) + 0.24s); }
+          .home-entrance > *:nth-child(6)  { animation-delay: calc(var(--home-entrance-delay-base) + 0.30s); }
+          .home-entrance > *:nth-child(7)  { animation-delay: calc(var(--home-entrance-delay-base) + 0.36s); }
+          .home-entrance > *:nth-child(8)  { animation-delay: calc(var(--home-entrance-delay-base) + 0.42s); }
+          .home-entrance > *:nth-child(9)  { animation-delay: calc(var(--home-entrance-delay-base) + 0.48s); }
+          .home-entrance > *:nth-child(10) { animation-delay: calc(var(--home-entrance-delay-base) + 0.54s); }
+          .home-entrance > *:nth-child(n+11) { animation-delay: calc(var(--home-entrance-delay-base) + 0.60s); }
           .evento-card {
             transition: transform 0.2s ease, box-shadow 0.2s ease;
           }
@@ -567,10 +566,6 @@ export default function Home() {
               min-width: 64px !important;
               aspect-ratio: auto !important;
               height: min(200px, 40vh) !important;
-            }
-          }
-              aspect-ratio: auto !important;
-              height: 132px !important;
             }
           }
           .evento-card-next {

@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import Header from '../components/Header';
 import Toast from '../components/Toast';
-import { loadConfig } from '../data/config';
 import { savePedidoOracaoToSupabase, deletePedidoOracaoFromSupabase } from '../data/supabase';
+import { loadPedidos, jaFoiIntercedido, ultimoCultoOracaoMs } from '../data/oracao';
 
 const STORAGE_KEY   = 'pedidos_oracao';
 const AMENS_KEY     = 'oracao_amens';
@@ -26,42 +26,6 @@ function fotoDoMembroLogado(session) {
 function fotoPorCelular(celular) {
   if (!celular) return null;
   return loadCadastros().find(c => c.celular === celular)?.foto || null;
-}
-
-// Retorna o timestamp do fim do último culto de oração (quinta-feira)
-function ultimoCultoOracaoMs() {
-  const cultos = loadConfig().cultos || [];
-  const culto  = cultos.find(c => c.diaSemana === 4); // 4 = quinta-feira
-  if (!culto) return null;
-  const now      = new Date();
-  const daysBack = (now.getDay() - 4 + 7) % 7;
-  const candidate = new Date(now);
-  candidate.setDate(now.getDate() - daysBack);
-  candidate.setHours(culto.horaFim, culto.minFim, 0, 0);
-  // Se o culto desta semana ainda não terminou, volta uma semana
-  if (candidate.getTime() > Date.now()) candidate.setDate(candidate.getDate() - 7);
-  return candidate.getTime();
-}
-
-// Converte "dd/mm/aaaa" para timestamp; retorna null se não der pra interpretar
-function parseDataBR(str) {
-  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(str || '');
-  if (!m) return null;
-  const [, dia, mes, ano] = m;
-  return new Date(Number(ano), Number(mes) - 1, Number(dia)).getTime();
-}
-
-// Já foi intercedido no último Culto de Oração (quinta) → sai do mural público.
-// Sem data legível, mantém visível (não esconde por engano).
-function jaFoiIntercedido(pedido, corte) {
-  if (!corte) return false;
-  const ts = parseDataBR(pedido.data);
-  return ts !== null && ts < corte;
-}
-
-function loadPedidos() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
-  catch { return []; }
 }
 
 function loadAmens() {
@@ -143,8 +107,9 @@ export default function Oracao() {
   const meusPedidos = pedidos.filter(p => meusIds.includes(String(p.id)));
 
   // Mural público: pedidos de todos (com o nome real de quem enviou, ou Anônimo),
-  // exceto os já intercedidos no último Culto de Oração — esses saem do mural
-  // automaticamente, mas continuam salvos (o admin ainda os vê/gerencia).
+  // exceto os já intercedidos no último Culto de Oração — esses saem do mural na
+  // hora; a exclusão definitiva (localStorage + Supabase) roda uma vez a cada
+  // abertura do app (ver limparPedidosOracaoIntercedidos em data/oracao.js).
   const corteMural = ultimoCultoOracaoMs();
   const pedidosPublicos = pedidos
     .filter(p => !p.privado && !jaFoiIntercedido(p, corteMural))
@@ -185,7 +150,12 @@ export default function Oracao() {
           </div>
 
           <div
-            onClick={() => setPrivado(p => !p)}
+            onClick={() => setPrivado(p => {
+              // Ao virar público, o celular preenchido não serve mais pra nada
+              // (não aparece em lugar nenhum) — descarta pra não ir junto por engano.
+              if (p) setCelularVisitante('');
+              return !p;
+            })}
             style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--spacing-md)', padding: 'var(--spacing-sm) var(--spacing-md)', background: 'var(--bg-surface-elevated)', borderRadius: 'var(--radius-md)', cursor: 'pointer' }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -213,10 +183,15 @@ export default function Oracao() {
                 type="text" value={nomeVisitante} onChange={e => setNomeVisitante(e.target.value)}
                 placeholder="Seu nome (opcional)" style={campoStyle}
               />
-              <input
-                type="tel" value={celularVisitante} onChange={e => setCelularVisitante(e.target.value)}
-                placeholder="Seu celular (opcional — ajuda a igreja a te responder)" style={campoStyle}
-              />
+              {/* Celular só faz sentido em pedido privado — no público ele nunca aparece
+                  em lugar nenhum (nem mural, nem preview); no privado, ajuda a liderança
+                  (só quem tem acesso ao admin) a responder pelo WhatsApp. */}
+              {privado && (
+                <input
+                  type="tel" value={celularVisitante} onChange={e => setCelularVisitante(e.target.value)}
+                  placeholder="Seu celular (opcional — ajuda a igreja a te responder)" style={campoStyle}
+                />
+              )}
             </div>
           )}
 

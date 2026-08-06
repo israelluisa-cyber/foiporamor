@@ -54,13 +54,29 @@ body.light {
   --text-primary:   #111111;
   --text-secondary: #444444;
   --text-muted:     #888888;
-  --accent-color:   #111111;
-  --accent-hover:   #333333;
+  /* !important necessário aqui: a cor de destaque da marca (configurada pelo
+     admin em Configurações) é aplicada via style inline em <html> por
+     applyBranding() (data/config.js), que tem prioridade maior que qualquer
+     regra de classe do CSS — sem o !important, --accent-color continua com
+     a cor de marca (geralmente amarelo/dourado) mesmo no modo claro, e todo
+     texto que usa var(--accent-color) direto sobre o fundo da página (sem
+     nenhum contraste por trás) fica praticamente ilegível sobre fundo claro. */
+  --accent-color:   #111111 !important;
+  --accent-hover:   #333333 !important;
   --border-color:   #dddddd;
   --glass-bg:       rgba(255,255,255,0.9);
   --glass-border:   #dddddd;
   --shadow-sm:      0 2px 8px rgba(0,0,0,0.1);
   --shadow-md:      0 8px 24px rgba(0,0,0,0.12);
+}
+
+/* Exceções ao --accent-color escurecido no modo claro: cards cujo fundo é
+   sempre escuro (foto + degradê), independente do tema — nesses, o texto
+   precisa continuar na cor de marca (dourado por padrão), senão fica
+   escuro sobre um fundo que também é escuro, ilegível do mesmo jeito. */
+body.light .login-card,
+body.light .pregacao-thumb-card {
+  --accent-color: var(--brand-accent-color, #fbbf24) !important;
 }
 
 * {

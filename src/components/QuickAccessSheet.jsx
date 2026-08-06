@@ -115,9 +115,14 @@ export default function QuickAccessSheet({ onClose }) {
       >
         <div style={{ width: '36px', height: '5px', borderRadius: 'var(--radius-full)', background: 'var(--border-color)', margin: '10px auto 4px', flexShrink: 0 }} />
 
-        <h3 style={{ fontSize: '0.95rem', fontWeight: 700, textAlign: 'center', margin: '4px 0 14px', color: 'var(--text-primary)', flexShrink: 0 }}>
-          Menu
-        </h3>
+        <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 40px', alignItems: 'center', padding: '0 14px', margin: '4px 0 14px', flexShrink: 0 }}>
+          <button className="icon-btn" aria-label="Voltar" onClick={requestClose}>
+            <i className="ph ph-caret-left"></i>
+          </button>
+          <h3 style={{ fontSize: '0.95rem', fontWeight: 700, textAlign: 'center', margin: 0, color: 'var(--text-primary)' }}>
+            Menu
+          </h3>
+        </div>
 
         <div
           ref={gridRef}

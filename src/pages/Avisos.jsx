@@ -1,22 +1,55 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import { loadConfig } from '../data/config';
 import { TIPO_CORES, loadAvisosValidos, marcarAvisosComoLidos } from '../data/avisos';
 
+function getSession() {
+  try { return JSON.parse(sessionStorage.getItem('user_session')); }
+  catch { return null; }
+}
+
 export default function Avisos() {
+  const navigate = useNavigate();
+  const session = getSession();
   const [filtro, setFiltro] = useState('Todos');
   const [expandido, setExpandido] = useState(null);
   const config = loadConfig();
 
-  const todosAvisos = loadAvisosValidos();
+  const todosAvisos = session ? loadAvisosValidos() : [];
 
   // Roda só uma vez, ao abrir a tela: marca como lidos os avisos que estavam
   // válidos nesse momento. Não deve rodar de novo a cada re-render (troca de
   // filtro, por exemplo), então a lista de dependências fica vazia de propósito.
   useEffect(() => {
+    if (!session) return;
     marcarAvisosComoLidos(todosAvisos);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  if (!session) {
+    return (
+      <div className="container" style={{ paddingBottom: 'var(--spacing-xl)' }}>
+        <Header title="Avisos" backButton={true} />
+        <main style={{ paddingTop: 'var(--spacing-xl)', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: 'var(--spacing-xl) var(--spacing-md)' }}>
+          <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 'var(--spacing-lg)' }}>
+            <i className="ph ph-lock" style={{ fontSize: '2rem', color: 'var(--text-muted)' }}></i>
+          </div>
+          <h2 className="font-heading" style={{ marginBottom: '8px' }}>Área Exclusiva para Membros</h2>
+          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 'var(--spacing-lg)', maxWidth: '320px' }}>
+            Os avisos da {config.nomeIgreja} são acessíveis apenas para membros cadastrados e aprovados.
+          </p>
+          <button onClick={() => navigate('/usuario')} className="primary-btn" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <i className="ph ph-sign-in"></i>
+            <span>Entrar como Membro</span>
+          </button>
+          <button onClick={() => navigate(-1)} style={{ marginTop: '12px', background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '0.85rem', cursor: 'pointer', textDecoration: 'underline' }}>
+            Voltar
+          </button>
+        </main>
+      </div>
+    );
+  }
 
   const filtrados = (filtro === 'Todos' ? todosAvisos : todosAvisos.filter(a => a.tipo === filtro)).slice(0, 5);
 

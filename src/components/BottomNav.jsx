@@ -8,24 +8,10 @@ const CLOSE_ANIM_MS = 220;
 export default function BottomNav() {
   const location = useLocation();
   const path = location.pathname;
-  const unread = getUnreadCount();
+  // Avisos são conteúdo exclusivo de membros — sem sessão, não conta nem mostra badge.
+  const unread = sessionStorage.getItem('user_session') ? getUnreadCount() : 0;
   const [phase, setPhase] = useState('closed'); // 'closed' | 'open' | 'closing'
   const [menuAberto, setMenuAberto] = useState(false);
-
-  if (path === '/admin') {
-    return (
-      <nav className="bottom-nav" translate="no">
-        <Link to="/" className="nav-item">
-          <i className="ph ph-house nav-icon"></i>
-          <span>Início</span>
-        </Link>
-        <Link to="/admin" className="nav-item active">
-          <i className="ph ph-chart-pie-slice nav-icon"></i>
-          <span>Dashboard</span>
-        </Link>
-      </nav>
-    );
-  }
 
   const navItems = [
     { to: '/',            icon: 'ph-house',     label: 'Início',      tx: -87, ty: -50 },
@@ -48,6 +34,21 @@ export default function BottomNav() {
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = ''; };
   }, [phase]);
+
+  if (path === '/admin') {
+    return (
+      <nav className="bottom-nav" translate="no">
+        <Link to="/" className="nav-item">
+          <i className="ph ph-house nav-icon"></i>
+          <span>Início</span>
+        </Link>
+        <Link to="/admin" className="nav-item active">
+          <i className="ph ph-chart-pie-slice nav-icon"></i>
+          <span>Dashboard</span>
+        </Link>
+      </nav>
+    );
+  }
 
   return (
     <>

@@ -6,10 +6,12 @@ import './App.css'
 import { syncFromSupabase, retryCadastrosPendentes } from './data/supabase'
 import { loadConfig, applyBranding } from './data/config'
 import { limparAvisosExpirados } from './data/avisos'
+import { limparPedidosOracaoIntercedidos } from './data/oracao'
 
 applyBranding(loadConfig()); // pinta o splash com o cache local imediatamente
 syncFromSupabase().then(() => {
   limparAvisosExpirados();
+  limparPedidosOracaoIntercedidos(); // apaga de vez os pedidos já intercedidos na última quinta
   applyBranding(loadConfig());
   retryCadastrosPendentes(); // reenvia cadastro que ficou preso sem confirmar no servidor
 });
