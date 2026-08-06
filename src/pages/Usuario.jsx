@@ -6,6 +6,7 @@ import { uploadFotoToStorage, saveCadastroToSupabase, updateCadastroSenhaSupabas
 import { hashPassword, verifyPassword } from '../data/crypto';
 import { loadConfig } from '../data/config';
 import { PLANOS, loadPlanosConcluidos } from '../data/biblia';
+import { loginOneSignalMembro, logoutOneSignalMembro, pedirPermissaoNotificacao, notificacaoPermitida } from '../data/onesignal';
 
 const CADASTROS_KEY      = 'cadastros_pendentes';
 const USER_KEY           = 'user_cadastro';
@@ -365,6 +366,13 @@ export default function Usuario() {
     } catch { return null; }
   });
 
+  /* Notificações push */
+  const [notificacoesAtivas, setNotificacoesAtivas] = useState(notificacaoPermitida);
+  const handleAtivarNotificacoes = async () => {
+    await pedirPermissaoNotificacao();
+    setNotificacoesAtivas(notificacaoPermitida());
+  };
+
   /* Login */
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -437,6 +445,7 @@ export default function Usuario() {
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
     setFotoAtual(user.foto || null);
     setEmail(''); setSenha(''); setErro('');
+    loginOneSignalMembro(sessionData.id);
 
     setSession(sessionData);
     if (user.isAdmin) {
@@ -537,6 +546,7 @@ export default function Usuario() {
   /* Logout */
   const handleLogout = () => {
     sessionStorage.removeItem(SESSION_KEY);
+    logoutOneSignalMembro();
     setSession(null);
     setTela('inicio');
   };
@@ -623,6 +633,22 @@ export default function Usuario() {
               </div>
             )}
           </section>
+
+          <button
+            onClick={notificacoesAtivas ? undefined : handleAtivarNotificacoes}
+            disabled={notificacoesAtivas}
+            style={{
+              width: '100%', padding: '14px', marginBottom: 'var(--spacing-sm)', borderRadius: 'var(--radius-md)', fontWeight: 600,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+              background: notificacoesAtivas ? 'rgba(34,197,94,0.08)' : 'transparent',
+              border: `1px solid ${notificacoesAtivas ? 'rgba(34,197,94,0.4)' : 'var(--border-color)'}`,
+              color: notificacoesAtivas ? '#22c55e' : 'var(--text-primary)',
+              cursor: notificacoesAtivas ? 'default' : 'pointer',
+            }}
+          >
+            <i className={`ph ${notificacoesAtivas ? 'ph-bell-ringing' : 'ph-bell'}`}></i>
+            {notificacoesAtivas ? 'Notificações ativadas' : 'Ativar notificações'}
+          </button>
 
           <button
             onClick={handleLogout}

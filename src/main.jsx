@@ -7,8 +7,16 @@ import { syncFromSupabase, retryCadastrosPendentes } from './data/supabase'
 import { loadConfig, applyBranding } from './data/config'
 import { limparAvisosExpirados } from './data/avisos'
 import { limparPedidosOracaoIntercedidos } from './data/oracao'
+import { initOneSignal, loginOneSignalMembro } from './data/onesignal'
 
 applyBranding(loadConfig()); // pinta o splash com o cache local imediatamente
+initOneSignal().then(() => {
+  // Se o app abre com uma sessão de membro já salva (ex.: reload da página),
+  // revincula o dispositivo a ela — sem isso, o login só aconteceria na
+  // próxima vez que a pessoa entrasse manualmente.
+  const sessao = JSON.parse(sessionStorage.getItem('user_session') || 'null');
+  if (sessao?.id) loginOneSignalMembro(sessao.id);
+});
 syncFromSupabase().then(() => {
   limparAvisosExpirados();
   limparPedidosOracaoIntercedidos(); // apaga de vez os pedidos já intercedidos na última quinta

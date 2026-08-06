@@ -141,7 +141,16 @@
       "Bash('/c/Program Files/GitHub CLI/gh.exe' repo create pizzaria_castro --private --source=. --remote=origin --description 'Site institucional da Pizzaria Castro \\(Next.js\\)' --push)",
       "Bash('/c/Program Files/GitHub CLI/gh.exe' repo edit israelluisa-cyber/pizzaria_castro --default-branch main)",
       "mcp__claude_ai_Vercel__list_deployments",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(npx --yes vercel@latest integration categories)",
+      "Bash(npx --yes vercel@latest integration discover --category messaging)",
+      "mcp__claude_ai_Vercel__get_project",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(npx --yes vercel@latest whoami)",
+      "Bash(npx --yes vercel@latest env add VITE_ONESIGNAL_APP_ID production)",
+      "Bash(npx --yes vercel@latest env add VITE_ONESIGNAL_APP_ID preview)",
+      "Bash(tasklist //FI \"IMAGENAME eq node.exe\")",
+      "Bash(taskkill *)"
     ]
   }
 }
