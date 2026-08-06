@@ -150,7 +150,13 @@
       "Bash(npx --yes vercel@latest env add VITE_ONESIGNAL_APP_ID production)",
       "Bash(npx --yes vercel@latest env add VITE_ONESIGNAL_APP_ID preview)",
       "Bash(tasklist //FI \"IMAGENAME eq node.exe\")",
-      "Bash(taskkill *)"
+      "Bash(taskkill *)",
+      "Bash(npx --yes vercel@latest ls foi-por-amor)",
+      "Bash(npx --yes vercel@latest domains ls)",
+      "Bash(npx --yes vercel@latest alias ls)",
+      "Bash(npx --yes vercel@latest ls foi-por-amor --meta)",
+      "WebFetch(domain:documentation.onesignal.com)",
+      "Read(//c//**)"
     ]
   }
 }
