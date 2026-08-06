@@ -245,6 +245,10 @@ export default function Home() {
   const [showEntrance] = useState(() => !homeEntranceShown);
   useEffect(() => { homeEntranceShown = true; }, []);
 
+  // Pedidos de oração longos ficam cortados em 2 linhas no preview da Home;
+  // clicando, expande ali mesmo sem precisar ir pro mural completo em /oracao.
+  const [pedidosExpandidos, setPedidosExpandidos] = useState({});
+
   // A cascata foi calibrada pra começar só depois que o splash de abertura
   // some (main.jsx: hideSplash aguarda 3000ms desde window._splashStart).
   // Isso só é verdade quando a Home é a primeira tela do app. Se ela monta
@@ -740,6 +744,11 @@ export default function Home() {
         </div>
         <section className="glass-card" style={{ padding: 0, overflow: 'hidden', marginBottom: 'var(--spacing-md)' }}>
           {pedidosPreview.map((pedido, i) => {
+            const expandido = !!pedidosExpandidos[pedido.id];
+            // ~90 caracteres é aproximadamente o que cabe em 2 linhas nesse card —
+            // usado só pra decidir se mostra o "ver mais", não é medida exata.
+            const truncavel = pedido.texto.length > 90;
+            const alternar = () => setPedidosExpandidos(s => ({ ...s, [pedido.id]: !s[pedido.id] }));
             return (
               <div key={pedido.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--spacing-md)', padding: 'var(--spacing-md)', borderBottom: i < pedidosPreview.length - 1 ? '1px solid var(--border-color)' : 'none' }}>
                 <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'var(--bg-surface-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: '1px solid var(--border-color)', overflow: 'hidden' }}>
@@ -753,9 +762,30 @@ export default function Home() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px' }}>
                     <p style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>{pedido.nome}</p>
                   </div>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--text-primary)', lineHeight: 1.5, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                  <p
+                    onClick={truncavel ? alternar : undefined}
+                    style={{
+                      fontSize: '0.85rem', color: 'var(--text-primary)', lineHeight: 1.5,
+                      overflow: expandido ? 'visible' : 'hidden',
+                      display: expandido ? 'block' : '-webkit-box',
+                      WebkitLineClamp: expandido ? 'unset' : 2,
+                      WebkitBoxOrient: 'vertical',
+                      cursor: truncavel ? 'pointer' : 'default',
+                    }}
+                  >
                     {pedido.texto}
                   </p>
+                  {truncavel && (
+                    <button
+                      onClick={alternar}
+                      style={{
+                        background: 'none', border: 'none', padding: 0, marginTop: '2px',
+                        fontSize: '0.78rem', fontWeight: 600, color: 'var(--accent-color)', cursor: 'pointer',
+                      }}
+                    >
+                      {expandido ? 'ver menos' : 'ver mais'}
+                    </button>
+                  )}
                 </div>
               </div>
             );

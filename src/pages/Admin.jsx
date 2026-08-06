@@ -2578,7 +2578,7 @@ function ModalPedidosOracao({ onClose, onLido }) {
                     <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>{p.nome || 'Anônimo'}</span>
                     <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>· {p.data}</span>
                     {p.privado && (
-                      <span style={{ fontSize: '0.65rem', background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-full)', padding: '1px 7px', color: 'var(--text-muted)' }}>
+                      <span className="badge-privado" style={{ fontSize: '0.65rem', border: '1px solid', borderRadius: 'var(--radius-full)', padding: '1px 7px', fontWeight: 600 }}>
                         Privado
                       </span>
                     )}

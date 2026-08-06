@@ -1002,6 +1002,15 @@ body.light .fab-petal {
   animation: badge-pulse 1.8s ease infinite;
 }
 
+@keyframes badge-blink-red {
+  0%, 100% { background: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.4); color: #ef4444; }
+  50%      { background: rgba(239, 68, 68, 0.55); border-color: rgba(239, 68, 68, 0.8); color: #ffffff; }
+}
+
+.badge-privado {
+  animation: badge-blink-red 1.2s ease-in-out infinite;
+}
+
 /* ===========================
    CELULAR EM PAISAGEM (landscape) — altura de tela curta é o problema real,
    não a largura, então mira em max-height em vez de max-width
