@@ -1,6 +1,12 @@
 import OneSignal from 'react-onesignal';
 
 const APP_ID = import.meta.env.VITE_ONESIGNAL_APP_ID;
+// Sem isso, o SDK ignora silenciosamente qualquer pedido de permissão em
+// navegadores da família Safari (iOS inteiro, inclusive instalado na Tela de
+// Início) — funciona normal no Chrome/Android mesmo sem essa chave, o que
+// mascarou o problema até testarmos no iPhone. Gerado em
+// dashboard.onesignal.com → Settings → Web Configuration.
+const SAFARI_WEB_ID = import.meta.env.VITE_ONESIGNAL_SAFARI_WEB_ID;
 
 let initialized = false;
 
@@ -10,7 +16,7 @@ let initialized = false;
 export async function initOneSignal() {
   if (initialized || !APP_ID) return;
   initialized = true;
-  await OneSignal.init({ appId: APP_ID });
+  await OneSignal.init({ appId: APP_ID, safari_web_id: SAFARI_WEB_ID });
 }
 
 // Vincula o dispositivo ao membro logado, pra podermos mandar notificação
