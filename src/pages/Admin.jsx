@@ -1641,13 +1641,13 @@ function ModalComunicado({ onClose, onSent }) {
     saveAvisoToSupabase(novoAviso);
     setForm({ titulo: '', texto: '', tipo: 'Informativo', data: hojeISO() });
     setAba('gerenciar');
-    let pushOk = null;
+    let pushResult = null;
     if (enviarPush) {
       setEnviando(true);
-      pushOk = await enviarNotificacaoPush({ titulo: novoAviso.titulo, texto: novoAviso.texto });
+      pushResult = await enviarNotificacaoPush({ titulo: novoAviso.titulo, texto: novoAviso.texto });
       setEnviando(false);
     }
-    onSent(pushOk);
+    onSent(pushResult);
   };
 
   const handleExcluir = (id) => {
@@ -2813,9 +2813,9 @@ const [modalMinisterios, setModalMinisterios]   = useState(false);
       {modalComunicado && (
         <ModalComunicado
           onClose={() => setModalComunicado(false)}
-          onSent={(pushOk) => setToast(
-            pushOk === false ? 'Comunicado publicado, mas a notificação push falhou.' :
-            pushOk === true ? 'Comunicado publicado e notificação enviada!' :
+          onSent={(pushResult) => setToast(
+            pushResult?.ok === false ? `Comunicado publicado, mas o push falhou: ${typeof pushResult.error === 'string' ? pushResult.error : JSON.stringify(pushResult.error)}` :
+            pushResult?.ok === true ? 'Comunicado publicado e notificação enviada!' :
             'Comunicado publicado com sucesso!'
           )}
         />

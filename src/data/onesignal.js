@@ -103,8 +103,11 @@ export async function enviarNotificacaoPush({ titulo, texto }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ titulo, texto }),
     });
-    return r.ok;
-  } catch {
-    return false;
+    const data = await r.json().catch(() => null);
+    if (!r.ok) console.error('[onesignal] /api/send-notification falhou:', r.status, data);
+    return { ok: r.ok, error: r.ok ? null : (data?.error || data || `HTTP ${r.status}`) };
+  } catch (e) {
+    console.error('[onesignal] /api/send-notification deu exceção:', e);
+    return { ok: false, error: e?.message || String(e) };
   }
 }
