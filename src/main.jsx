@@ -9,20 +9,6 @@ import { limparAvisosExpirados } from './data/avisos'
 import { limparPedidosOracaoIntercedidos } from './data/oracao'
 import { initOneSignal, loginOneSignalMembro } from './data/onesignal'
 
-// Console de depuração dentro do próprio app — carrega com ?debug=1 na URL,
-// ou sozinho depois (via localStorage) porque o ícone instalado na Tela de
-// Início sempre abre no start_url fixo do manifest, sem dar pra colar query
-// string. Existe pra investigar bugs em aparelhos (iPhone) sem acesso a Mac
-// pra usar o inspetor remoto do Safari. Remover depois de resolvido.
-if (new URLSearchParams(window.location.search).get('debug') === '1') {
-  localStorage.setItem('debug_console', '1');
-}
-if (localStorage.getItem('debug_console') === '1') {
-  const s = document.createElement('script');
-  s.src = 'https://cdn.jsdelivr.net/npm/eruda';
-  s.onload = () => window.eruda && window.eruda.init();
-  document.head.appendChild(s);
-}
 
 applyBranding(loadConfig()); // pinta o splash com o cache local imediatamente
 initOneSignal().then(() => {
