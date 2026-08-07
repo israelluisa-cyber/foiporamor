@@ -26,7 +26,11 @@ let initialized = false;
 // deixamos a checagem de suporte de verdade a cargo do script deles, que é
 // quem sabe se o iOS atual suporta push.
 export async function initOneSignal() {
-  if (initialized || !APP_ID) return;
+  console.log('[onesignal] initOneSignal chamado. APP_ID:', APP_ID, 'SAFARI_WEB_ID:', SAFARI_WEB_ID);
+  if (initialized || !APP_ID) {
+    console.log('[onesignal] abortou init (initialized=', initialized, ' APP_ID=', APP_ID, ')');
+    return;
+  }
   initialized = true;
   window.OneSignalDeferred = window.OneSignalDeferred || [];
   if (!document.getElementById('onesignal-sdk')) {
@@ -34,10 +38,16 @@ export async function initOneSignal() {
     script.id = 'onesignal-sdk';
     script.defer = true;
     script.src = 'https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js';
+    script.onload = () => console.log('[onesignal] script cdn.onesignal.com carregou com sucesso');
+    script.onerror = (e) => console.error('[onesignal] script cdn.onesignal.com FALHOU ao carregar', e);
     document.head.appendChild(script);
   }
+  console.log('[onesignal] empilhando callback de init no OneSignalDeferred');
   window.OneSignalDeferred.push((OneSignalSDK) => {
-    OneSignalSDK.init({ appId: APP_ID, safari_web_id: SAFARI_WEB_ID });
+    console.log('[onesignal] callback do OneSignalDeferred executou, chamando OneSignalSDK.init()');
+    OneSignalSDK.init({ appId: APP_ID, safari_web_id: SAFARI_WEB_ID })
+      .then(() => console.log('[onesignal] OneSignalSDK.init() resolveu com sucesso'))
+      .catch((err) => console.error('[onesignal] OneSignalSDK.init() rejeitou:', err));
   });
 }
 
@@ -59,14 +69,22 @@ export function logoutOneSignalMembro() {
 // do usuário (botão na tela) — navegador ignora/bloqueia se chamado sozinho
 // ao carregar a página.
 export async function pedirPermissaoNotificacao() {
+  console.log('[onesignal] pedirPermissaoNotificacao chamado');
   if (!APP_ID) throw new Error('OneSignal sem APP_ID configurado neste ambiente.');
   if (typeof Notification === 'undefined') {
     throw new Error('Este navegador/contexto não suporta notificações push (no iPhone, precisa abrir pelo ícone instalado na Tela de Início).');
   }
+  console.log('[onesignal] Notification existe, permission atual:', Notification.permission, '— chamando OneSignal.Notifications.requestPermission()');
   const semResposta = new Promise((_, reject) => {
     setTimeout(() => reject(new Error('O OneSignal não respondeu a tempo. Tente novamente em alguns segundos.')), 15000);
   });
-  await Promise.race([OneSignal.Notifications.requestPermission(), semResposta]);
+  try {
+    const resultado = await Promise.race([OneSignal.Notifications.requestPermission(), semResposta]);
+    console.log('[onesignal] requestPermission voltou:', resultado, 'Notification.permission agora:', Notification.permission);
+  } catch (e) {
+    console.error('[onesignal] requestPermission deu erro/timeout:', e);
+    throw e;
+  }
 }
 
 // Estado atual da permissão no navegador — usado pra decidir se mostra o

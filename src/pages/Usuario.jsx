@@ -369,6 +369,7 @@ export default function Usuario() {
   /* Notificações push */
   const [notificacoesAtivas, setNotificacoesAtivas] = useState(notificacaoPermitida);
   const handleAtivarNotificacoes = async () => {
+    console.log('[onesignal] botão Ativar notificações clicado');
     try {
       await pedirPermissaoNotificacao();
       setNotificacoesAtivas(notificacaoPermitida());
@@ -376,6 +377,7 @@ export default function Usuario() {
         setToast('Permissão de notificação não foi concedida.');
       }
     } catch (e) {
+      console.error('[onesignal] handleAtivarNotificacoes capturou erro:', e);
       setToast(`Não deu pra ativar: ${e?.message || e}`);
     }
   };

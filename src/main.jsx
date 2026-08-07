@@ -9,6 +9,16 @@ import { limparAvisosExpirados } from './data/avisos'
 import { limparPedidosOracaoIntercedidos } from './data/oracao'
 import { initOneSignal, loginOneSignalMembro } from './data/onesignal'
 
+// Console de depuração dentro do próprio app — só carrega com ?debug=1 na
+// URL. Existe pra investigar bugs em aparelhos (iPhone) sem acesso a Mac
+// pra usar o inspetor remoto do Safari. Remover depois de resolvido.
+if (new URLSearchParams(window.location.search).get('debug') === '1') {
+  const s = document.createElement('script');
+  s.src = 'https://cdn.jsdelivr.net/npm/eruda';
+  s.onload = () => window.eruda && window.eruda.init();
+  document.head.appendChild(s);
+}
+
 applyBranding(loadConfig()); // pinta o splash com o cache local imediatamente
 initOneSignal().then(() => {
   // Se o app abre com uma sessão de membro já salva (ex.: reload da página),
