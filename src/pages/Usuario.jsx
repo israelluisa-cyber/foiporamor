@@ -369,8 +369,15 @@ export default function Usuario() {
   /* Notificações push */
   const [notificacoesAtivas, setNotificacoesAtivas] = useState(notificacaoPermitida);
   const handleAtivarNotificacoes = async () => {
-    await pedirPermissaoNotificacao();
-    setNotificacoesAtivas(notificacaoPermitida());
+    try {
+      await pedirPermissaoNotificacao();
+      setNotificacoesAtivas(notificacaoPermitida());
+      if (!notificacaoPermitida()) {
+        setToast('Permissão de notificação não foi concedida.');
+      }
+    } catch (e) {
+      setToast(`Não deu pra ativar: ${e?.message || e}`);
+    }
   };
 
   /* Login */

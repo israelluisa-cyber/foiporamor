@@ -31,7 +31,10 @@ export function logoutOneSignalMembro() {
 // do usuário (botão na tela) — navegador ignora/bloqueia se chamado sozinho
 // ao carregar a página.
 export async function pedirPermissaoNotificacao() {
-  if (!APP_ID) return;
+  if (!APP_ID) throw new Error('OneSignal sem APP_ID configurado neste ambiente.');
+  if (typeof Notification === 'undefined') {
+    throw new Error('Este navegador/contexto não suporta notificações push (no iPhone, precisa abrir pelo ícone instalado na Tela de Início).');
+  }
   await OneSignal.Notifications.requestPermission();
 }
 
