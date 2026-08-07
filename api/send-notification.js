@@ -37,8 +37,10 @@ export default async function handler(request, response) {
       // nem chegar a criar o registro da mensagem no painel.
       included_segments: ['Total Subscriptions'],
       // Título fixo com o nome da igreja em vez do assunto que o admin
-      // digita — o pedido é sempre "IFPA" no topo e a mensagem embaixo.
-      headings: { en: 'IFPA' },
+      // digita. Nome completo (não "IFPA") pra não repetir a linha
+      // "from IFPA" que o Safari já insere sozinho embaixo do título em
+      // todo push no iOS.
+      headings: { en: 'Igreja Foi Por Amor' },
       contents: { en: texto },
     }),
   });
