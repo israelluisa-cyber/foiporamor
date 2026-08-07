@@ -37,7 +37,10 @@ export default async function handler(request, response) {
 
   const data = await r.json();
   // Log temporário pra descobrir o formato real da resposta da OneSignal
-  // (o toast do Admin espera um campo "recipients" que está vindo undefined).
-  console.log('[send-notification] resposta da OneSignal:', JSON.stringify(data));
+  // (o toast do Admin espera um campo "recipients" que está vindo undefined)
+  // e pra comparar o appId usado aqui no servidor com o appId que o bundle
+  // do cliente usou pra criar a inscrição (suspeita de estarem diferentes,
+  // já que essa var foi trocada mais de uma vez no histórico do projeto).
+  console.log('[send-notification] appId usado no servidor (últimos 8):', appId.slice(-8), '— resposta da OneSignal:', JSON.stringify(data));
   response.status(r.ok ? 200 : r.status).json(data);
 }

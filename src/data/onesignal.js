@@ -125,6 +125,10 @@ export function notificacaoPermitida() {
 export function diagnosticoPushSubscription() {
   try {
     return {
+      // Últimos 8 caracteres do appId que o bundle do cliente usou pra
+      // inicializar o SDK — comparar com o log "appId usado no servidor"
+      // em api/send-notification.js pra descartar mismatch entre os dois.
+      appIdCliente: APP_ID ? `...${APP_ID.slice(-8)}` : null,
       notificationPermission: typeof Notification !== 'undefined' ? Notification.permission : 'indisponível',
       subscriptionId: OneSignal?.User?.PushSubscription?.id ?? null,
       optedIn: OneSignal?.User?.PushSubscription?.optedIn ?? null,
