@@ -13,10 +13,32 @@ let initialized = false;
 // Inicializa o SDK uma única vez, cedo no ciclo de vida do app (chamado em
 // main.jsx). Sem APP_ID configurado (.env local sem a chave), não faz nada —
 // evita erro em ambiente de quem ainda não configurou o OneSignal.
+//
+// Não usamos OneSignal.init() do pacote react-onesignal: antes de carregar o
+// script real, ele roda uma checagem de suporte (isPushNotificationsSupported)
+// que testa `window.safari.pushNotification` — API que só existiu no Safari
+// de macOS antigo, nunca no iOS. No iPhone essa checagem sempre falha,
+// init() rejeita antes até de adicionar o <script> do OneSignal na página, e
+// como não tinha .catch() aqui, a rejeição sumia em silêncio — o SDK nunca
+// carregava e qualquer chamada depois (como pedirPermissaoNotificacao) ficava
+// esperando pra sempre uma resposta que nunca vinha. Carregamos o script na
+// mão (é o mesmo jeito que o próprio painel do OneSignal recomenda) e
+// deixamos a checagem de suporte de verdade a cargo do script deles, que é
+// quem sabe se o iOS atual suporta push.
 export async function initOneSignal() {
   if (initialized || !APP_ID) return;
   initialized = true;
-  await OneSignal.init({ appId: APP_ID, safari_web_id: SAFARI_WEB_ID });
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  if (!document.getElementById('onesignal-sdk')) {
+    const script = document.createElement('script');
+    script.id = 'onesignal-sdk';
+    script.defer = true;
+    script.src = 'https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js';
+    document.head.appendChild(script);
+  }
+  window.OneSignalDeferred.push((OneSignalSDK) => {
+    OneSignalSDK.init({ appId: APP_ID, safari_web_id: SAFARI_WEB_ID });
+  });
 }
 
 // Vincula o dispositivo ao membro logado, pra podermos mandar notificação
@@ -41,7 +63,10 @@ export async function pedirPermissaoNotificacao() {
   if (typeof Notification === 'undefined') {
     throw new Error('Este navegador/contexto não suporta notificações push (no iPhone, precisa abrir pelo ícone instalado na Tela de Início).');
   }
-  await OneSignal.Notifications.requestPermission();
+  const semResposta = new Promise((_, reject) => {
+    setTimeout(() => reject(new Error('O OneSignal não respondeu a tempo. Tente novamente em alguns segundos.')), 15000);
+  });
+  await Promise.race([OneSignal.Notifications.requestPermission(), semResposta]);
 }
 
 // Estado atual da permissão no navegador — usado pra decidir se mostra o
