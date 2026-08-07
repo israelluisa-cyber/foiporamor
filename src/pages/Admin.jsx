@@ -2815,7 +2815,7 @@ const [modalMinisterios, setModalMinisterios]   = useState(false);
           onClose={() => setModalComunicado(false)}
           onSent={(pushResult) => setToast(
             pushResult?.ok === false ? `Comunicado publicado, mas o push falhou: ${typeof pushResult.error === 'string' ? pushResult.error : JSON.stringify(pushResult.error)}` :
-            pushResult?.ok === true ? `Comunicado publicado! Push enviado a ${pushResult.data?.recipients ?? '?'} destinatário(s).` :
+            pushResult?.ok === true ? `Comunicado publicado! Push enviado${typeof pushResult.data?.recipients === 'number' ? ` a ${pushResult.data.recipients} destinatário(s).` : '.'}` :
             'Comunicado publicado com sucesso!'
           )}
         />

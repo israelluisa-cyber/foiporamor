@@ -36,5 +36,8 @@ export default async function handler(request, response) {
   });
 
   const data = await r.json();
+  // Log temporário pra descobrir o formato real da resposta da OneSignal
+  // (o toast do Admin espera um campo "recipients" que está vindo undefined).
+  console.log('[send-notification] resposta da OneSignal:', JSON.stringify(data));
   response.status(r.ok ? 200 : r.status).json(data);
 }
