@@ -46,7 +46,17 @@ export async function initOneSignal() {
   window.OneSignalDeferred.push((OneSignalSDK) => {
     console.log('[onesignal] callback do OneSignalDeferred executou, chamando OneSignalSDK.init()');
     OneSignalSDK.init({ appId: APP_ID, safari_web_id: SAFARI_WEB_ID })
-      .then(() => console.log('[onesignal] OneSignalSDK.init() resolveu com sucesso'))
+      .then(() => {
+        console.log('[onesignal] OneSignalSDK.init() resolveu com sucesso');
+        // Autocura quem ativou antes do optIn() explícito existir (ver
+        // pedirPermissaoNotificacao): permissão do navegador já concedida,
+        // mas a inscrição podia ter ficado "not subscribed" do lado da
+        // OneSignal, sem nenhum jeito de o usuário perceber ou corrigir sozinho.
+        if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && !OneSignalSDK.User.PushSubscription.optedIn) {
+          console.log('[onesignal] permissão já concedida mas optedIn=false — chamando optIn() pra autocurar');
+          OneSignalSDK.User.PushSubscription.optIn().catch((err) => console.error('[onesignal] optIn() de autocura falhou:', err));
+        }
+      })
       .catch((err) => console.error('[onesignal] OneSignalSDK.init() rejeitou:', err));
   });
 }
@@ -83,6 +93,21 @@ export async function pedirPermissaoNotificacao() {
     console.log('[onesignal] requestPermission voltou:', resultado, 'Notification.permission agora:', Notification.permission);
   } catch (e) {
     console.error('[onesignal] requestPermission deu erro/timeout:', e);
+    throw e;
+  }
+  // Conceder a permissão do navegador não garante, sozinho, que a OneSignal
+  // marque essa inscrição como "subscribed" do lado dela — sem esse optIn()
+  // explícito, o push era aceito pela API mas voltava com "All included
+  // players are not subscribed" e ninguém recebia nada, mesmo com o botão
+  // mostrando "Notificações ativadas" (que só reflete a permissão do navegador).
+  try {
+    await OneSignal.User.PushSubscription.optIn();
+    console.log('[onesignal] optIn() concluído. PushSubscription:', {
+      id: OneSignal.User.PushSubscription.id,
+      optedIn: OneSignal.User.PushSubscription.optedIn,
+    });
+  } catch (e) {
+    console.error('[onesignal] optIn() deu erro:', e);
     throw e;
   }
 }
