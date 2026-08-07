@@ -76,7 +76,6 @@ export default async function handler(request, response) {
         included_segments: ['Total Subscriptions'],
         headings: { en: 'Vai começar!' },
         contents: { en: `${culto.nome} começa às ${hhmm}. Não perca!` },
-        subtitle: { en: '' },
       }),
     });
     const data = await r.json();

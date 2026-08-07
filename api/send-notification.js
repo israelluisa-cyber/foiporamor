@@ -38,9 +38,6 @@ export default async function handler(request, response) {
       included_segments: ['Total Subscriptions'],
       headings: { en: titulo },
       contents: { en: texto },
-      // Sem isso, o iOS mostra um subtítulo padrão "from <nome do app>"
-      // entre o título e o corpo da notificação.
-      subtitle: { en: '' },
     }),
   });
 
