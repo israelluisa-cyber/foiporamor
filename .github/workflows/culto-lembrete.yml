@@ -1,0 +1,15 @@
+name: Lembrete de culto
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  lembrete:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Chama o endpoint de lembrete de culto
+        run: |
+          curl -sf -X POST https://foiporamor.vercel.app/api/cron-lembrete-culto \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"

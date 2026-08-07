@@ -1921,6 +1921,7 @@ function ModalEvangelismo({ onClose, onSaved }) {
   const [saidasOriginais] = useState(() => loadSaidas());
   const [saidas, setSaidas] = useState(() => loadSaidas());
   const [form, setForm] = useState({ titulo: '', data: '', horario: '', pontoEncontro: '', local: '', lider: '', descricao: '', vagas: 20, avisar: true });
+  const [salvando, setSalvando] = useState(false);
 
   const set = (campo, valor) => setForm(f => ({ ...f, [campo]: valor }));
 
@@ -1938,6 +1939,7 @@ function ModalEvangelismo({ onClose, onSaved }) {
     const atualizados = [novoAviso, ...atuais];
     localStorage.setItem(ADMIN_AVISOS_KEY, JSON.stringify(atualizados));
     saveAvisoToSupabase(novoAviso);
+    return novoAviso;
   };
 
   const inputSt = {
@@ -1967,12 +1969,19 @@ function ModalEvangelismo({ onClose, onSaved }) {
     setForm({ titulo: '', data: '', horario: '', pontoEncontro: '', local: '', lider: '', descricao: '', vagas: 20, avisar: true });
   };
 
-  const handleSalvar = () => {
+  const handleSalvar = async () => {
     const idsOriginais = new Set(saidasOriginais.map(s => s.id));
     const novasSaidas = saidas.filter(s => !idsOriginais.has(s.id));
-    novasSaidas.filter(s => s.avisar).forEach(criarAvisoSaida);
+    const novosAvisos = novasSaidas.filter(s => s.avisar).map(criarAvisoSaida);
     saveSaidas(saidas);
-    onSaved();
+    if (novosAvisos.length > 0) {
+      setSalvando(true);
+      for (const aviso of novosAvisos) {
+        await enviarNotificacaoPush({ titulo: aviso.titulo, texto: aviso.texto });
+      }
+      setSalvando(false);
+    }
+    onSaved(novosAvisos.length);
     onClose();
   };
 
@@ -2070,8 +2079,8 @@ function ModalEvangelismo({ onClose, onSaved }) {
           ))}
         </div>
 
-        <button onClick={handleSalvar} className="primary-btn" style={{ width: '100%', justifyContent: 'center', gap: '8px' }}>
-          <i className="ph ph-floppy-disk"></i> Salvar Alterações
+        <button onClick={handleSalvar} disabled={salvando} className="primary-btn" style={{ width: '100%', justifyContent: 'center', gap: '8px', opacity: salvando ? 0.7 : 1, cursor: salvando ? 'default' : 'pointer' }}>
+          <i className={`ph ${salvando ? 'ph-spinner' : 'ph-floppy-disk'}`}></i> {salvando ? 'Enviando avisos...' : 'Salvar Alterações'}
         </button>
       </div>
     </div>
@@ -2836,7 +2845,11 @@ const [modalMinisterios, setModalMinisterios]   = useState(false);
       {modalEvangelismo && (
         <ModalEvangelismo
           onClose={() => setModalEvangelismo(false)}
-          onSaved={() => setToast('Saídas de evangelismo salvas!')}
+          onSaved={(pushesEnviados) => setToast(
+            pushesEnviados > 0
+              ? `Saídas de evangelismo salvas! ${pushesEnviados} aviso(s) com push enviado.`
+              : 'Saídas de evangelismo salvas!'
+          )}
         />
       )}
 

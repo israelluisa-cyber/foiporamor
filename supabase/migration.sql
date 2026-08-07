@@ -160,3 +160,13 @@ CREATE POLICY "allow_all_visitantes" ON visitantes             FOR ALL USING (tr
 CREATE POLICY "allow_all_checkin"    ON checkin_infantil       FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "allow_all_aconselh"   ON pedidos_aconselhamento FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "allow_all_config"     ON app_config             FOR ALL USING (true) WITH CHECK (true);
+
+-- LEMBRETES DE CULTO ENVIADOS (dedup do cron de push "vai começar em 30min")
+CREATE TABLE IF NOT EXISTS culto_lembretes_enviados (
+  culto_id   TEXT        NOT NULL,
+  data       DATE        NOT NULL,
+  enviado_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (culto_id, data)
+);
+ALTER TABLE culto_lembretes_enviados ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "allow_all_lembretes" ON culto_lembretes_enviados FOR ALL USING (true) WITH CHECK (true);
