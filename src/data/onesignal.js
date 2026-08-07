@@ -105,7 +105,8 @@ export async function enviarNotificacaoPush({ titulo, texto }) {
     });
     const data = await r.json().catch(() => null);
     if (!r.ok) console.error('[onesignal] /api/send-notification falhou:', r.status, data);
-    return { ok: r.ok, error: r.ok ? null : (data?.error || data || `HTTP ${r.status}`) };
+    else console.log('[onesignal] /api/send-notification respondeu OK:', data);
+    return { ok: r.ok, error: r.ok ? null : (data?.error || data || `HTTP ${r.status}`), data };
   } catch (e) {
     console.error('[onesignal] /api/send-notification deu exceção:', e);
     return { ok: false, error: e?.message || String(e) };
