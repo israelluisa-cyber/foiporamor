@@ -7,7 +7,7 @@ export default async function handler(request, response) {
     return;
   }
 
-  const { titulo, texto, subscriptionId } = request.body || {};
+  const { titulo, texto } = request.body || {};
   if (!titulo?.trim() || !texto?.trim()) {
     response.status(400).json({ error: 'titulo e texto são obrigatórios' });
     return;
@@ -29,22 +29,18 @@ export default async function handler(request, response) {
     body: JSON.stringify({
       app_id: appId,
       target_channel: 'push',
-      // Debug: mirando direto num subscriptionId (painel de depuração de
-      // /usuario) em vez do segmento, pra descartar problema de segmento
-      // vs. problema na inscrição em si. Remover include_subscription_ids
-      // depois de resolvido o "not subscribed".
-      ...(subscriptionId ? { include_subscription_ids: [subscriptionId] } : { included_segments: ['Subscribed Users'] }),
+      // "Subscribed Users" é o nome do segmento padrão da API legada da
+      // OneSignal — apps criados na plataforma nova (como este) usam
+      // "Total Subscriptions" como segmento padrão. Mandar pro nome errado
+      // não dá erro na hora: a audiência simplesmente resolve pra zero e a
+      // OneSignal responde "All included players are not subscribed" sem
+      // nem chegar a criar o registro da mensagem no painel.
+      included_segments: ['Total Subscriptions'],
       headings: { en: titulo },
       contents: { en: texto },
     }),
   });
 
   const data = await r.json();
-  // Log temporário pra descobrir o formato real da resposta da OneSignal
-  // (o toast do Admin espera um campo "recipients" que está vindo undefined)
-  // e pra comparar o appId usado aqui no servidor com o appId que o bundle
-  // do cliente usou pra criar a inscrição (suspeita de estarem diferentes,
-  // já que essa var foi trocada mais de uma vez no histórico do projeto).
-  console.log('[send-notification] appId usado no servidor (últimos 8):', appId.slice(-8), '— resposta da OneSignal:', JSON.stringify(data));
   response.status(r.ok ? 200 : r.status).json(data);
 }
