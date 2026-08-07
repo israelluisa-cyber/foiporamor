@@ -7,7 +7,7 @@ export default async function handler(request, response) {
     return;
   }
 
-  const { titulo, texto } = request.body || {};
+  const { titulo, texto, subscriptionId } = request.body || {};
   if (!titulo?.trim() || !texto?.trim()) {
     response.status(400).json({ error: 'titulo e texto são obrigatórios' });
     return;
@@ -29,7 +29,11 @@ export default async function handler(request, response) {
     body: JSON.stringify({
       app_id: appId,
       target_channel: 'push',
-      included_segments: ['Subscribed Users'],
+      // Debug: mirando direto num subscriptionId (painel de depuração de
+      // /usuario) em vez do segmento, pra descartar problema de segmento
+      // vs. problema na inscrição em si. Remover include_subscription_ids
+      // depois de resolvido o "not subscribed".
+      ...(subscriptionId ? { include_subscription_ids: [subscriptionId] } : { included_segments: ['Subscribed Users'] }),
       headings: { en: titulo },
       contents: { en: texto },
     }),

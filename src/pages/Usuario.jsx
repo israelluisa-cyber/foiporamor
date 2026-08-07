@@ -396,6 +396,17 @@ export default function Usuario() {
       setDebugInfo({ erroOptIn: e?.message || String(e) });
     }
   };
+  const [debugEnvioResultado, setDebugEnvioResultado] = useState(null);
+  const handleDebugEnviarDireto = async () => {
+    setDebugEnvioResultado('enviando...');
+    const r = await fetch('/api/send-notification', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ titulo: 'Teste debug', texto: 'Push direto pro subscriptionId deste aparelho', subscriptionId: debugInfo.subscriptionId }),
+    });
+    const data = await r.json().catch(() => null);
+    setDebugEnvioResultado(JSON.stringify({ status: r.status, data }, null, 2));
+  };
 
   /* Login */
   const handleLogin = async (e) => {
@@ -678,10 +689,16 @@ export default function Usuario() {
             <section style={{ marginBottom: 'var(--spacing-sm)', padding: '10px', borderRadius: 'var(--radius-md)', border: '1px dashed #f59e0b', background: 'rgba(245,158,11,0.08)', fontSize: '0.72rem', fontFamily: 'monospace', color: 'var(--text-primary)' }}>
               <p style={{ margin: '0 0 6px', fontWeight: 700, color: '#f59e0b' }}>DEBUG PUSH SUBSCRIPTION</p>
               <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', margin: '0 0 8px' }}>{JSON.stringify(debugInfo, null, 2)}</pre>
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                 <button onClick={handleDebugRefresh} style={{ flex: 1, padding: '8px', fontSize: '0.7rem', cursor: 'pointer' }}>Atualizar</button>
                 <button onClick={handleDebugOptIn} style={{ flex: 1, padding: '8px', fontSize: '0.7rem', cursor: 'pointer' }}>Forçar optIn()</button>
               </div>
+              <button onClick={handleDebugEnviarDireto} disabled={!debugInfo.subscriptionId} style={{ width: '100%', padding: '8px', fontSize: '0.7rem', cursor: debugInfo.subscriptionId ? 'pointer' : 'not-allowed' }}>
+                Enviar push direto pra este subscriptionId
+              </button>
+              {debugEnvioResultado && (
+                <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', margin: '8px 0 0' }}>{debugEnvioResultado}</pre>
+              )}
             </section>
           )}
 
