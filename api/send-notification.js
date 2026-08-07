@@ -36,7 +36,9 @@ export default async function handler(request, response) {
       // OneSignal responde "All included players are not subscribed" sem
       // nem chegar a criar o registro da mensagem no painel.
       included_segments: ['Total Subscriptions'],
-      headings: { en: titulo },
+      // Título fixo com o nome da igreja em vez do assunto que o admin
+      // digita — o pedido é sempre "IFPA" no topo e a mensagem embaixo.
+      headings: { en: 'IFPA' },
       contents: { en: texto },
     }),
   });

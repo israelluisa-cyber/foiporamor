@@ -74,7 +74,7 @@ export default async function handler(request, response) {
         app_id: appId,
         target_channel: 'push',
         included_segments: ['Total Subscriptions'],
-        headings: { en: 'Vai começar!' },
+        headings: { en: 'IFPA' },
         contents: { en: `${culto.nome} começa às ${hhmm}. Não perca!` },
       }),
     });
