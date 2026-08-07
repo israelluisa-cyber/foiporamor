@@ -118,6 +118,31 @@ export function notificacaoPermitida() {
   return typeof Notification !== 'undefined' && Notification.permission === 'granted';
 }
 
+// Snapshot do estado real da inscrição na OneSignal — usado no painel de
+// depuração (ver diagnosticoPushSubscription() na tela /usuario) pra
+// enxergar direto na tela do celular por que o push está caindo em
+// "not subscribed" mesmo com a permissão do navegador concedida.
+export function diagnosticoPushSubscription() {
+  try {
+    return {
+      notificationPermission: typeof Notification !== 'undefined' ? Notification.permission : 'indisponível',
+      subscriptionId: OneSignal?.User?.PushSubscription?.id ?? null,
+      optedIn: OneSignal?.User?.PushSubscription?.optedIn ?? null,
+      token: OneSignal?.User?.PushSubscription?.token ?? null,
+    };
+  } catch (e) {
+    return { erro: e?.message || String(e) };
+  }
+}
+
+// Força o optIn() de novo sob demanda (fora do fluxo normal de pedir
+// permissão), pra testar no painel de depuração sem precisar revogar a
+// permissão do navegador antes.
+export async function forcarOptIn() {
+  await OneSignal.User.PushSubscription.optIn();
+  return diagnosticoPushSubscription();
+}
+
 // Pede pro backend (/api/send-notification, que guarda a REST API Key em
 // segredo) disparar um push pra todo mundo com notificação ativada. Só o
 // Admin chama isso, ao publicar um comunicado.

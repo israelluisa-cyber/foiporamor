@@ -6,7 +6,7 @@ import { uploadFotoToStorage, saveCadastroToSupabase, updateCadastroSenhaSupabas
 import { hashPassword, verifyPassword } from '../data/crypto';
 import { loadConfig } from '../data/config';
 import { PLANOS, loadPlanosConcluidos } from '../data/biblia';
-import { loginOneSignalMembro, logoutOneSignalMembro, pedirPermissaoNotificacao, notificacaoPermitida } from '../data/onesignal';
+import { loginOneSignalMembro, logoutOneSignalMembro, pedirPermissaoNotificacao, notificacaoPermitida, diagnosticoPushSubscription, forcarOptIn } from '../data/onesignal';
 
 const CADASTROS_KEY      = 'cadastros_pendentes';
 const USER_KEY           = 'user_cadastro';
@@ -382,6 +382,21 @@ export default function Usuario() {
     }
   };
 
+  // Painel de depuração temporário — só aparece se o app foi aberto uma vez
+  // com ?debug=1 (ver src/main.jsx). Existe pra investigar por que o push
+  // cai em "not subscribed" na OneSignal direto na tela do celular, sem
+  // depender do timing do console eruda nem de Mac com Safari remoto.
+  const [debugAtivo] = useState(() => { try { return localStorage.getItem('debug_console') === '1'; } catch { return false; } });
+  const [debugInfo, setDebugInfo] = useState(() => diagnosticoPushSubscription());
+  const handleDebugRefresh = () => setDebugInfo(diagnosticoPushSubscription());
+  const handleDebugOptIn = async () => {
+    try {
+      setDebugInfo(await forcarOptIn());
+    } catch (e) {
+      setDebugInfo({ erroOptIn: e?.message || String(e) });
+    }
+  };
+
   /* Login */
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -658,6 +673,17 @@ export default function Usuario() {
             <i className={`ph ${notificacoesAtivas ? 'ph-bell-ringing' : 'ph-bell'}`}></i>
             {notificacoesAtivas ? 'Notificações ativadas' : 'Ativar notificações'}
           </button>
+
+          {debugAtivo && (
+            <section style={{ marginBottom: 'var(--spacing-sm)', padding: '10px', borderRadius: 'var(--radius-md)', border: '1px dashed #f59e0b', background: 'rgba(245,158,11,0.08)', fontSize: '0.72rem', fontFamily: 'monospace', color: 'var(--text-primary)' }}>
+              <p style={{ margin: '0 0 6px', fontWeight: 700, color: '#f59e0b' }}>DEBUG PUSH SUBSCRIPTION</p>
+              <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', margin: '0 0 8px' }}>{JSON.stringify(debugInfo, null, 2)}</pre>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button onClick={handleDebugRefresh} style={{ flex: 1, padding: '8px', fontSize: '0.7rem', cursor: 'pointer' }}>Atualizar</button>
+                <button onClick={handleDebugOptIn} style={{ flex: 1, padding: '8px', fontSize: '0.7rem', cursor: 'pointer' }}>Forçar optIn()</button>
+              </div>
+            </section>
+          )}
 
           <button
             onClick={handleLogout}
