@@ -3,7 +3,7 @@
   "name": "Igreja Foi Por Amor",
   "short_name": "IFPA",
   "description": "App oficial da Igreja Foi Por Amor — programação, oração, devocional e muito mais.",
-  "start_url": "/?debug=1",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#0d0d0d",
   "theme_color": "#0d0d0d",
