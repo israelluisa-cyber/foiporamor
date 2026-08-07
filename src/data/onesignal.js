@@ -40,3 +40,19 @@ export async function pedirPermissaoNotificacao() {
 export function notificacaoPermitida() {
   return typeof Notification !== 'undefined' && Notification.permission === 'granted';
 }
+
+// Pede pro backend (/api/send-notification, que guarda a REST API Key em
+// segredo) disparar um push pra todo mundo com notificação ativada. Só o
+// Admin chama isso, ao publicar um comunicado.
+export async function enviarNotificacaoPush({ titulo, texto }) {
+  try {
+    const r = await fetch('/api/send-notification', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ titulo, texto }),
+    });
+    return r.ok;
+  } catch {
+    return false;
+  }
+}

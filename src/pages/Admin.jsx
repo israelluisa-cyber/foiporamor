@@ -17,6 +17,7 @@ import { loadMinisterios, saveMinisterios, ICON_OPTIONS, COLOR_PRESETS } from '.
 import { loadGrupos, saveGrupos, GRUPO_COLOR_PRESETS } from '../data/gruposData';
 import { loadMural, saveMural } from '../data/muralData';
 import { loadSaidas, saveSaidas } from '../data/evangelismo';
+import { enviarNotificacaoPush } from '../data/onesignal';
 import { loadTeologia, saveTeologia } from '../data/teologia';
 
 const CADASTROS_KEY = 'cadastros_pendentes';
@@ -1622,10 +1623,12 @@ function ModalComunicado({ onClose, onSent }) {
   const [form, setForm] = useState({ titulo: '', texto: '', tipo: 'Informativo', data: hojeISO() });
   const [avisos, setAvisos] = useState(() => JSON.parse(localStorage.getItem(ADMIN_AVISOS_KEY) || '[]'));
   const [aba, setAba] = useState('novo');
+  const [enviarPush, setEnviarPush] = useState(true);
+  const [enviando, setEnviando] = useState(false);
   const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }));
   const inputSt = { width: '100%', padding: '10px', background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', color: 'var(--text-primary)', fontFamily: 'var(--font-body)', boxSizing: 'border-box', outline: 'none' };
 
-  const handleEnviar = (e) => {
+  const handleEnviar = async (e) => {
     e.preventDefault();
     if (!form.titulo.trim() || !form.texto.trim() || !form.data) return;
     const novoAviso = {
@@ -1638,7 +1641,13 @@ function ModalComunicado({ onClose, onSent }) {
     saveAvisoToSupabase(novoAviso);
     setForm({ titulo: '', texto: '', tipo: 'Informativo', data: hojeISO() });
     setAba('gerenciar');
-    onSent();
+    let pushOk = null;
+    if (enviarPush) {
+      setEnviando(true);
+      pushOk = await enviarNotificacaoPush({ titulo: novoAviso.titulo, texto: novoAviso.texto });
+      setEnviando(false);
+    }
+    onSent(pushOk);
   };
 
   const handleExcluir = (id) => {
@@ -1741,10 +1750,14 @@ function ModalComunicado({ onClose, onSent }) {
                   O comunicado some sozinho no dia seguinte a essa data.
                 </p>
               </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                <input type="checkbox" checked={enviarPush} onChange={e => setEnviarPush(e.target.checked)} />
+                Enviar notificação push pra quem tiver ativado
+              </label>
               <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
                 <button type="button" onClick={onClose} style={{ flex: 1, padding: '11px', background: 'transparent', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 600 }}>Cancelar</button>
-                <button type="submit" style={{ flex: 1, padding: '11px', background: 'var(--accent-color)', border: 'none', borderRadius: 'var(--radius-md)', color: 'var(--bg-color)', cursor: 'pointer', fontWeight: 700 }}>
-                  <i className="ph ph-megaphone"></i> Publicar
+                <button type="submit" disabled={enviando} style={{ flex: 1, padding: '11px', background: 'var(--accent-color)', border: 'none', borderRadius: 'var(--radius-md)', color: 'var(--bg-color)', cursor: enviando ? 'default' : 'pointer', fontWeight: 700, opacity: enviando ? 0.7 : 1 }}>
+                  <i className={`ph ${enviando ? 'ph-spinner' : 'ph-megaphone'}`}></i> {enviando ? 'Enviando...' : 'Publicar'}
                 </button>
               </div>
             </form>
@@ -2800,7 +2813,11 @@ const [modalMinisterios, setModalMinisterios]   = useState(false);
       {modalComunicado && (
         <ModalComunicado
           onClose={() => setModalComunicado(false)}
-          onSent={() => setToast('Comunicado publicado com sucesso!')}
+          onSent={(pushOk) => setToast(
+            pushOk === false ? 'Comunicado publicado, mas a notificação push falhou.' :
+            pushOk === true ? 'Comunicado publicado e notificação enviada!' :
+            'Comunicado publicado com sucesso!'
+          )}
         />
       )}
 
