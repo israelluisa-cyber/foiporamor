@@ -4,11 +4,13 @@
 // CRON_SECRET pra ninguém de fora conseguir chamar isso e mandar push à toa.
 import { createClient } from '@supabase/supabase-js';
 
+// Janela aberta (não só os 15min ideais entre dois ticks do cron): o
+// GitHub Actions agenda "schedule" como best-effort e pode atrasar ou pular
+// uma rodada, então aceitamos qualquer tick entre o culto e 30min antes —
+// se um tick falhar, o próximo ainda cai dentro da janela. A tabela
+// culto_lembretes_enviados evita duplicar caso mais de uma rodada acerte
+// a janela do mesmo culto no mesmo dia.
 const ANTECEDENCIA_MIN = 30;
-// Janela de 15min (largura do intervalo do cron) terminando exatamente na
-// marca dos 30min — garante, no caso ideal, uma única rodada por culto por
-// dia. A tabela culto_lembretes_enviados cobre o caso de atraso/duplicidade.
-const JANELA_MIN = 15;
 
 export default async function handler(request, response) {
   if (request.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -54,7 +56,7 @@ export default async function handler(request, response) {
     if (culto.ativo === false) continue;
     if (culto.diaSemana !== diaSemanaHoje) continue;
     const faltam = (culto.hora * 60 + culto.min) - minutosAgora;
-    if (faltam <= ANTECEDENCIA_MIN - JANELA_MIN || faltam > ANTECEDENCIA_MIN) continue;
+    if (faltam <= 0 || faltam > ANTECEDENCIA_MIN) continue;
 
     // Marca "já enviado hoje" antes de mandar o push — se a linha já existir
     // (violação de PK), outra rodada já cuidou desse culto, então pula.

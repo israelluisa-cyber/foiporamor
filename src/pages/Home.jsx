@@ -23,6 +23,12 @@ const CULTO_FOTO_PLACEHOLDERS = [
 const STORAGE_KEY_PEDIDOS = 'pedidos_oracao';
 const CADASTROS_KEY_PEDIDOS = 'cadastros_pendentes';
 
+// Ponto focal de uma foto do mural, ajustado arrastando a prévia no Admin —
+// cai pro centro se a foto for antiga e não tiver posição salva ainda.
+function posicaoMural(foto) {
+  return foto?.posicao ? `${foto.posicao.x}% ${foto.posicao.y}%` : 'center';
+}
+
 // Foto por celular — cobre pedidos antigos (enviados antes de guardarmos a foto
 // junto) reencontrando o cadastro do membro pelo mesmo celular do pedido.
 function fotoPorCelular(celular) {
@@ -403,7 +409,7 @@ export default function Home() {
             style={{
               position: 'absolute', inset: '20px', zIndex: 0,
               backgroundImage: `url(${heroBgAtual})`, backgroundSize: 'cover',
-              backgroundPosition: fotoMural ? 'center' : heroBgPosition,
+              backgroundPosition: fotoMural ? posicaoMural(fotoMural) : heroBgPosition,
               filter: 'blur(32px) saturate(1.7) brightness(0.85)',
               transform: 'scale(1.06)', opacity: 0.9,
               borderRadius: 'var(--radius-lg)',
@@ -420,7 +426,7 @@ export default function Home() {
             key={heroBgAtual}
             src={heroBgAtual}
             alt=""
-            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: fotoMural ? 'center' : heroBgPosition, zIndex: 0, animation: fotoMural ? 'slideInRight 0.6s ease both' : 'none' }}
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: fotoMural ? posicaoMural(fotoMural) : heroBgPosition, zIndex: 0, animation: fotoMural ? 'slideInRight 0.6s ease both' : 'none' }}
           />
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: `rgba(0,0,0,${overlayOpacity})`, zIndex: 1 }} />
           <div style={{ position: 'relative', zIndex: 2 }}>

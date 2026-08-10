@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Navigate } from 'react-router-dom';
 import Header from '../components/Header';
 import Toast from '../components/Toast';
@@ -2408,9 +2408,39 @@ function ModalMuralAdmin({ onClose, onSaved }) {
   const [editando, setEditando] = useState(null);
   const inputSt = { width: '100%', background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', padding: '10px 12px', fontSize: '0.9rem', boxSizing: 'border-box' };
 
-  const FORM_EMPTY = { id: '', foto: null, legenda: '' };
+  const FORM_EMPTY = { id: '', foto: null, legenda: '', posicao: null };
   const [form, setForm] = useState(FORM_EMPTY);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  // Trava o scroll da página por trás enquanto o modal está aberto — sem isso,
+  // o gesto de arrastar a prévia pra ajustar o enquadramento também rola a
+  // Home por baixo.
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
+
+  // Arrastar a prévia pra ajustar o ponto focal da foto (evita corte de rosto/
+  // detalhe importante quando o card do hero não fecha exatamente em 16:9).
+  // Pointer capture em vez de listeners na window: fica preso ao elemento
+  // mesmo se o dedo/mouse sair da caixa durante o arraste, sem precisar
+  // registrar/remover listeners manualmente a cada render.
+  const previewBoxRef = useRef(null);
+  const dragRef = useRef(null);
+  const iniciarArraste = (e) => {
+    if (!form.foto) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    dragRef.current = { x: e.clientX, y: e.clientY, pos: form.posicao || { x: 50, y: 50 } };
+  };
+  const arrastar = (e) => {
+    if (!dragRef.current || !previewBoxRef.current) return;
+    const { width, height } = previewBoxRef.current.getBoundingClientRect();
+    const { x: startX, y: startY, pos } = dragRef.current;
+    const x = Math.min(100, Math.max(0, pos.x - ((e.clientX - startX) / width) * 100));
+    const y = Math.min(100, Math.max(0, pos.y - ((e.clientY - startY) / height) * 100));
+    set('posicao', { x, y });
+  };
+  const soltarArraste = () => { dragRef.current = null; };
 
   const abrirNovo = () => { setForm(FORM_EMPTY); setEditando(null); setTela('form'); };
   const abrirEditar = (m) => { setForm({ ...m }); setEditando(m.id); setTela('form'); };
@@ -2492,7 +2522,7 @@ function ModalMuralAdmin({ onClose, onSaved }) {
                 {lista.map(m => (
                   <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)' }}>
                     <div style={{ width: '56px', height: '32px', borderRadius: 'var(--radius-sm)', overflow: 'hidden', flexShrink: 0, background: '#111' }}>
-                      <img src={m.foto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <img src={m.foto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: `${m.posicao?.x ?? 50}% ${m.posicao?.y ?? 50}%` }} />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-primary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.legenda || '(sem legenda)'}</p>
@@ -2515,9 +2545,33 @@ function ModalMuralAdmin({ onClose, onSaved }) {
               <div>
                 <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>Foto (proporção 16:9 recomendada, ex: 1200×675px)</label>
                 {form.foto && (
-                  <div style={{ width: '100%', aspectRatio: '16 / 9', borderRadius: 'var(--radius-md)', overflow: 'hidden', marginBottom: '10px', border: '1px solid var(--border-color)' }}>
-                    <img src={form.foto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <div
+                    ref={previewBoxRef}
+                    onPointerDown={iniciarArraste}
+                    onPointerMove={arrastar}
+                    onPointerUp={soltarArraste}
+                    onPointerCancel={soltarArraste}
+                    style={{ width: '100%', aspectRatio: '16 / 9', borderRadius: 'var(--radius-md)', overflow: 'hidden', marginBottom: '4px', border: '1px solid var(--border-color)', position: 'relative', cursor: 'grab', touchAction: 'none', userSelect: 'none' }}
+                  >
+                    <img
+                      src={form.foto}
+                      alt=""
+                      draggable={false}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: `${form.posicao?.x ?? 50}% ${form.posicao?.y ?? 50}%`, pointerEvents: 'none' }}
+                    />
+                    <span style={{ position: 'absolute', bottom: '8px', left: '50%', transform: 'translateX(-50%)', display: 'flex', alignItems: 'center', gap: '5px', padding: '4px 10px', borderRadius: 'var(--radius-full)', background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)', color: '#fff', fontSize: '0.68rem', fontWeight: 600, pointerEvents: 'none' }}>
+                      <i className="ph ph-arrows-out-cardinal"></i> Arraste para ajustar o enquadramento
+                    </span>
                   </div>
+                )}
+                {form.foto && form.posicao && (
+                  <button
+                    type="button"
+                    onClick={() => set('posicao', null)}
+                    style={{ background: 'none', border: 'none', color: 'var(--accent-color)', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', padding: '0 0 10px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                  >
+                    <i className="ph ph-arrow-counter-clockwise"></i> Centralizar
+                  </button>
                 )}
                 <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px', background: 'var(--bg-surface)', border: '1px dashed var(--border-color)', borderRadius: 'var(--radius-md)', cursor: 'pointer', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.9rem' }}>
                   <i className="ph ph-upload-simple" style={{ fontSize: '1.2rem' }}></i>
