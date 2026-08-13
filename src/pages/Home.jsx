@@ -636,7 +636,15 @@ export default function Home() {
         {/* Programação da Semana — cards verticais */}
         <h3 className="section-title">Programação da Semana</h3>
         {eventosFiltrados.length > 0 && (
-          <div ref={programacaoRef} style={{ display: 'flex', alignItems: 'flex-end', gap: '10px', overflowX: 'auto', paddingTop: '6px', paddingRight: 'var(--spacing-md)', paddingBottom: '4px', paddingLeft: 'var(--spacing-md)', marginLeft: 'calc(-1 * var(--spacing-md))', marginRight: 'calc(-1 * var(--spacing-md))', marginBottom: 'var(--spacing-md)', scrollbarWidth: 'none' }}>
+          /* overflowX: 'auto' sem overflowY definido faz o navegador travar o
+             overflow-y em modo "corta também" (regra do CSS, não é bug de um
+             navegador específico) — por isso o padding vertical aqui precisa
+             ser maior que o alcance do glow dourado do card em destaque
+             (box-shadow com blur de até 28px), senão ele bate no limite do
+             corte antes de sumir. O padding extra empurraria o carrossel
+             mais pra baixo, então marginTop negativo compensa pra manter a
+             posição visual dos cards igual à de antes. */
+          <div ref={programacaoRef} style={{ display: 'flex', alignItems: 'flex-end', gap: '10px', overflowX: 'auto', paddingTop: '24px', paddingRight: 'var(--spacing-md)', paddingBottom: '32px', paddingLeft: 'var(--spacing-md)', marginLeft: 'calc(-1 * var(--spacing-md))', marginRight: 'calc(-1 * var(--spacing-md))', marginTop: '-20px', marginBottom: 'calc(var(--spacing-md) - 28px)', scrollbarWidth: 'none' }}>
             {eventosFiltrados.map((ev, i) => {
               const isLive = !ev.isEvangelismo && aoVivo?.id === ev.id;
               // Ensaio de sexta não tem transmissão — mostra "Agora" em vez de "Ao vivo"
