@@ -371,13 +371,13 @@ export async function syncFromSupabase() {
       supabase.from('pedidos_oracao').select('*').order('created_at', { ascending: false }),
       supabase.from('visitantes').select('*').order('created_at', { ascending: false }),
       supabase.from('pedidos_aconselhamento').select('*').order('created_at', { ascending: false }),
-      supabase.from('app_config').select('data').eq('id', 'main').single(),
-      supabase.from('app_config').select('data').eq('id', 'teologia').single(),
-      supabase.from('app_config').select('data').eq('id', 'evangelismo').single(),
-      supabase.from('app_config').select('data').eq('id', 'ministerios').single(),
-      supabase.from('app_config').select('data').eq('id', 'vagas').single(),
-      supabase.from('app_config').select('data').eq('id', 'grupos').single(),
-      supabase.from('app_config').select('data').eq('id', 'mural').single(),
+      supabase.from('app_config').select('data').eq('id', 'main').maybeSingle(),
+      supabase.from('app_config').select('data').eq('id', 'teologia').maybeSingle(),
+      supabase.from('app_config').select('data').eq('id', 'evangelismo').maybeSingle(),
+      supabase.from('app_config').select('data').eq('id', 'ministerios').maybeSingle(),
+      supabase.from('app_config').select('data').eq('id', 'vagas').maybeSingle(),
+      supabase.from('app_config').select('data').eq('id', 'grupos').maybeSingle(),
+      supabase.from('app_config').select('data').eq('id', 'mural').maybeSingle(),
     ]);
 
     if (membros?.length)        localStorage.setItem('membros_data',           JSON.stringify(mapMembros(membros)));

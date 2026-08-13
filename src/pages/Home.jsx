@@ -397,22 +397,23 @@ export default function Home() {
           const overlayOpacity = 0.15;
           return (
         <div style={{ position: 'relative', padding: '20px', marginLeft: '-20px', marginRight: '-20px', marginBottom: 'calc(var(--spacing-lg) - 20px)' }}>
-          {/* Glow ambiente — cópia borrada da própria foto do hero, vazando atrás do
-              card. Troca de cor sozinho a cada foto porque é a mesma imagem, só borrada.
-              Sem "key" de propósito: trocar a key a cada foto forçava o React a destruir
-              e recriar essa camada (blur pesado) a cada troca, o que em celular deixava
-              uma mancha "fantasma" presa na tela — sobretudo no topo, onde o glow vaza
-              pra fora do card. Mantendo o mesmo elemento, o navegador só atualiza a
-              imagem de fundo, sem esse recriar-e-repintar. */}
+          {/* Glow ambiente — cópia borrada da própria foto do hero, vazando atrás
+              do card. De propósito SEM transform (nada de scale): a versão
+              anterior juntava transform + filter no mesmo elemento, e o
+              Safari/iOS tem bug conhecido cortando esse tipo de blur de forma
+              abrupta perto da borda quando os dois se combinam. Aqui a folga
+              vem só de inset negativo (top/bottom/left/right), e o blur fica
+              só pra suavizar — nada de scale. Valores start conservadores de
+              propósito (pouco vazamento, pouco blur, opacidade baixa); ir
+              aumentando aos poucos e testando no Safari a cada passo. */}
           <div
             aria-hidden="true"
             style={{
-              position: 'absolute', inset: '20px', zIndex: 0,
+              position: 'absolute', top: '-10px', bottom: '-10px', left: '0px', right: '0px', zIndex: 0,
               backgroundImage: `url(${heroBgAtual})`, backgroundSize: 'cover',
               backgroundPosition: fotoMural ? posicaoMural(fotoMural) : heroBgPosition,
-              filter: 'blur(32px) saturate(1.7) brightness(0.85)',
-              transform: 'scale(1.06)', opacity: 0.9,
-              borderRadius: 'var(--radius-lg)',
+              filter: 'blur(16px) saturate(1.7) brightness(0.85)',
+              opacity: 0.5,
               transition: 'background-image 0.3s ease',
             }}
           />

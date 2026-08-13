@@ -7,5 +7,10 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
+    // Libera hosts de túnel (.loca.lt / .trycloudflare.com), usados pra
+    // testar em celular fora da rede local — sem isso o Vite bloqueia o
+    // Host header por segurança (proteção contra DNS rebinding) mesmo com
+    // o túnel de pé.
+    allowedHosts: ['.loca.lt', '.trycloudflare.com'],
   },
 })

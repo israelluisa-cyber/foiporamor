@@ -65,14 +65,14 @@ export async function initOneSignal() {
 // só pra ele (ou segmentar por membro) e não perder o vínculo entre sessões.
 export function loginOneSignalMembro(id) {
   if (!APP_ID || id == null) return;
-  OneSignal.login(String(id));
+  OneSignal.login(String(id)).catch((err) => console.error('[onesignal] login() falhou:', err));
 }
 
 // Desvincula o dispositivo do membro ao sair — sem isso, o próximo a logar
 // nesse mesmo aparelho herdaria a identidade do anterior no OneSignal.
 export function logoutOneSignalMembro() {
   if (!APP_ID) return;
-  OneSignal.logout();
+  OneSignal.logout().catch((err) => console.error('[onesignal] logout() falhou:', err));
 }
 
 // Pede a permissão do navegador. Precisa ser chamado a partir de um clique
