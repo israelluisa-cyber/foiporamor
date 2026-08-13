@@ -409,11 +409,19 @@ export default function Home() {
           <div
             aria-hidden="true"
             style={{
-              position: 'absolute', top: '-10px', bottom: '-10px', left: '0px', right: '0px', zIndex: 0,
+              /* A borda suave vem da mask-image (fade dentro da própria caixa),
+                 não do blur vazando pra fora dela — o Safari corta o filter
+                 bem rente ao limite da caixa, sem suavizar, então depender do
+                 blur pra sumir na borda sempre deixava um corte reto ali. Com
+                 mask-image o fade acontece dentro da caixa por definição, sem
+                 precisar de nada "vazando". */
+              position: 'absolute', top: '-20px', bottom: '-20px', left: '0px', right: '0px', zIndex: 0,
               backgroundImage: `url(${heroBgAtual})`, backgroundSize: 'cover',
               backgroundPosition: fotoMural ? posicaoMural(fotoMural) : heroBgPosition,
               filter: 'blur(16px) saturate(1.7) brightness(0.85)',
               opacity: 0.5,
+              WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 25%, black 75%, transparent 100%)',
+              maskImage: 'linear-gradient(to bottom, transparent 0%, black 25%, black 75%, transparent 100%)',
               transition: 'background-image 0.3s ease',
             }}
           />
@@ -535,8 +543,8 @@ export default function Home() {
             50%       { opacity: 0.4; transform: scale(0.75); }
           }
           @keyframes cascadeIn {
-            from { opacity: 0; transform: translateY(18px); }
-            to   { opacity: 1; transform: translateY(0); }
+            from { opacity: 0; }
+            to   { opacity: 1; }
           }
           /* Entrada em cascata dos blocos da Home — só na primeira vez que o app abre.
              O atraso embutido em cada regra casa com o tempo mínimo do splash screen
