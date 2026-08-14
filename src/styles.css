@@ -209,15 +209,28 @@ body.light .app-header {
   font-size: 1.1rem;
 }
 
-.icon-btn:hover {
-  background: var(--accent-color);
-  color: var(--bg-color);
-  border-color: var(--accent-color);
-  transform: scale(1.05);
-}
-
 .icon-btn:active {
   transform: scale(0.95);
+}
+
+/* :hover só é aplicado em dispositivos com mouse de verdade — em touch
+   (celular) o iOS Safari trata o primeiro toque como "ativar hover" e só
+   o segundo toque dispara o clique, exigindo dois toques nos botões. */
+@media (hover: hover) and (pointer: fine) {
+  .icon-btn:hover {
+    background: var(--accent-color);
+    color: var(--bg-color);
+    border-color: var(--accent-color);
+    transform: scale(1.05);
+  }
+
+  /* .icon-btn:hover troca a cor do ícone pra --bg-color (pensado pro fundo
+     sólido escuro do hover) — sem esse fundo aqui, o ícone sumiria (quase
+     branco sobre header claro) enquanto o mouse passa por cima. */
+  body.light .theme-toggle:hover {
+    background: var(--bg-surface-elevated);
+    color: var(--text-primary);
+  }
 }
 
 /* No modo claro o fundo/borda cinza-claro do botão de tema fica marcado
@@ -225,14 +238,6 @@ body.light .app-header {
 body.light .theme-toggle {
   background: transparent;
   border-color: transparent;
-}
-
-/* .icon-btn:hover troca a cor do ícone pra --bg-color (pensado pro fundo
-   sólido escuro do hover) — sem esse fundo aqui, o ícone sumiria (quase
-   branco sobre header claro) enquanto o mouse passa por cima. */
-body.light .theme-toggle:hover {
-  background: var(--bg-surface-elevated);
-  color: var(--text-primary);
 }
 
 /* ===========================
@@ -1327,30 +1332,6 @@ body.light .fab-petal {
   font-size: 0.84rem;
   padding: 0;
 }
-
-.login-badges {
-  display: flex;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  padding: 16px 8px;
-  margin-bottom: var(--spacing-lg);
-}
-
-.login-badge {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  text-align: center;
-  padding: 0 4px;
-}
-
-.login-badge + .login-badge { border-left: 1px solid var(--border-color); }
-.login-badge i { color: var(--accent-color); font-size: 1.15rem; }
-.login-badge strong { font-size: 0.74rem; color: var(--text-primary); }
-.login-badge span { font-size: 0.64rem; color: var(--text-muted); }
 
 @media (prefers-reduced-motion: reduce) {
   .login-card-bg,

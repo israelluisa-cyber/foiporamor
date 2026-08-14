@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Navigate } from 'react-router-dom';
 import Header from '../components/Header';
 import Toast from '../components/Toast';
+import useLockBodyScroll from '../hooks/useLockBodyScroll';
 import { loadMembros, saveMembros, deleteMembroSupabase } from '../data/membros';
 import {
   uploadFotoToStorage, saveConfigToSupabase, updateCadastroStatusSupabase, syncFromSupabase,
@@ -66,6 +67,7 @@ function gerarSenhaTemporaria() {
 }
 
 function ModalGerenciarCadastros({ isOpen, onClose, cadastros, setCadastros, membros, setMembros }) {
+  useLockBodyScroll();
   const pendentes = cadastros.filter(c => c.status === 'pendente');
   const aprovados = cadastros.filter(c => c.status === 'aprovado');
   const [aprovadoNome, setAprovadoNome] = useState(null);
@@ -403,6 +405,7 @@ function ModalGerenciarCadastros({ isOpen, onClose, cadastros, setCadastros, mem
 }
 
 function ModalGerenciarMembros({ onClose, membros, setMembros }) {
+  useLockBodyScroll();
   const [modo, setModo] = useState('lista'); // lista, editar, adicionar
   const [membroSelecionado, setMembroSelecionado] = useState(null);
   const [formData, setFormData] = useState({});
@@ -715,6 +718,7 @@ function SeletorHorario({ value, onChange, small }) {
 
 /* ── Modal Configurações da Igreja ─────────────────────────────── */
 function ModalConfiguracoes({ onClose, onSaved }) {
+  useLockBodyScroll();
   const [cfg, setCfg] = useState(loadConfig);
   const [secao, setSecao] = useState('identidade');
   const [vagas, setVagas] = useState(loadVagas);
@@ -1475,6 +1479,7 @@ function loadAconselhamentos() {
 }
 
 function ModalAconselhamento({ onClose, pedidos, setPedidos }) {
+  useLockBodyScroll();
   const [expandido, setExpandido] = useState(null);
   const config = loadConfig();
 
@@ -1620,6 +1625,7 @@ function isoParaBR(iso) {
 }
 
 function ModalComunicado({ onClose, onSent }) {
+  useLockBodyScroll();
   const [form, setForm] = useState({ titulo: '', texto: '', tipo: 'Informativo', data: hojeISO() });
   const [avisos, setAvisos] = useState(() => JSON.parse(localStorage.getItem(ADMIN_AVISOS_KEY) || '[]'));
   const [aba, setAba] = useState('novo');
@@ -1800,6 +1806,7 @@ function ModalComunicado({ onClose, onSent }) {
 
 /* ── Modal ITEAP ─────────────────────────────────────────────────── */
 function ModalITEAP({ onClose, onSaved }) {
+  useLockBodyScroll();
   const [data, setData] = useState(() => loadTeologia());
   const [novoModulo, setNovoModulo] = useState({ nome: '', totalAulas: '' });
   const inputSt = { width: '100%', padding: '10px', background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', color: 'var(--text-primary)', fontFamily: 'var(--font-body)', boxSizing: 'border-box', outline: 'none' };
@@ -1918,6 +1925,7 @@ function ModalITEAP({ onClose, onSaved }) {
 const DIAS_SEMANA_NOME = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
 
 function ModalEvangelismo({ onClose, onSaved }) {
+  useLockBodyScroll();
   const [saidasOriginais] = useState(() => loadSaidas());
   const [saidas, setSaidas] = useState(() => loadSaidas());
   const [form, setForm] = useState({ titulo: '', data: '', horario: '', pontoEncontro: '', local: '', lider: '', descricao: '', vagas: 20, avisar: true });
@@ -2088,6 +2096,7 @@ function ModalEvangelismo({ onClose, onSaved }) {
 }
 
 function ModalMinisteriosAdmin({ onClose, onSaved, membros }) {
+  useLockBodyScroll();
   const [lista, setLista] = useState(loadMinisterios);
   const [tela, setTela] = useState('lista'); // lista | form
   const [editando, setEditando] = useState(null);
@@ -2275,6 +2284,7 @@ function ModalMinisteriosAdmin({ onClose, onSaved, membros }) {
 
 /* ── Modal Grupos & Ministérios ────────────────────────────────── */
 function ModalGruposAdmin({ onClose, onSaved }) {
+  useLockBodyScroll();
   const [lista, setLista] = useState(loadGrupos);
   const [tela, setTela] = useState('lista'); // lista | form
   const [editando, setEditando] = useState(null);
@@ -2598,6 +2608,7 @@ function ModalMuralAdmin({ onClose, onSaved }) {
 
 /* ── Modal Pedidos de Oração ─────────────────────────────────────── */
 function ModalPedidosOracao({ onClose, onLido }) {
+  useLockBodyScroll();
   const [pedidos, setPedidos] = useState(loadPedidosOracao);
 
   // Roda só uma vez, ao abrir o modal: marca os pedidos carregados nesse momento

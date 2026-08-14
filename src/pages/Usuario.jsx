@@ -7,6 +7,7 @@ import { hashPassword, verifyPassword } from '../data/crypto';
 import { loadConfig } from '../data/config';
 import { PLANOS, loadPlanosConcluidos } from '../data/biblia';
 import { loginOneSignalMembro, logoutOneSignalMembro, pedirPermissaoNotificacao, notificacaoPermitida } from '../data/onesignal';
+import useLockBodyScroll from '../hooks/useLockBodyScroll';
 
 const CADASTROS_KEY      = 'cadastros_pendentes';
 const USER_KEY           = 'user_cadastro';
@@ -43,6 +44,7 @@ function getInitials(nome) {
 
 /* ── Modal de Cadastro ─────────────────────────────────────────────── */
 function ModalCadastroMembro({ isOpen, onClose, onSuccess }) {
+  useLockBodyScroll(isOpen);
   const [formData, setFormData] = useState({
     nome: '', email: '', celular: '', dataNascimento: '',
     bairro: '', celula: '',
@@ -291,6 +293,10 @@ export default function Usuario() {
   const [tempoRestanteRec, setTempoRestanteRec] = useState(0);
   const [planosConcluidos] = useState(loadPlanosConcluidos);
   const [mostrarSenha, setMostrarSenha] = useState(false);
+
+  // Trava o scroll da própria página de login (não é modal por cima de
+  // nada) — o conteúdo foi ajustado pra caber inteiro na tela sem rolagem.
+  useLockBodyScroll(!session && !userCadastro);
 
   useEffect(() => {
     if (tempoRestante <= 0) return;
@@ -869,24 +875,6 @@ export default function Usuario() {
                   Ainda não tem conta?{' '}
                   <button onClick={() => setModalCadastro(true)}>Cadastrar como membro</button>
                 </p>
-              </div>
-            </div>
-
-            <div className="login-badges">
-              <div className="login-badge login-anim" style={{ '--login-anim-delay': '1.95s' }}>
-                <i className="ph ph-shield-check"></i>
-                <strong>Ambiente Seguro</strong>
-                <span>Seus dados protegidos</span>
-              </div>
-              <div className="login-badge login-anim" style={{ '--login-anim-delay': '2.1s' }}>
-                <i className="ph ph-users-three"></i>
-                <strong>Comunidade</strong>
-                <span>Conecte-se e participe</span>
-              </div>
-              <div className="login-badge login-anim" style={{ '--login-anim-delay': '2.25s' }}>
-                <i className="ph ph-heart"></i>
-                <strong>Propósito</strong>
-                <span>Juntos por um só amor</span>
               </div>
             </div>
           </>

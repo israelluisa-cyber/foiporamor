@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Header from '../components/Header';
 import { loadMinisterios } from '../data/ministeriosData';
+import useLockBodyScroll from '../hooks/useLockBodyScroll';
 
 function Emblema({ icon, gradient, glow, ring, foto, size = 76 }) {
   return (
@@ -23,6 +24,7 @@ function Emblema({ icon, gradient, glow, ring, foto, size = 76 }) {
 }
 
 function ModalMinisterio({ ministerio, onClose }) {
+  useLockBodyScroll();
   if (!ministerio) return null;
   const sn = ministerio.sobreNos || {};
   return (

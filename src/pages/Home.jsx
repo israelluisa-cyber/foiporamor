@@ -396,7 +396,7 @@ export default function Home() {
           const heroBgAtual = fotoMural ? fotoMural.foto : (fotoCulto ? proximoInfo.foto : heroBg);
           const overlayOpacity = 0.15;
           return (
-        <div style={{ position: 'relative', padding: '20px', marginLeft: '-20px', marginRight: '-20px', marginBottom: 'calc(var(--spacing-lg) - 20px)' }}>
+        <div style={{ position: 'relative', padding: '20px', marginLeft: '-20px', marginRight: '-20px', marginBottom: '-20px' }}>
           {/* Glow ambiente — cópia borrada da própria foto do hero, vazando atrás
               do card. De propósito SEM transform (nada de scale): a versão
               anterior juntava transform + filter no mesmo elemento, e o
@@ -905,6 +905,12 @@ export default function Home() {
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Rodapé — só pra sinalizar visualmente o fim da página */}
+        <div style={{ marginTop: 'var(--spacing-xl)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--spacing-md)' }}>
+          <div style={{ width: '100%', height: '1px', background: 'var(--border-color)' }} />
+          <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>{config.nomeIgreja}</span>
         </div>
 
       </main>

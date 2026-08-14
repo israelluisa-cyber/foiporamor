@@ -156,7 +156,15 @@
       "Bash(npx --yes vercel@latest alias ls)",
       "Bash(npx --yes vercel@latest ls foi-por-amor --meta)",
       "WebFetch(domain:documentation.onesignal.com)",
-      "Read(//c//**)"
+      "Read(//c//**)",
+      "Bash(npm view *)",
+      "Bash(npx *)",
+      "Bash(yes)",
+      "Bash(vercel --version)",
+      "mcp__claude_ai_Vercel__get_runtime_logs",
+      "Bash(gh repo *)",
+      "Bash(gh secret *)",
+      "Bash(identify logo.jpeg logo-icon.png)"
     ]
   }
 }

@@ -9,6 +9,7 @@ import {
   LIVROS, buscarCapitulo, CORES_MARCACAO, chaveVersiculo,
   loadMarcacoes, salvarMarcacoes, loadUltimaLeitura, salvarUltimaLeitura,
 } from '../data/bibliaTexto';
+import useLockBodyScroll from '../hooks/useLockBodyScroll';
 
 const CORES_CONFETE = ['#facc15', '#fb923c', '#4ade80', '#60a5fa', '#c084fc', '#f472b6'];
 
@@ -25,6 +26,7 @@ function gerarConfete(qtd = 26) {
 
 /* ── Modal de celebração ao concluir um plano ─────────────────────── */
 function ModalPlanoConcluido({ plano, proximoPlano, onEscolherProximo, onFechar }) {
+  useLockBodyScroll();
   const [confete] = useState(gerarConfete);
 
   return (

@@ -3,6 +3,7 @@ import Header from '../components/Header';
 import Toast from '../components/Toast';
 import { loadConfig } from '../data/config';
 import { saveVisitanteToSupabase } from '../data/supabase';
+import useLockBodyScroll from '../hooks/useLockBodyScroll';
 
 function toEmbedUrl(url) {
   if (!url) return null;
@@ -75,6 +76,7 @@ A glória que me envolve`,
 ];
 
 function ModalVisitante({ onClose }) {
+  useLockBodyScroll();
   const [form, setForm] = useState({ nome: '', telefone: '', como: 'Redes sociais' });
   const [enviado, setEnviado] = useState(false);
   const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }));
